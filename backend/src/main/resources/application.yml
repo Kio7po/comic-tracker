@@ -1,0 +1,16 @@
+spring:
+  sql:
+    init:
+      mode: always
+  datasource:
+    username: ${DB_USER}
+    url: ${DB_URL}
+    password: ${DB_PASSWORD}
+  application:
+    name: comic-tracker
+  jpa:
+    hibernate:
+      ddl-auto: none
+  threads:
+    virtual:
+      enabled: 'true'

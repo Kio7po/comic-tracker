@@ -1,0 +1,98 @@
+graph TB
+    %% ─── Actores
+    Visitante(["Visitante"])
+    UsuarioReg(["Usuario registrado"])
+    Admin(["Administrador"])
+
+    %% ─── Frontend
+    subgraph FE["Frontend - React"]
+        Web["Web"]
+    end
+
+    %% ─── Backend
+    subgraph BE["Backend - Spring Boot"]
+
+        %% ─── Web
+        subgraph WEB["web/"]
+            SEC["SecurityConfig\nJwtAuthenticationFilter"]
+            CTRL["Controllers"]
+        end
+
+        %% ─── Dominio
+        subgraph DOM["domain/"]
+            SVC_CAT["CatalogService"]
+            SVC_AGG["MetadataAggregatorService"]
+            SVC_SRC["ReadingSourceService"]
+            SVC_USR["UserService"]
+            SVC_TRK["TrackingService"]
+        end
+
+        %% ─── Adaptadores
+        subgraph ADP["adapter/"]
+            PERSIST["persistence/\nRepositorios JPA"]
+
+            subgraph META["metadata/"]
+                PORT_META["«port»\nMetadataProvider"]
+                ANILIST["AniListMetadataAdapter"]
+                MANGADEX["MangaDexMetadataAdapter"]
+            end
+
+            subgraph SRC["source/"]
+                PORT_SRC["«port»\nReadingSourceAdapter"]
+                SRC_IMPL["SpecificSourceAdapter"]
+            end
+        end
+    end
+
+    %% ─── Infraestructura
+    subgraph INFRA["Infraestructura"]
+        DB[("PostgreSQL")]
+    end
+
+    %% ─── APIs externas
+    subgraph EXT["APIs externas - metadatos"]
+        ANILIST_API["AniList API"]
+        MANGADEX_API["MangaDex API"]
+    end
+
+    subgraph EXT_SRC["Sitios externos - fuentes de lectura"]
+        SITES["Sitios de lectura"]
+    end
+
+    %% ─── Relaciones actores -> frontend
+    Visitante --> Web
+    UsuarioReg --> Web
+    Admin --> Web
+
+    %% ─── Frontend → Backend (REST)
+    Web -- "REST / JWT" --> SEC
+    SEC --> CTRL
+    CTRL --> SVC_CAT
+    CTRL --> SVC_AGG
+    CTRL --> SVC_SRC
+    CTRL --> SVC_USR
+    CTRL --> SVC_TRK
+
+    %% ─── Servicios de dominio -> puertos
+    SVC_CAT -- "búsqueda\nmono-fuente" --> PORT_META
+    SVC_AGG -- "ver detalle\nmulti-fuente" --> PORT_META
+    SVC_SRC --> PORT_SRC
+
+    %% ─── Puertos -> adaptadores concretos
+    PORT_META --> ANILIST
+    PORT_META --> MANGADEX
+    PORT_SRC --> SRC_IMPL
+
+    %% ─── Adaptadores -> APIs externas
+    ANILIST --> ANILIST_API
+    MANGADEX --> MANGADEX_API
+    SRC_IMPL --> SITES
+
+    %% ─── Persistencia
+    PERSIST --> DB
+
+    %% ─── Servicios -> Persistencia
+    SVC_AGG --> PERSIST
+    SVC_USR --> PERSIST
+    SVC_TRK --> PERSIST
+    SVC_SRC --> PERSIST

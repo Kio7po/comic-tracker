@@ -1,0 +1,202 @@
+classDiagram
+
+    %% ─── User ───────────────────────────────────────────────────
+    class User {
+        + username: string
+        + email: string
+        + password: string
+        + biography: string
+        + picture: string
+        + language: Enum
+        + role: Enum
+    }
+
+    %% ─── Comic ──────────────────────────────────────────────────
+    %% Entidad canónica del catálogo. No representa los datos crudos de ninguna fuente
+    %% en particular, sino los valores ya fusionados por prioridad que el sistema presenta
+    %% al usuario. Se persiste la primera vez que un usuario entra al detalle de una obra
+    %% (cache-aside); hasta entonces existe solo en la fuente externa de búsqueda.
+    class Comic {
+        + title: string
+        + synopsis: string
+        + cover: string
+        + alternative_titles: string
+        + start_date: Date
+        + end_date: Date
+        + nsfw: Enum
+        + media_type: Enum
+        + status: Enum
+        + chapters: int
+        + authors: string
+        + slug: string
+    }
+
+    %% Genre y Tag son entidades propias (no enums) para permitir
+    %% que las fuentes de metadatos aporten valores distintos sin
+    %% estar restringidas a un conjunto cerrado predefinido.
+    class Genre {
+        + name: string
+    }
+
+    class Tag {
+        + name: string
+    }
+
+    %% ─── Metadatos ───────────────────────────────────────────────
+    %% El sitio de metadatos en sí (AniList, MangaDex…) como entidad propia.
+    %% No está vinculado a ningún cómic concreto; es el catálogo de fuentes
+    %% de las que el sistema puede obtener información.
+    class ComicMetadataSource {
+        + url: string
+        + name: string
+        + slug: string
+    }
+
+    %% El dato crudo normalizado que una ComicMetadataSource concreta devuelve
+    %% para un cómic concreto. Una fila por (comic_metadata_source_id, external_id),
+    %% con restricción de unicidad sobre ese par. Es la pieza que permite deducir
+    %% que dos fuentes hablan de la misma obra: si dos ComicMetadataEntry apuntan
+    %% al mismo comic_id, son la misma obra.
+    class ComicMetadataEntry {
+        + external_id: string
+    }
+
+    %% ─── Fuentes de lectura ──────────────────────────────────────
+    %% El sitio de lectura en sí (agregador de scans, plataforma oficial…)
+    %% como entidad propia. Análogo a ComicMetadataSource pero para fuentes de lectura.
+    class ComicReadingSource {
+        + url: string
+        + name: string
+        + icon: string
+        + slug: string
+    }
+
+    %% Registro de que un cómic concreto está disponible en un ComicReadingSource
+    %% concreto, aportado por un usuario. El campo status (PENDING, APPROVED, REJECTED)
+    %% cubre el ciclo de vida de la propuesta. Los campos hidratables por el adaptador
+    %% (available_chapters, etc.) quedan null hasta después de la aprobación.
+    %% Se decidió una única entidad en lugar de separar Submission y Entry porque
+    %% la diferencia es solo de estado y de qué campos están rellenos, no de estructura.
+    class ComicReadingEntry {
+        + url: string
+        + title: string
+        + available_chapters: int
+        + language: Enum
+        + status: Enum
+    }
+
+    %% ─── Listas de lectura ───────────────────────────────────────
+    %% Agrupación temática libre de cómics bajo un nombre arbitrario
+    %% ("Pendientes", "Favoritos"…). Distinta de ReadingState: una lista
+    %% es una agrupación temática, no un registro de progreso de lectura.
+    class List {
+        + name: string
+    }
+
+    %% ─── Seguimiento ─────────────────────────────────────────────
+    %% Estado de lectura de un usuario sobre un cómic concreto. Registra
+    %% en qué punto está (status: leyendo, completado, en pausa, quiero leer…)
+    %% y el último capítulo leído (chapters). No es un historial; es una
+    %% instantánea del progreso actual, incrementable/decrementable con +/-.
+    class ReadingState {
+        + status: Enum
+        + chapters: int
+    }
+
+    %% ─── Valoraciones ────────────────────────────────────────────
+    %% Valoración de un usuario sobre un cómic (puntuación y texto opcional).
+    class ComicReview {
+        + score: float
+        + text: string
+    }
+
+    %% Valoración de un usuario sobre un sitio de lectura en general
+    %% ("este sitio tiene buena calidad de imagen").
+    class ComicReadingSourceReview {
+        + score: float
+        + text: string
+    }
+
+    %% Valoración de un usuario sobre un cómic concreto en un sitio de lectura
+    %% concreto ("este cómic está mal traducido en este sitio"). Más granular
+    %% que ComicReadingSourceReview.
+    class ComicReadingEntryReview {
+        + score: float
+        + text: string
+    }
+
+    %% ─── Moderación ──────────────────────────────────────────────
+    %% Denuncia de un usuario sobre una ComicReadingEntry (enlace roto, spam,
+    %% información incorrecta…). Distinto de una review: tiene tipo de reporte
+    %% y estado de resolución, y es de naturaleza moderativa, no valorativa.
+    class ComicReadingEntryReport {
+        + report_type: Enum
+        + message: string
+        + status: Enum
+    }
+
+    %% ─── Notificaciones (granularidad decidida, implementación pendiente) ─
+    %% Suscripción de un usuario a una ComicReadingEntry concreta para recibir
+    %% notificación cuando aparezcan capítulos nuevos en esa fuente. Granularidad
+    %% decidida por Entry, no por Comic ni por ComicReadingSource genérica: entre
+    %% otras razones, así se resuelve el filtro de idioma/fuente preferida sin
+    %% campos adicionales, ya que el idioma ya es un atributo de ComicReadingEntry.
+    %% Deliberadamente independiente de ReadingState (seguimiento de progreso de
+    %% lectura): un usuario puede tener progreso registrado sin notificaciones
+    %% activas, o viceversa; son dos conceptos distintos aunque referencien el
+    %% mismo Comic/Entry.
+    %% Pendiente de implementación, bloqueado por: (a) estrategia de invalidación/
+    %% actualización de ComicReadingEntry, aún sin decidir; (b) mecanismo de job
+    %% periódico, aún sin decidir; (c) política de rate limit por
+    %% ComicReadingSource — probablemente por tandas periódicas (N entries por
+    %% sitio y ejecución, con algún orden), sin decidir y dependiente de datos
+    %% reales que hoy no existen porque no hay ningún ComicReadingProvider
+    %% implementado. No forma parte del backlog formal todavía.
+    class Follow {
+    }
+
+    %% Capítulo concreto disponible dentro de una ComicReadingEntry.
+    %% Solo tiene sentido si existe un adaptador para el ComicReadingSource
+    %% correspondiente. Usa number: float para numeraciones no enteras (0.5, extras…).
+    %% published_at: fecha de publicación/detección de ese capítulo concreto en la
+    %% fuente. Cada fila actúa como registro histórico (no se sobrescribe), lo que
+    %% permite agrupar por fecha para una futura pantalla de "capítulos nuevos por
+    %% día". Sigue siendo una entidad tentativa ("está por ver" si se implementa),
+    %% pero de implementarse, resolvería la necesidad de un log de eventos aparte.
+    class ChapterReadingEntry {
+        + number: float
+        + title: string
+        + published_at: Date
+    }
+
+    %% ─── Relaciones ──────────────────────────────────────────────
+
+    Comic "0..*" --> "0..*" Genre
+    Comic "0..*" --> "0..*" Tag
+    Comic "1" --> "1..*" ComicMetadataEntry
+    Comic "1" --> "0..*" ComicReadingEntry
+    Comic "1" --> "0..*" ComicReview
+    Comic "1" --> "0..*" ReadingState
+
+    ComicMetadataEntry "0..*" --> "1" ComicMetadataSource
+
+    ComicReadingEntry "0..*" --> "1" ComicReadingSource
+    ComicReadingEntry "0..*" --> "1" User : aportada por
+    ComicReadingEntry "1" --> "0..*" ComicReadingEntryReview
+    ComicReadingEntry "1" --> "0..*" ComicReadingEntryReport
+    ComicReadingEntry "1" --> "0..*" ChapterReadingEntry : tentativo
+
+    ComicReadingSource "1" --> "0..*" ComicReadingSourceReview
+
+    ComicReview "0..*" --> "1" User
+    ComicReadingSourceReview "0..*" --> "1" User
+    ComicReadingEntryReview "0..*" --> "1" User
+    ComicReadingEntryReport "0..*" --> "1" User
+
+    List "0..*" --> "1" User : creada por
+    List "0..*" --> "0..*" Comic
+
+    ReadingState "0..*" --> "1" User
+
+    Follow "0..*" --> "1" User : pendiente de implementación
+    Follow "0..*" --> "1" ComicReadingEntry : pendiente de implementación

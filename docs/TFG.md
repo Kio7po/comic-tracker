@@ -1,0 +1,383 @@
+# TFG — Juan Vázquez Longueira (UDC, Ingeniería de Software)
+
+## Problema
+La información sobre dónde leer cómics/mangas en internet está dispersa, en formatos heterogéneos y sin garantías de calidad. No existe un punto centralizado que lo agregue.
+
+## Solución
+Aplicación web de indexación colaborativa para búsqueda, seguimiento y localización de fuentes de lectura de cómics.
+
+## Capas de datos
+- **Metadatos del cómic** (título, autor, género, estado, portada, nº capítulos…): obtenidos automáticamente desde fuentes externas. El usuario no los toca.
+- **Fuentes de lectura** (sitio web donde se puede leer): aportación comunitaria. Requiere cuenta registrada.
+
+## Funcionalidades
+
+### Catálogo
+- Búsqueda por título (original y sinónimos), género y tipo (manga, tebeo, cómic occidental…).
+- Ficha por obra con metadatos completos.
+- Navegación pública sin cuenta.
+- Sin duplicados: cada cómic existe una sola vez. **Decidido a nivel de modelo de datos** — ver sección "Deduplicación y fusión de metadatos". Pendiente únicamente la estrategia de respaldo para cuando no hay cruce directo entre fuentes (ver esa misma sección).
+- Los usuarios **no crean cómics**, solo aportan fuentes sobre existentes.
+- **Fuente de datos para la búsqueda: decidido usar una única fuente principal** (no combinación multi-fuente), invocada a través del mismo puerto `ComicMetadataProvider` ya definido en Adaptadores de metadatos — esto la mantiene intercambiable si la fuente activa deja de estar disponible, sin necesidad de un patrón nuevo. *Razón:* combinar resultados paginados y rankeados de varias fuentes en una búsqueda en vivo introduce problemas de deduplicación de entidades, paginación inconsistente entre fuentes y latencia acumulada que no se justifican para el alcance de un TFG. Para el **detalle** de un cómic ya identificado sí se mantiene la combinación multi-fuente (ver Adaptadores de metadatos): ahí el problema es de fusión de campos sobre una misma entidad, no de fusión de conjuntos de resultados distintos.
+- **Decidido: sin carga batch inicial.** La fuente principal se consulta en vivo en cada búsqueda. `Comic` se persiste en BBDD únicamente cuando el usuario entra al detalle de una obra concreta (patrón cache-aside). *Razón:* una carga batch requiere infraestructura adicional (job programado, gestión de volumen inicial) que no se justifica para el alcance del TFG. El cache-aside mantiene el catálogo local creciendo orgánicamente a medida que los usuarios lo usan, sin necesidad de una carga previa.
+
+### Fuentes colaborativas
+- Por cada cómic, lista de sitios donde se puede leer.
+- Metadatos por fuente: nombre en el sitio, enlace, capítulos disponibles, estado, idioma…
+- Requiere cuenta registrada para aportar.
+
+### Seguimiento personal
+- El usuario registra qué está leyendo o quiere leer, con control de progreso.
+- **Granularidad del progreso: último capítulo leído** (`chapters: int` en `ReadingState`), incrementable y decrementable manualmente con controles +/-. No se registra el historial de capítulos leídos individualmente — pedirle al usuario que marque cada capítulo por separado se considera excesivo para el alcance del TFG. *Trade-off aceptado:* cómics con numeración no lineal (decimales, extras, prólogos) no encajan perfectamente en un entero, pero el modelo lo deja abierto a futuro si se implementa `ChapterReadingEntry` (ver Modelo de dominio).
+- Requiere cuenta registrada.
+- **Distinto de las notificaciones de nuevos capítulos** (ver sección siguiente): el seguimiento de progreso registra por qué capítulo va el usuario; las notificaciones son una suscripción aparte a una fuente concreta que puede activarse o desactivarse sin afectar al progreso registrado. Son dos conceptos independientes aunque puedan referenciar el mismo Comic/Entry.
+
+### Notificaciones de nuevos capítulos *(por concretar — explorada en discusión de diseño, no forma parte del backlog formal todavía)*
+- Pantalla que muestra, agrupados por día, los capítulos nuevos de los cómics que el usuario sigue para notificaciones.
+- **Decidido — granularidad:** la suscripción se hace por `ComicReadingEntry` concreta (no por `Comic` agregado, ni por `ComicReadingSource` genérica). *Razón:* solo hay señal fiable de "capítulo nuevo" para Entries cuya Source tenga Provider — los datos de número de capítulos de fuentes de metadatos (AniList, MyAnimeList) no son fiables para obras en emisión. Seguir por Entry además resuelve el filtro de idioma/fuente preferida sin necesidad de un mecanismo aparte, ya que el idioma ya es un atributo de `ComicReadingEntry`. Se descarta explícitamente seguir una `ComicReadingSource` completa ("avísame de todo lo nuevo en este sitio, sea el cómic que sea"): no se considera una necesidad real de usuario.
+- **Decidido — independencia del seguimiento de progreso:** es una entidad distinta de `ReadingState`, no una extensión suya. Reutiliza la entidad `Follow` ya prevista en el modelo de dominio (antes anotada como tentativa sin alcance definido; ver `domain.mmd`).
+- **Pendiente — mecanismo de detección:** requiere un job periódico que revise las Entries con suscripción activa, en lugar del patrón cache-aside on-demand ya usado para metadatos. Esto convierte en bloqueante la estrategia de invalidación de `ComicReadingEntry`, ya señalada como pendiente en este documento.
+- **Pendiente — rate limiting:** no es viable actualizar en una sola tanda todas las Entries seguidas de un sitio. Previsiblemente hará falta una estrategia por `ComicReadingSource`/Provider, en tandas periódicas (N entries por sitio y ejecución, con algún criterio de orden). No decidible hoy: depende de límites reales de cada sitio, que no se conocerán hasta que exista al menos un `ComicReadingProvider` implementado.
+- **Pendiente — tecnología de programación del job:** por decidir cuando el resto del diseño esté más cerrado (candidatas: `@Scheduled` de Spring frente a Quartz; el patrón general del proyecto favorece evitar infraestructura adicional salvo necesidad demostrada).
+- **Pendiente — log histórico:** la pantalla necesita poder agrupar capítulos detectados por fecha, lo cual requiere que el dato de "capítulo detectado" no se sobrescriba. Probablemente cubierto por `ChapterReadingEntry` (entidad aún tentativa en el modelo — ver `domain.mmd`), con un campo de fecha de publicación/detección por capítulo, en vez de una entidad de log separada.
+
+### Moderación *(por concretar)*
+- Los usuarios pueden valorar fuentes aportadas: correcto, incorrecto, roto, spam…
+- Requiere cuenta registrada.
+
+### Administración *(por concretar)*
+- Acceso total a todas las entidades del sistema, incluyendo cuentas de usuario. Alcance exacto de las operaciones por concretar.
+
+## Arquitectura de adaptadores
+
+Patrón común para dos tipos de integraciones externas. En ambos casos se define una interfaz y se implementa por cada fuente/sitio concreto. Al menos un adaptador concreto de cada tipo será implementado en el TFG.
+
+### Adaptadores de metadatos
+- Obtienen información del cómic desde fuentes externas (AniList, MangaDex…).
+- Combinables con prioridad configurable para completar información. **Aplica al detalle de un cómic ya identificado** (fusión de campos sobre una misma entidad); para la búsqueda de catálogo se usa una única fuente principal — ver sección Catálogo — por ser un problema distinto (fusión de conjuntos de resultados, no de campos). Modelo de datos de la fusión y de la deduplicación: ver sección "Deduplicación y fusión de metadatos".
+- Estrategia: on-demand inicialmente, batch periódico a futuro.
+
+### Adaptadores de fuentes de lectura
+- Dado un enlace aportado por un usuario, extraen información del sitio: nombre del cómic en ese sitio, capítulos disponibles, estado…
+- Detección del adaptador por dominio.
+- Si no hay adaptador para un sitio, se almacena el enlace tal cual.
+
+## Deduplicación y fusión de metadatos
+
+Hay dos cosas que se mantenían mezcladas en redacciones anteriores de este documento y que conviene separar:
+
+- **Trazabilidad por fuente:** cada fuente de metadatos (AniList, MangaDex…) puede traer datos distintos para la misma obra, o no traerlos en absoluto. Se guardan por separado, etiquetados con su procedencia. No es duplicación — es información distinta que debe poder atribuirse a su origen.
+- **Fusión por prioridad:** ya decidida en Adaptadores de metadatos — los datos por fuente se combinan según un orden de prioridad configurable, completando huecos sin sobrescribir el valor de una fuente de mayor prioridad.
+
+**Modelo de datos — decidido:**
+- `Comic` (entidad canónica, ya existente en `domain/entities/`): guarda los valores **efectivos**, ya fusionados según prioridad, de los campos que el catálogo necesita mostrar y buscar (título, género, tipo, estado, portada, sinopsis…). Se recalculan cuando cambian los datos de alguna fuente o la prioridad configurada — no es una tabla de identidad vacía, es una vista materializada de la fusión.
+- **`ComicMetadataSource`** (nombre definitivo — ver "Convención de nombres de entidades y adaptadores"): el sitio de metadatos en sí (AniList, MangaDex…), como entidad propia.
+- **`ComicMetadataEntry`** (nombre definitivo, antes "FuenteMetadata" — ver "Convención de nombres de entidades y adaptadores"): una fila por (`comic_metadata_source_id`, id externo, comic_id), con restricción de unicidad sobre (`comic_metadata_source_id`, id externo). Guarda el dato crudo normalizado tal como lo devuelve esa fuente. Nombrada por simetría con `ComicReadingEntry`, ya existente. **Nota de migración de modelo:** al pasar `ComicMetadataSource` a ser una entidad real, la restricción de unicidad deja de apoyarse en un valor de fuente suelto (string/enum) y pasa a ser una FK a `ComicMetadataSource`.
+- La equivalencia entre dos fuentes para el mismo cómic **no se guarda como una tabla de pares "id↔id"** — se deduce porque ambas filas de `ComicMetadataEntry` apuntan al mismo `comic_id`. Se descarta explícitamente el diseño de pares sueltos porque, con tres o más fuentes, introduce un problema de cierre transitivo (A≈B y B≈C conocidos, pero A≈C no registrado directamente) que el modelo anclado al Comic no tiene.
+
+**Proceso de alta de una fuente nueva — orden de resolución, decidido:**
+1. Si el id externo ya está registrado en `ComicMetadataEntry`, se reutiliza su `comic_id` — no se crea un Comic nuevo.
+2. Si no, se comprueba si la fuente expone una referencia cruzada nativa hacia una fuente ya conocida. Caso concreto verificado: la API de MangaDex expone un campo de enlaces que puede incluir directamente el ID de AniList de la obra.
+3. Si tampoco hay referencia cruzada nativa, se puede consultar Wikidata, que mantiene propiedades de identificador estructuradas para varias fuentes de manga (AniList, MyAnimeList, MangaUpdates…). Cobertura parcial — depende de que la obra tenga ficha en Wikidata y esté enlazada. **No verificado para fuentes de cómic occidental** (Comic Vine, Grand Comics Database…), que usan un ecosistema de identificadores distinto.
+4. **Pendiente, descartado a propósito por no ser necesario ahora:** estrategia de respaldo para cuando ninguno de los pasos anteriores da correspondencia (matching manual, fuzzy por título/autor, o tratar como cómic nuevo hasta una resolución posterior).
+
+**Búsqueda de catálogo vs. ficha de detalle — decidido:** al filtrar por género/tipo/título, la coincidencia se evalúa contra el valor de **cualquier** fuente (unión), no solo el valor fusionado por prioridad — para no ocultar resultados solo porque la fuente de mayor prioridad no incluya una etiqueta que sí tiene otra. La ficha de detalle muestra el valor fusionado por prioridad. La prioridad es **global** (misma para todos los usuarios y todos los campos). *Mejora futura, no decidida:* prioridad configurable por usuario — se valoró y se descarta por ahora; el modelo ya guarda los datos crudos por fuente, así que esta puerta queda abierta sin coste arquitectónico si se decide más adelante.
+
+**Acoplamiento con la caché de adaptadores de metadatos (ver Decisiones técnicas relevantes):** cuando el TTL pasivo ya decidido provoque un refresco de los datos de una fuente, ese refresco debe disparar también un recálculo de los valores fusionados en `Comic`. No es una decisión nueva sobre el mecanismo de caché — es una dependencia entre ambas capas que conviene dejar anotada.
+
+## Convención de nombres de entidades y adaptadores
+
+Nombres definitivos (sustituyen a "FuenteMetadata"/"FuenteLectura", que eran informales y provisionales):
+
+| Concepto | Nombre definitivo | Antes (informal) |
+|---|---|---|
+| Sitio de metadatos en sí (AniList, MangaDex…), como entidad propia | `ComicMetadataSource` | no existía como entidad |
+| Registro por-cómic-por-fuente de metadatos (dato crudo normalizado) | `ComicMetadataEntry` | `FuenteMetadata` |
+| Sitio de lectura en sí (scans), como entidad propia | `ComicReadingSource` | no existía como entidad |
+| Registro por-cómic-por-sitio de lectura (enlace, capítulos, estado, idioma) | `ComicReadingEntry` | `FuenteLectura` |
+| Puerto de metadatos | `ComicMetadataProvider` | `MetadataProvider` |
+| Puerto de fuentes de lectura | `ComicReadingProvider` | `ReadingSourceAdapter` |
+| Implementación concreta de metadatos | `[Sitio]ComicMetadataProvider` (ej. `AniListComicMetadataProvider`, `MangaDexComicMetadataProvider`) | `AniListMetadataAdapter`, `MangaDexMetadataAdapter` |
+| Implementación concreta de lectura | `[Sitio]ComicReadingProvider` | implementaciones sin nombre fijado |
+
+**Razones de la convención:**
+
+- **`Source` vs. `Entry` separa dos conceptos que antes compartían nombre bajo "fuente":** "fuente" se usaba de forma ambigua tanto para el sitio en sí (AniList, un sitio de scans) como para el registro que liga ese sitio con un cómic concreto. `Source` queda reservado para el sitio como entidad propia; `Entry` para el registro por-cómic. Esto obliga a modelar `ComicMetadataSource`/`ComicReadingSource` como entidades reales (antes el "sitio" de metadatos no existía como tabla, era un valor suelto dentro de `FuenteMetadata`), no solo a renombrar.
+- **El prefijo `Comic` tiene dos motivaciones distintas según la entidad, no una sola:** en `ComicMetadataEntry`/`ComicReadingEntry` significa "vinculado a un cómic concreto" (la fila referencia un `comic_id`). En `ComicMetadataSource`/`ComicReadingSource` **no** hay vínculo a un cómic concreto — el prefijo ahí señala solo "del dominio de cómics" (p. ej. "fuente de metadata de cómics" en general, no de una obra en particular). Se deja anotado explícitamente para que no se asuma que una fila de `ComicMetadataSource` está atada a un cómic.
+- **Se descartaron los términos `Port` y `Adapter` para nombrar los conceptos genéricos** (puerto e implementación de Ports & Adapters), reservándolos para referirse al patrón en sí, y se usó en su lugar un nombre concreto del dominio: `Provider`.
+- **Convención puerto/implementación con `Provider`:** el puerto lleva el nombre genérico (`ComicMetadataProvider`), y cada implementación concreta antepone el nombre de la fuente al mismo nombre del puerto (`MangadexComicMetadataProvider`), en vez de usar un sufijo distinto tipo `...Adapter`. Es un patrón de nombrado extendido en Java/Spring (p. ej. `UserRepository` → `JpaUserRepository`; `PaymentGateway` → `StripePaymentGateway`): prefijo + mismo sufijo, en vez de sufijo distinto para cada nivel.
+- **Se corrige una inconsistencia previa del documento:** antes, el puerto del lado de lectura ya se llamaba `ReadingSourceAdapter` (con sufijo "Adapter", atípico para un puerto — rompía la convención que sí seguía el lado de metadatos, donde el puerto era `MetadataProvider` y solo las implementaciones llevaban "Adapter"). Con `ComicReadingProvider` como nuevo nombre del puerto, ambos lados (metadatos y lectura) siguen ahora el mismo criterio.
+
+## Modelo de dominio
+
+El diagrama de clases de dominio se encuentra en `docs/domain.mmd`. En él se incluyen descripciones de las entidades cuyo propósito no es evidente por su nombre.
+
+## Roles de usuario
+
+- **Visitante:** puede navegar y consultar el catálogo.
+- **Usuario registrado:** puede además aportar fuentes y valorar las existentes.
+- **Administrador:** acceso total a todas las entidades del sistema, incluyendo cuentas de usuario. Alcance exacto de las operaciones por concretar.
+
+## Metodología
+
+Ágil con iteraciones cortas, precedidas de un análisis y diseño global inicial (este marco general se mantiene; lo que estaba pendiente era el framework concreto de las iteraciones).
+
+**Decisión: Scrum simplificado**, adaptado a desarrollo en solitario. Eventos por iteración:
+
+- **Planning:** selección del backlog de la iteración, incluyendo la investigación y el análisis necesarios para acotar el alcance. *Razón:* al ser una sola persona, no hay reparto de tareas que justifique mantener "investigación y análisis" como fase separada del resto; se concentran en Planning porque es ahí donde se decide qué entra en la iteración. Es esperable que surja investigación o análisis puntual adicional durante el Increment ante imprevistos de diseño o implementación — esto se reconoce como excepción normal, no como inconsistencia del esquema.
+- **Increment:** diseño + desarrollo + pruebas de las historias seleccionadas en Planning.
+- **Review + Retrospective:** al final de la iteración, en una sola sesión pero como **dos salidas separadas** (qué se construyó vs. cómo se trabajó). *Razón:* al ser una sola persona hay poca discusión que requiera separar las sesiones, pero la memoria del TFG necesita poder evidenciar ambas cosas por separado.
+- **Daily:** descartada explícitamente. *Razón:* no hay equipo con quien sincronizar.
+
+**Timeboxing:** 1 semana por iteración. Fijo dentro de un incremento en curso; puede ajustarse de un incremento a otro si la duración resulta insuficiente o excesiva. *Razón:* evitar que el timebox se convierta en una variable libre a mitad de trabajo (lo que suele invalidar la práctica); se revisa solo entre incrementos porque 1 semana es una estimación inicial todavía sin validar con datos reales.
+
+## Gestión de tareas
+
+**Decisión: Jira (plan Free, proyecto de tipo team-managed).** *Razón:* el team-managed (antes "next-gen") no requiere administrador de Jira para crearse ni configurarse, y permite activar o desactivar funciones ágiles (sprints, backlog, estimaciones) según necesidad — ajustado a un proyecto de una sola persona, frente a la configuración más rígida del company-managed. Frente a GitHub Projects, se prioriza tener informes ágiles automáticos de fábrica (burndown, velocity): conectan directamente con una decisión pendiente de la metodología — el timeboxing de 1 semana está marcado como "estimación inicial sin validar con datos reales" (ver Metodología), y esos informes son la fuente de esos datos sin trabajo manual añadido.
+
+**Integración con GitHub:** app oficial "GitHub for Jira" (gratuita, instalación de pocos minutos, compatible con proyectos team-managed). El enlace entre commits/ramas/PRs y los issues de Jira se hace incluyendo la clave del issue (p. ej. `TFG-12`) en el mensaje de commit, nombre de rama o título de PR. La integración es de un solo sentido (GitHub → Jira) — no supone un problema porque GitHub no se usará para gestión de tareas en paralelo.
+
+**Estado de la puesta en marcha — hecho:** proyecto Jira creado, tipo Scrum, clave `TFG`. App "GitHub for Jira" instalada y conectada al repositorio (confirmado en la práctica: las reglas de automatización descritas más abajo, que dependen de esa conexión, ya están funcionando).
+
+**Workflow — estados decididos:** Por hacer, En curso, En revisión, Bloqueada, Finalizado.
+
+Las transiciones del workflow se han nombrado explícitamente (Project settings → Work types → Edit workflow → botón "Transition"), en minúscula y con guion medio, para poder invocarlas por Smart Commit. Los nombres son: `start`, `review`, `done`, `reject`, `reopen`.
+
+**Doble mecanismo de cambio de estado — decidido mantener ambos en paralelo:**
+- **Automatización (Jira Automation):** reglas basadas en eventos de GitHub, configuradas para: creación de rama con la clave del issue en el nombre → En curso; creación de PR → En revisión; PR fusionada → Finalizado. *Decidido, por ahora:* la regla de PR fusionada **no** filtra por rama destino (`{{pullRequest.destinationBranch.name}}`) — se consideró la condición pero se pospuso conscientemente por no ser necesaria todavía; queda abierta para añadirla si se considera oportuno más adelante.
+- **Smart Commits:** se mantienen activos igualmente, como mecanismo manual complementario (vía `#comment`, `#time`, `#<transición>` en el mensaje de commit), pese a solaparse en parte con lo que ya cubre la automatización.
+- **Nota de riesgo, no una decisión:** ambos mecanismos son independientes entre sí y no se coordinan — no hay una "prioridad" definida por Jira entre ellos. Si en algún momento un Smart Commit y una regla de automatización llegan a apuntar a transiciones distintas sobre el mismo evento, pueden ejecutarse ambas sin arbitraje, con el resultado dependiendo del orden de ejecución. Con las reglas actuales el riesgo práctico es bajo porque automatización y Smart Commits no compiten por el mismo evento (rama/PR vs. commit), pero conviene vigilarlo si se añaden más reglas.
+- Las transiciones `block`/`unblock` no están automatizadas ni tienen Smart Commit asociado — uso manual desde el tablero, por ser eventos que no coinciden de forma natural con un commit ni con una acción de GitHub.
+
+**Pendiente, no confirmado en este documento:** que los requisitos previos de los Smart Commits (email de git público y coincidente con la cuenta de Jira, Time tracking activado, permisos de transición) estén realmente cumplidos — no se ha confirmado explícitamente en la conversación, solo se ha dejado como checklist.
+
+**Plan de salida, condicional, no descartado:** si el uso de Jira resulta excesivo para el alcance de un proyecto de una sola persona, se contempla migrar a GitHub Projects. *Aviso:* no existe ruta de exportación/migración automática de Jira a GitHub Projects — el traspaso del backlog pendiente sería manual.
+
+**Azure DevOps Boards: descartado.** *Razón:* ecosistema más pesado que las otras dos opciones para un proyecto de una sola persona, sin sinergia adicional si no se usa el resto del ecosistema Azure.
+
+## Stack
+
+- **Backend:** Java 21 + Spring Boot 4.1.x (actualizado desde 3.4.x: en el momento de crear el proyecto, la serie 3.4 ya había quedado fuera de las opciones activas de Initializr — solo 4.0 y 4.1 tenían soporte activo. El salto de versión mayor no afecta a las decisiones ya tomadas sobre Bean Validation, Spring Data JPA, etc.).
+- **Frontend:** React con TypeScript (decidido explícitamente; antes el documento solo decía "React" sin especificar JS/TS).
+- **BBDD:** PostgreSQL
+- **ORM:** Spring Data JPA + Hibernate
+- **Seguridad:** Spring Security con JWT. Sin librería de terceros para generar/validar el JWT — se usan las piezas ya incluidas en Spring Security 7 (`spring-boot-starter-oauth2-resource-server` para validar tokens entrantes + `spring-security-oauth2-jose` para emitirlos), en vez de una librería externa. `jjwt` queda anotado como alternativa considerada y no elegida, por si se reconsidera más adelante. Registro de usuarios: cuentas propias inicialmente; OAuth por valorar.
+- **Comunicación frontend-backend:** REST
+- **Frontend — toolchain de build: Vite.** Alternativas descartadas: Create React App (deprecado por el propio equipo de React, ya no es la vía recomendada ni mantenida activamente) y Next.js (orientado a SSR/rutas de servidor; obligaría a decidir modo de renderizado y dónde desplegar ese runtime Node, sin que exista ningún requisito de SEO o renderizado en servidor en el alcance del proyecto). Vite genera una SPA como build estático, coherente con el modelo de despliegue ya decidido (backend y frontend como servicios independientes, sin acoplar el frontend a un runtime Node en producción).
+- **Frontend — Node.js: versión LTS activa** (no la última en sentido estricto). *Razón:* la versión más reciente de Node en cada momento suele ser una rama "Current" sin garantías de estabilidad para uso continuado, y además Corepack (usado para gestionar pnpm) deja de venir incluida por defecto a partir de Node 25.
+- **Frontend — gestor de paquetes:** pnpm, instalado vía Corepack (`corepack enable` + `corepack prepare pnpm@latest --activate`), en vez de una instalación global aparte.
+- **Frontend — Linter: ESLint.** Se valoró Oxlint (Rust, del mismo equipo que mantiene Vite, órdenes de magnitud más rápido) pero se descarta por ahora: la cobertura de reglas TypeScript *type-aware* (las que detectan errores reales de tipos, no solo de estilo) sigue siendo más madura en ESLint/`typescript-eslint`, y la ganancia de velocidad de Oxlint no se justifica a la escala de este proyecto.
+- **Frontend — Formateador: Prettier — sin decidir.** ESLint no formatea código, solo detecta problemas; si se quiere formato automático consistente haría falta añadir Prettier aparte, con `eslint-config-prettier` para que no choquen reglas de estilo entre ambas herramientas.
+- **Frontend — Cliente HTTP: Axios**, decidido. La instancia configurada (`baseURL` desde variable de entorno + interceptor para adjuntar el JWT) queda pendiente de implementar en `common/api/`.
+- **Validación de entrada (backend): Bean Validation** (`spring-boot-starter-validation`), usada en los DTOs de `web/dto/` (no en las entidades de dominio), coherente con la separación DTO/entidad ya decidida. Cubre la validación de datos aportados por el usuario (enlaces y metadatos de fuentes de lectura, entre otros).
+- **Lombok: descartado.** Motivo: interfiere con el autocompletado/depuración en algunos entornos y genera código no visible en el fuente (riesgo señalado especialmente en `equals`/`hashCode` autogenerados sobre entidades JPA con relaciones lazy). Getters/setters/constructores se escriben a mano.
+- **Mapeo entidad ↔ DTO: manual, sin MapStruct.** Se considera y se descarta explícitamente: el mapeo manual no se percibe como suficientemente costoso para justificar la dependencia adicional.
+- **Backend — Actuator: decidido no añadirlo por ahora.** Sin un entorno de despliegue definido (ver Modelo de despliegue), no hay nada que consuma sus endpoints de salud/métricas; es una dependencia de una línea el día que haga falta.
+
+### Decisiones técnicas relevantes
+
+**Virtual threads (Java 21):** se habilitan con `spring.threads.virtual.enabled=true` en Spring Boot 3.2+. Los adaptadores de metadatos realizan llamadas I/O bloqueantes a APIs externas (AniList, MangaDex…); con virtual threads, la JVM aparca esos threads mientras esperan respuesta en lugar de mantener threads del SO bloqueados. Esto justifica explícitamente el uso de Java 21.
+
+**Adaptadores de metadatos asíncronos: decidido.** Las llamadas a múltiples fuentes externas se lanzan en paralelo para combinar los resultados según prioridad configurable. Implementación: `Executors.newVirtualThreadPerTaskExecutor()` — cada adaptador se ejecuta en su propio virtual thread con una llamada bloqueante normal (`provider.fetch(...)`), y el orquestador espera a todos con `executor.invokeAll(...)`.
+
+*Razón:*
+- Es el estilo idiomático para E/S bloqueante en paralelo según el propio diseño de Project Loom/Java 21: el valor de los virtual threads es escribir código bloqueante normal sin necesidad de encadenar `CompletableFuture`, dejando que la JVM aparque el virtual thread mientras espera la respuesta de red.
+- Mantiene el puerto `ComicMetadataProvider` libre de detalles de infraestructura: `fetch()` devuelve un tipo de dominio normal (`Optional<MetadataResult>`), no `CompletableFuture<...>`. La paralelización queda encapsulada en el orquestador (`MetadataAggregatorService`, en `domain/service/`), sin filtrarse al contrato del puerto — más coherente con Arquitectura Hexagonal que la alternativa con `@Async`.
+- Evita el problema de self-invocation de los proxies `@Async` (no intercepta llamadas dentro de la misma clase) y la configuración adicional de executor que esa vía exige.
+
+*Verificado, no asumido:* las llamadas a distintas fuentes sí se solapan en tiempo real (no es concurrencia aparente) — al bloquear en E/S de red, el virtual thread se desmonta de su carrier thread, liberándolo para otro adaptador. Confirmado contra documentación de Project Loom y los JEP correspondientes, no asumido por analogía con otros modelos de concurrencia.
+
+**Riesgo a vigilar — pinning en Java 21:** un virtual thread bloqueado dentro de un `synchronized` no se desmonta de su carrier ("pinning"), reduciendo la concurrencia real. Corregido en JDK 24 (JEP 491), **no en Java 21** (la versión fijada en este TFG). No afecta a una llamada bloqueante normal sin `synchronized` alrededor (caso actual de los adaptadores), pero es relevante para la decisión pendiente de tecnología de caché (ver "Caché de respuestas de adaptadores externos" más abajo): si esa caché se implementa con `ConcurrentHashMap.computeIfAbsent(...)` y la llamada bloqueante ocurre dentro de esa función, el `synchronized` interno de `ConcurrentHashMap` sobre la clave pinearía el virtual thread en Java 21. A la escala de tráfico de este TFG (2-4 llamadas en paralelo por petición, no miles de usuarios concurrentes) el impacto sería mínimo incluso si ocurriera, pero queda anotado para tenerlo en cuenta al decidir esa tecnología.
+
+**Alternativa descartada — `@Async` + `CompletableFuture`:** enfoque clásico de Spring, ampliamente documentado, pero descartado por las razones de arriba (el puerto tendría que devolver `CompletableFuture<...>`, filtrando un detalle de infraestructura al dominio) y porque requiere configurar explícitamente el executor para que `@Async` use virtual threads — de lo contrario no los adopta automáticamente pese a tener `spring.threads.virtual.enabled=true`.
+
+**Caché de respuestas de adaptadores externos:** se cachean las respuestas de todos los adaptadores externos (metadatos y fuentes de lectura) para evitar llamadas redundantes a servicios de terceros. La motivación difiere según el tipo:
+
+- *Adaptadores de metadatos:* los datos (título, autor, género…) cambian con poca frecuencia. Las APIs externas tienen rate limits y la consulta implica llamadas en paralelo a varias fuentes; repetir esa operación para cada petición no tiene sentido.
+- *Adaptadores de fuentes de lectura:* los datos (capítulos disponibles, estado…) cambian con más frecuencia. La motivación aquí es principalmente evitar llamadas repetidas al mismo sitio externo en períodos cortos de tiempo, algo esperable con obras populares. Esto introduce un tradeoff inherente: los datos cacheados pueden estar desactualizados. Esta diferencia deberá tenerse en cuenta al definir la estrategia de invalidación.
+
+**Estrategia de invalidación — adaptadores de metadatos: decidido.** TTL pasivo: cada entrada cacheada guarda el momento de la última consulta; al pedir ese cómic, si ha pasado más tiempo que el TTL configurado desde esa última consulta, se repite la llamada a los adaptadores antes de servir la respuesta; si no, se sirve el valor cacheado. No requiere infraestructura adicional (sin job programado). *Razón:* coherente con que estos datos cambian con poca frecuencia (ya establecido arriba) y con la estrategia "on-demand inicialmente" ya prevista en Adaptadores de metadatos — es su implementación concreta, no una decisión nueva independiente. **Pendiente:** el valor concreto del TTL no está fijado.
+
+*Mejora futura planteada, no decidida:* complementar el TTL pasivo con un batch periódico dirigido (no a todo el catálogo, para no multiplicar consumo de rate limit por cómic) que refresque proactivamente los cómics con más tráfico o marcados como "en emisión", reduciendo la latencia que sufre el primer usuario que pide un dato ya caducado. Coherente con el "batch periódico a futuro" ya previsto en Adaptadores de metadatos.
+
+**Estrategia de invalidación — adaptadores de fuentes de lectura:** sigue sin decidir. La motivación es distinta (evitar llamadas repetidas en períodos cortos, no datos estables — ver arriba), por lo que el TTL pasivo decidido para metadatos no se traslada automáticamente a este caso.
+
+La tecnología concreta de caché (almacén, etc.) no está decidida. Implementación diferida según disponibilidad de tiempo.
+
+**Gestión de esquema de BBDD: `schema.sql` / `data.sql`, versionados en el repositorio, con `spring.jpa.hibernate.ddl-auto=none`** (o `validate`) para evitar que Hibernate genere o altere el esquema por su cuenta. Alternativas consideradas y descartadas: Flyway y Liquibase — ambas resuelven un historial incremental de cambios de esquema (migraciones numeradas, aplicables paso a paso), pero se descartan por no considerarse necesarias para un esquema que no se prevé grande. **Trade-off aceptado explícitamente:** a diferencia de una migración incremental, `schema.sql` representa el estado actual completo del esquema, no un historial paso a paso de cómo se llegó a él; el control de versiones del repositorio permite recuperar versiones anteriores del fichero, pero no aplicar cambios incrementales sobre una BBDD ya poblada sin intervención manual. **Aviso operativo comprobado:** con PostgreSQL como BBDD externa (no embebida), Spring Boot por defecto **no ejecuta `schema.sql`/`data.sql` salvo que se declare explícitamente `spring.sql.init.mode=always`** — sin esa propiedad, los scripts no se ejecutan nunca. Pendiente de revisar ese valor cuando exista un modelo de despliegue real: no debería quedarse en `always` fuera de desarrollo, porque reejecutaría los scripts en cada reinicio.
+
+**ORM:** `FetchType.LAZY` por defecto en todas las relaciones. Las fuentes de lectura se cargan únicamente al consultar el detalle de un cómic concreto, no en el catálogo general, por lo que el problema N+1 no aplica en los casos relevantes.
+
+**Testing de integración — Testcontainers, decidido.** Sustituye a una decisión anterior de este documento ("Testcontainers descartado por ahora"). *Motivo del cambio:* la integración `@ServiceConnection` (disponible desde Spring Boot 3.1, vigente en 4.x) elimina la fricción que originalmente motivó posponerlo — gestiona automáticamente el ciclo de vida de un contenedor PostgreSQL por clase de test, sin necesitar una segunda base de datos gestionada a mano ni coordinar un contenedor externo en CI. La clase de test por defecto generada por Initializr sigue este mismo patrón, para que la suite no dependa de tener el entorno de desarrollo local ya levantado.
+
+**Cobertura backend — JaCoCo.** El goal `report` está atado a la fase `verify` del ciclo de vida de Maven (no a `test`). Decisión deliberada, no un descuido: si en el futuro se separan tests unitarios (Surefire, fase `test`) de tests de integración (Failsafe, fases `integration-test`/`verify`), el informe seguiría generándose correctamente después de ambos sin tener que revisar esta configuración — atarlo a `verify` no tiene coste hoy y evita un ajuste futuro.
+
+**Análisis de calidad — SonarQube Cloud** (nombre de marca correcto; en versiones anteriores de este documento se refería como "SonarCloud"). La integración usada es distinta según el stack:
+- **Backend (Maven):** se usa el plugin oficial `sonar-maven-plugin`, invocado en la misma llamada de Maven que hace el build, dentro del propio workflow de CI (ver CI/CD más abajo) — no una action de GitHub. Los identificadores de proyecto (`sonar.projectKey`, `sonar.organization`) se declaran como `<properties>` en el propio `pom.xml`.
+- **Frontend (TypeScript):** al no existir un integrador de Maven/Gradle equivalente para npm/pnpm, sí se usa la action oficial de GitHub para SonarQube Cloud. Los identificadores de proyecto se declaran en `sonar-project.properties`, en la raíz de `frontend/`.  El analizador de JS/TS de Sonar interpreta JSX/TSX de forma nativa e incluye reglas propias orientadas a React, sin necesidad de plugin adicional; toma la cobertura del reporte LCOV que genera Jest con `--coverage` por defecto.
+- Se opta por **dos proyectos Sonar independientes** (uno por app) en vez de un único proyecto multi-módulo, por simplicidad a esta escala. Misma organización para ambos, y ambos proyectos comparten el mismo token de autenticación (`SONAR_TOKEN`) frente a la API de SonarQube Cloud. `SONAR_TOKEN` ya está dado de alta como secret del repositorio en GitHub Actions.
+
+## Herramientas de desarrollo y build
+
+### Build
+
+- **Backend:** Maven.
+- **Frontend:** pnpm, gestionado de forma nativa (no envuelto dentro de Maven).
+
+**Decisión descartada — Maven unificando backend y frontend:** se valoró usar `frontend-maven-plugin` para que un único proyecto Maven gestionase también el build del frontend (con el resultado de `pnpm build` empaquetado dentro del JAR de Spring Boot). Esto se descartó al decidir el modelo de despliegue (ver más abajo): si backend y frontend son servicios independientes, no tiene sentido acoplar sus ciclos de build en una sola herramienta. Maven gestiona únicamente el backend.
+
+### Modelo de despliegue (arquitectura)
+
+Backend y frontend se ejecutan y despliegan como **servicios independientes** (no como un JAR único que sirva ambos).
+
+### Estructura de repositorio
+
+**Monorepo**, con `/backend` y `/frontend` como carpetas separadas dentro del mismo repositorio. Se prefiere frente a repositorios separados por la menor sobrecarga de gestión a la escala de un TFG desarrollado por una sola persona.
+
+Estructura de carpetas de la raíz del repositorio (la estructura interna de `backend/` y `frontend/` se detalla en las dos secciones siguientes):
+
+```
+/ (raíz del repo)
+├── backend/                    # Proyecto Maven (Spring Boot)
+│   ├── pom.xml
+│   └── src/...                 # estructura interna: ver "Estructura interna del backend"
+│
+├── frontend/                   # Proyecto pnpm (React)
+│   ├── package.json
+│   ├── pnpm-lock.yaml
+│   └── src/...                 # estructura interna: ver "Estructura interna del frontend"
+│
+├── docs/                       # Documentación del TFG — contenido exacto: pendiente
+│
+├── docker-compose.yml          # Solo PostgreSQL; especificaciones ya decididas — ver "Orquestación en desarrollo"
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # Workflow único, jobs "backend" y "frontend" — ver "CI/CD"
+│
+├── .gitignore                  # Único en la raíz, cubre target/ (Java) y node_modules/ (Node)
+└── README.md
+```
+
+**Workflow de CI único vs separado por stack:** se valoró tener dos workflows independientes (`backend-ci.yml`, `frontend-ci.yml`) frente a uno único con dos jobs. Se decidió ir con un único `ci.yml` con jobs `backend` y `frontend`, por ser la opción más simple de gestionar a la escala de un TFG de una sola persona (un solo fichero, sin necesidad de mantener dos en paralelo). Si el pipeline crece en complejidad, separar los jobs en workflows independientes es un cambio sencillo de aplicar más adelante.
+
+**`docs/`:** carpeta para la documentación del TFG, separada del código. El contenido exacto que irá dentro (memoria, diagramas, anteproyecto, este propio documento…) queda pendiente de decidir.
+
+### Estructura interna del backend
+
+**Patrón: Arquitectura Hexagonal (Ports & Adapters)**, adoptada y nombrada explícitamente. *Razón:* los adaptadores de metadatos y de fuentes de lectura no son "acceso a datos" en sentido estricto (no son una base de datos, y hay varios tipos distintos); el patrón Hexagonal resuelve esto tratando la persistencia como un adaptador más entre varios (hacia BD, hacia APIs externas, hacia sitios web de terceros), todos al mismo nivel, cada uno implementando un puerto (interfaz) definido por el dominio.
+
+```
+backend/src/main/java/.../
+├── domain/
+│   ├── entities/          Comic, ComicMetadataSource, ComicMetadataEntry, ComicReadingSource,
+│                           ComicReadingEntry (nombres definitivos — ver "Convención de
+│                           nombres de entidades y adaptadores") (crecerá: p. ej.
+│                           Valoracion para moderación)
+│   ├── exceptions/         excepciones de dominio, sin conocimiento de HTTP
+│   └── service/             lógica de negocio: combinar adaptadores de metadatos por
+│                           prioridad, deduplicación, cálculo de progreso
+│
+├── adapter/
+│   ├── persistence/         adaptador hacia BD: repositorios JPA
+│   ├── metadata/             ComicMetadataProvider (puerto) + AniListComicMetadataProvider,
+│                            MangaDexComicMetadataProvider...
+│   └── source/                ComicReadingProvider (puerto) + implementaciones por dominio
+│                            (p. ej. `[Sitio]ComicReadingProvider`)
+│
+└── web/
+    ├── controller/
+    ├── dto/                  DTOs de request/response, separados de las entidades JPA
+    ├── mapper/               entidad ↔ DTO (manual — MapStruct descartado, ver Stack)
+    ├── exception/            GlobalExceptionHandler (@RestControllerAdvice), traduce
+    │                        excepciones de dominio a códigos HTTP (404, 409...)
+    └── security/             SecurityConfig, JwtAuthenticationFilter. Incluye también
+                             la configuración de CORS (necesaria porque frontend y backend
+                             corren en orígenes distintos).
+```
+
+Razones puntuales:
+- **`web/` fuera de `adapter/`, pese a que estrictamente en Ports & Adapters todo lo que no es dominio es "un adaptador más":** los adaptadores agrupados en `adapter/` (`persistence`, `metadata`, `source`) tienen en común que **implementan un puerto definido por el dominio** (`ComicMetadataProvider`, `ComicReadingProvider`, los repositorios JPA) — el dominio define la interfaz, el adaptador la implementa, con inversión de dependencia real. `web/` no cumple esa condición: según `architecture.mmd`, los controllers llaman directamente a los services de dominio (`CTRL --> SVC_CAT`, etc.), sin que exista ninguna interfaz de caso de uso definida en `domain/` que el controller implemente o consuma como contrato. Al no haber puerto que implementar, no hay simetría real que justifique tratar `web/` como "un adaptador más" junto a los driven. **Nota importante:** la razón correcta es la ausencia de puerto de dominio, *no* que la API REST no vaya a tener varias implementaciones o formas de entrada alternativas (p. ej. GraphQL) — esa multiplicidad no es la condición que define un adaptador en Hexagonal (un adaptador con una sola implementación posible sigue siendo un adaptador si implementa un puerto); usar ese argumento no resistiría bien una pregunta directa sobre qué es un "puerto" en Ports & Adapters. **Pendiente, no decidido:** si en el futuro se introdujeran interfaces de caso de uso en `domain/` que los controllers consumieran como contrato (con o sin una segunda entrada como GraphQL), `web/` pasaría a cumplir la misma condición que los adaptadores driven y esta ubicación debería reconsiderarse.
+- **DTOs separados de entidades JPA:** motivado directamente por `FetchType.LAZY` (ya decidido) — serializar entidades JPA con relaciones lazy directamente como respuesta REST puede dar problemas (proxies, `LazyInitializationException`, ciclos).
+- **`security/` dentro de `web/`**, en lugar de un paquete propio al mismo nivel que `domain/`/`adapter/`/`web/`: justificado porque, en el alcance actual del TFG, el 100% de lo que protege el JWT son los endpoints REST — no hay otro punto de entrada (colas de mensajes, WebSocket...). Si en el futuro apareciera otro punto de entrada que también necesite autenticación, habría que reconsiderar esta ubicación.
+- **`exceptions/` dentro de `domain/`:** las excepciones de negocio no deben conocer HTTP; su traducción a códigos de estado se centraliza aparte, en `web/exception/`.
+
+### Estructura interna del frontend
+
+```
+frontend/src/
+├── app/                    routing + bootstrap
+├── common/
+│   ├── api/                 cliente HTTP base (Axios; instancia con baseURL + interceptor
+│   │                        JWT — pendiente de implementar)
+│   └── components/           componentes UI genéricos compartidos entre módulos
+│
+├── services/                 DTOs (tal cual los devuelve la API) + llamadas API, por entidad
+│   ├── comic/    { types/, api/ }
+│   ├── source/   { types/, api/ }
+│   └── user/     { types/, api/ }
+│
+└── modules/                  composición de UI por funcionalidad (auth, catalog, tracking...)
+```
+
+Razones puntuales:
+- **`services/` separado de `modules/`:** las entidades de negocio (Comic, ComicReadingEntry, Usuario) no corresponden 1:1 con los módulos de UI — una misma pantalla puede necesitar varias entidades a la vez (p. ej. detalle de cómic + sus fuentes), y un módulo de UI puede no mapear a una sola entidad. Mantenerlas separadas evita forzar esa correspondencia. Inspirado en el concepto de capa "entities" de Feature-Sliced Design, sin adoptar sus reglas estrictas de importación entre capas.
+- **Los tipos en `services/` son DTOs, no modelos de UI transformados:** simetría intencionada con `web/dto` del backend — ambos representan la forma del contrato HTTP, no un modelo de dominio enriquecido.
+- **Sin capa de mapeo DTO → modelo de UI por ahora:** los componentes consumen los DTOs directamente. Se acepta el acoplamiento resultante (un cambio de forma en un DTO impacta a los componentes que lo usan) porque, al ser un proyecto de una sola persona controlando ambos extremos, el coste de ese acoplamiento cuando ocurra es manejable. **Revisar si:** (a) un componente necesita combinar DTOs de varias entidades a la vez, o (b) se necesita un campo derivado que no viene tal cual de la API — en cualquiera de esos casos, introducir el mapeo en ese módulo concreto, no en todos a la vez.
+- **`common/` fuera de `modules/`:** deliberado, para que cualquier módulo pueda importar de `common/` sin necesidad de una regla de excepción — al no ser un módulo más, no rompe el principio de que los módulos no se importan entre sí.
+
+### Orquestación en desarrollo
+
+- **Docker Compose:** se usa para levantar **PostgreSQL** en local. Especificaciones ya decididas (contenido completo en el propio `docker-compose.yml` del repositorio):
+  - Imagen `postgres:18-alpine`, con **ICU como proveedor de locale** (en vez del proveedor por defecto de la libc del sistema). *Razón:* Alpine usa `musl` como libc, que solo soporta de forma nativa las locales `C`/`POSIX` — insuficiente para ordenar/buscar correctamente títulos en español, algo relevante para el catálogo. ICU trae sus propios datos de locale, independientes del sistema operativo, resolviendo el problema sin renunciar al menor tamaño de imagen de Alpine.
+  - Volumen montado en `/var/lib/postgresql` (no en `/var/lib/postgresql/data`, válido hasta PostgreSQL 17 pero no desde la 18, por un cambio de layout de la propia imagen oficial hacia un formato compatible con `pg_ctlcluster`).
+  - Ambos parámetros (locale y layout del volumen) se fijan una sola vez, al crear el volumen — cualquier cambio posterior requiere recrearlo desde cero.
+- **Backend:** se lanza nativo (`mvn spring-boot:run` o equivalente).
+- **Frontend:** se lanza nativo (`pnpm dev`).
+- *Evolución futura prevista (no decidida aún):* extender el `docker-compose.yml` para incluir también backend y frontend cuando el proyecto esté más maduro.
+
+### Gestión de secrets
+
+Ningún secreto (credenciales de BBDD, futuro secreto de firma del JWT) se hardcodea en el código ni se versiona.
+
+- **Backend:** Spring Boot no soporta ficheros `.env` de forma nativa. Se usa la dependencia **`springboot4-dotenv`** para cargar `backend/.env` (gitignorado), con las credenciales de conexión consumidas en `application.yml` vía placeholders.
+- **Docker Compose (raíz del repo):** lee su propio `.env` (gitignorado) de forma nativa, con las credenciales del contenedor Postgres. Es un fichero distinto al de `backend/.env`, con valores que hay que mantener sincronizados a mano entre ambos — no hay una única fuente de verdad automática, y no se ha considerado necesario añadir infraestructura para evitarlo a esta escala.
+- **Frontend:** Vite lee `.env`/`.env.local` de forma nativa. Convención decidida: solo se exponen al código cliente variables con prefijo `VITE_`. **A día de hoy no existe `frontend/.env.local`** — no hace falta todavía, porque el frontend no necesita ninguna variable de entorno en el punto actual del desarrollo; se creará cuando exista una (p. ej. la URL del backend). La URL del backend, en cualquier caso, no se trata como secreto real.
+- **CORS:** pendiente de implementar en `web/security/SecurityConfig` — necesario para que el frontend (origen distinto al del backend) pueda llamar a la API. No es una decisión de arquitectura, es un requisito de funcionamiento básico una vez ambos servicios corran de forma independiente.
+
+### Documentación de la API
+
+**Swagger**, mediante **Springdoc OpenAPI** (`springdoc-openapi-starter-webmvc-ui`, compatible con Spring Boot 3.x/4.x). Genera la documentación a partir de las anotaciones del código en tiempo de ejecución.
+
+### Testing
+
+- **Backend:** stack nativo de Spring Boot — JUnit 5 + Mockito.
+- **BBDD para tests de integración: Testcontainers, decidido** (revierte la decisión anterior de posponerlo — ver justificación en "Decisiones técnicas relevantes"). Usa la misma imagen y configuración de locale que en desarrollo.
+- **Frontend:** Jest (nativo). **Aviso pendiente:** al no ser Vite-nativo, su configuración necesitará pasos adicionales (`ts-jest`/`babel-jest`, y `moduleNameMapper` si se usan los alias de ruta del frontend) que no harían falta con Vitest. Se mantiene Jest como decisión; solo se deja constancia de la fricción esperable.
+- **Cobertura backend:** JaCoCo (plugin Maven), cuyo informe alimenta el análisis de SonarQube Cloud.
+- **Cobertura frontend:** Jest con la flag `--coverage` (no requiere herramienta adicional), en formato LCOV, consumido por el análisis de SonarQube Cloud del frontend.
+- **E2E (tentativo, no cerrado):** Playwright. Pendiente de confirmar cuando haya una arquitectura estable de endpoints y vistas.
+- **Rendimiento/carga (tentativo, no cerrado):** k6. Pendiente de confirmar más adelante.
+
+### CI/CD — GitHub Actions
+
+Pipeline en un único `ci.yml` (contenido completo en el propio fichero del repositorio), con jobs `backend` y `frontend`.
+
+**Filtrado por carpeta cambiada:** no existe un filtro `paths` a nivel de job individual (ese filtro solo aplica a todo el workflow) — se usa en su lugar un job previo (`changes`) con la action `dorny/paths-filter`, del que dependen condicionalmente los jobs `backend` y `frontend`. Corrige el planteamiento de una versión anterior de este documento, que asumía incorrectamente que era posible un filtro `paths` por job.
+
+**Backend:** una única invocación de Maven que cubre build, tests (incluidos los de Testcontainers, que gestionan su propio contenedor Postgres sin nada adicional que preparar en el runner), cobertura (JaCoCo) y análisis de SonarQube Cloud — todo en la misma sesión de Maven, para que el análisis recoja los datos de cobertura de la ejecución que él mismo presencia, sin depender de qué sobreviva en disco entre comandos separados. Ya no hace falta declarar ningún servicio Postgres a nivel de job (a diferencia de un planteamiento anterior de este documento) — lo gestiona Testcontainers directamente.
+
+**Frontend:** instalación con `pnpm` (usando `pnpm/action-setup` antes de `actions/setup-node`, necesario porque pnpm no viene preinstalado en los runners), lint (ESLint), build, test con cobertura (Jest), y análisis de SonarQube Cloud vía la action oficial correspondiente.
+
+**Calidad de código — SonarQube Cloud** (corrección de nombre de marca respecto a versiones anteriores de este documento, que decían "SonarCloud"; la action que se había anotado inicialmente, específica de SonarCloud, está deprecada en favor de una action unificada). Integración distinta según stack, según se detalla en "Decisiones técnicas relevantes".
+
+**Pendiente, decisión consciente de posponer:** bloque `permissions` (lectura de contenido y de pull requests) en el job de filtrado por carpetas — recomendado por la documentación de la action usada para ese filtrado, no añadido todavía; se revisará más adelante.
+
+**Deploy** *(por decidir)*
+No hay destino de despliegue fijado (VPS propio, plataforma cloud, servidor de la UDC, etc.). Por tanto, el job de deploy del pipeline no existe todavía; se añadirá cuando se decida dónde se alojará la aplicación. Estará condicionado a la rama `main` y dependiente de que los jobs de build/test/calidad pasen correctamente.
+
+**Optimización disponible (no aplicada todavía):** al ser un monorepo, los jobs de backend y frontend ya solo se ejecutan cuando cambian archivos de su carpeta correspondiente (ver filtrado por carpeta cambiada, arriba) — esta optimización, planteada inicialmente como pendiente, queda resuelta con el cambio a `dorny/paths-filter`.
+
+## Directores
+- David Otero Freijeiro — david.otero.freijeiro@udc.es
+- Miguel Anxo Pérez Vila — anxo.pvila@udc.es
