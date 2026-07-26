@@ -14,6 +14,7 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     permissions:
+      contents: read       # requerido si el job hace checkout, es el default del repo pero al especificar permissions se sobreescribe con lo más restrictivo
       pull-requests: read  # requerido por dorny/paths-filter en una pr porque llama a la api de github
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
