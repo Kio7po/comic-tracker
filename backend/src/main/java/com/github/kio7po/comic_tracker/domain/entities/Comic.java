@@ -32,13 +32,13 @@ public class Comic {
     private String title;
     private String synopsis;
     private String coverUrl;
-    @ElementCollection(fetch = FetchType.LAZY)
     /*
         Usa la tabla por defecto <entity>_<attribute>
         Para la columna de unión <entity>_<PK>
         Para la columna con el dato sería <attribute>
         Importante, por defecto camelCase -> snake_case
     */
+    @ElementCollection(fetch = FetchType.LAZY)
     private Set<String> alternativeTitles = new HashSet<>();
     private LocalDate startDate;
     private LocalDate endDate;
