@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Comic Tracker is a TFG (bachelor's thesis, UDC) web app for indexing where to read comics/manga online: a public catalog with metadata pulled from external sources (AniList, MangaDex...), community-contributed reading sources (links to sites), and personal reading tracking. Monorepo with independent `backend/` (Spring Boot) and `frontend/` (React) services.
 
-**Current state: early skeleton.** `backend/` is an unmodified Spring Initializr project (one `@SpringBootApplication` class, no domain code yet) and `frontend/` is an unmodified Vite React+TS template. The architecture below is the *decided* design from `docs/TFG.md` that new code must follow — it does not yet exist in the tree. When implementing features, check `docs/TFG.md` for the specific decision and rationale before deviating from it; it records not just what was decided but what was considered and rejected, so re-litigating a settled question there wastes effort.
+The architecture below is the *decided* design from `docs/TFG.md` that new code must follow — the tree may lag behind it at any point in time, so check what's actually implemented (`git log`, directory listing) rather than trusting a hardcoded status here. When implementing features, check `docs/TFG.md` for the specific decision and rationale before deviating from it; it records not just what was decided but what was considered and rejected, so re-litigating a settled question there wastes effort.
 
 ## Commands
 
@@ -116,7 +116,7 @@ src/
 - **No MapStruct.** Entity<->DTO mapping is manual, in `web/mapper/`.
 - **Bean Validation** (`spring-boot-starter-validation`) on DTOs in `web/dto/`, not on JPA entities.
 - **`FetchType.LAZY` by default** on all JPA relations.
-- **Schema managed via versioned `schema.sql`/`data.sql`**, `spring.jpa.hibernate.ddl-auto=none`. No Flyway/Liquibase. Note `spring.sql.init.mode=always` is required for these scripts to run at all against an external (non-embedded) Postgres — currently set in `application.yml`; should not stay `always` once a real deployment exists (it would rerun on every restart).
+- **Schema managed via versioned `schema.sql`/`data.sql`**, `spring.jpa.hibernate.ddl-auto=validate` (fails fast on startup if the entities and `schema.sql` drift apart, without letting Hibernate alter the schema itself). No Flyway/Liquibase. Note `spring.sql.init.mode=always` is required for these scripts to run at all against an external (non-embedded) Postgres — currently set in `application.yml`; should not stay `always` once a real deployment exists (it would rerun on every restart).
 - **CORS** needs configuring in `web/security/SecurityConfig` (frontend and backend run on different origins) — not yet implemented.
 - **Spring Security 7 note:** CSRF is on by default even for stateless JWT APIs and must be explicitly disabled (`http.csrf(AbstractHttpConfigurer::disable)`); `authorizeRequests()` no longer exists, only `authorizeHttpRequests()`.
 - Frontend HTTP client is **Axios**; linter is **ESLint** (not Oxlint); formatter (Prettier) is undecided/not set up.

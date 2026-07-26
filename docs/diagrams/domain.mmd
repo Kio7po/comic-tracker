@@ -17,6 +17,7 @@ classDiagram
     %% al usuario. Se persiste la primera vez que un usuario entra al detalle de una obra
     %% (cache-aside); hasta entonces existe solo en la fuente externa de búsqueda.
     class Comic {
+        + slug: string
         + title: string
         + synopsis: string
         + cover: string
@@ -27,18 +28,20 @@ classDiagram
         + media_type: Enum
         + status: Enum
         + chapters: int
-        + authors: string
-        + slug: string
     }
 
-    %% Genre y Tag son entidades propias (no enums) para permitir
-    %% que las fuentes de metadatos aporten valores distintos sin
-    %% estar restringidas a un conjunto cerrado predefinido.
+    %% Genre, Tag y Author son entidades propias (no enums/campos escalares)
+    %% para permitir que las fuentes de metadatos aporten valores distintos
+    %% sin estar restringidas a un conjunto cerrado predefinido.
     class Genre {
         + name: string
     }
 
     class Tag {
+        + name: string
+    }
+
+    class Author {
         + name: string
     }
 
@@ -173,6 +176,7 @@ classDiagram
 
     Comic "0..*" --> "0..*" Genre
     Comic "0..*" --> "0..*" Tag
+    Comic "0..*" --> "0..*" Author
     Comic "1" --> "1..*" ComicMetadataEntry
     Comic "1" --> "0..*" ComicReadingEntry
     Comic "1" --> "0..*" ComicReview
