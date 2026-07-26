@@ -2,9 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
   pull_request: # PRs to the following branches will trigger the workflow
-    branches: [main]
+    branches:
+      - main
+      - develop
 
 jobs:
   changes:
