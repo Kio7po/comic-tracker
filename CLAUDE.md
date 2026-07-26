@@ -8,6 +8,11 @@ Comic Tracker is a TFG (bachelor's thesis, UDC) web app for indexing where to re
 
 The architecture below is the *decided* design from `docs/TFG.md` that new code must follow — the tree may lag behind it at any point in time, so check what's actually implemented (`git log`, directory listing) rather than trusting a hardcoded status here. When implementing features, check `docs/TFG.md` for the specific decision and rationale before deviating from it; it records not just what was decided but what was considered and rejected, so re-litigating a settled question there wastes effort.
 
+### Working notes for Claude Code sessions
+
+- Before asserting a bug or inconsistency from `find`/`grep`/`cat` output, check whether multiple files matched (e.g. a build artifact under `target/`/`node_modules/`/`dist/` duplicating a source file) before presenting it as fact.
+- While an architectural decision is still being actively discussed and not yet confirmed as final, don't execute file moves/renames or other structural changes — wait for an explicit go-ahead, especially right after the user pushes back or reconsiders.
+
 ## Commands
 
 ### Backend (`backend/`, Maven, Java 21)
@@ -55,13 +60,15 @@ Planned package layout under `backend/src/main/java/.../`:
 ```
 domain/
   entities/    Comic, ComicMetadataSource, ComicMetadataEntry, ComicReadingSource, ComicReadingEntry, ...
+  port/        ports (interfaces) + their contract types, no impls — metadata/, source/
+  common/      generic domain types shared across ports, e.g. Page<T>
   exceptions/  domain exceptions, no HTTP knowledge
   service/     business logic: metadata merge-by-priority, dedup, progress calculation
 
 adapter/
   persistence/  JPA repositories (implements a domain-defined port)
-  metadata/     ComicMetadataProvider (port) + [Site]ComicMetadataProvider impls (AniList, MangaDex...)
-  source/       ComicReadingProvider (port) + [Site]ComicReadingProvider impls, detected by domain
+  metadata/     ComicMetadataProvider impls (AniList, MangaDex...)
+  source/       ComicReadingProvider impls, detected by domain
 
 web/
   controller/
@@ -94,6 +101,8 @@ Key modeling decisions worth knowing before touching this area:
 - Catalog search matches against the union of values across all metadata sources (not just the merged/priority value), so a tag present in only a lower-priority source still surfaces in search; the detail page shows the merged value.
 - Reading progress (`ReadingState.chapters`) is a single mutable int (+/- controls), not a per-chapter log. `Follow` (new-chapter notifications) and `ChapterReadingEntry` (per-chapter history) are separate, not-yet-implemented concepts — don't conflate them with `ReadingState`.
 - Catalog search uses a single primary metadata source live per query (no batch preload); `Comic` is only persisted the first time a user opens that work's detail page (cache-aside). Multi-source merging applies to the *detail* view, not catalog search.
+- `ComicMetadataProvider` returns `ComicMetadataResult` (externalId + a transient `Comic`), reusing `Comic`'s shape instead of a parallel type.
+- `[Site]ComicMetadataProvider` naming can use the actual API/library called instead of the site name when they differ (e.g. `JikanComicMetadataProvider` for `myanimelist`).
 
 ### Frontend structure (planned)
 
