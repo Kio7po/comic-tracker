@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
-import com.github.kio7po.comic_tracker.domain.enums.MediaType;
+import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
 
 import jakarta.persistence.Column;
@@ -45,7 +45,7 @@ public class Comic {
     @Enumerated(EnumType.STRING)
     private NsfwRating nsfw;
     @Enumerated(EnumType.STRING)
-    private MediaType mediaType;
+    private ComicMediaType mediaType;
     @Enumerated(EnumType.STRING)
     private ComicStatus status;
     private Integer chapters;
@@ -133,11 +133,11 @@ public class Comic {
         this.nsfw = nsfw;
     }
 
-    public MediaType getMediaType() {
+    public ComicMediaType getMediaType() {
         return mediaType;
     }
 
-    public void setMediaType(MediaType mediaType) {
+    public void setMediaType(ComicMediaType mediaType) {
         this.mediaType = mediaType;
     }
 

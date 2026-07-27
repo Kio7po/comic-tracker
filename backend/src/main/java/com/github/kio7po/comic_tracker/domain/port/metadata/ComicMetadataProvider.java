@@ -4,11 +4,11 @@ import java.util.Optional;
 
 import com.github.kio7po.comic_tracker.domain.common.Page;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
-import com.github.kio7po.comic_tracker.domain.enums.MediaType;
+import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
 
 public interface ComicMetadataProvider {
-    Page<ComicMetadataResult> search(String keywords, int limit, int offset, NsfwRating nsft, ComicStatus status, MediaType type);
+    Page<ComicMetadataResult> search(String keywords, int limit, int offset, NsfwRating nsfw, ComicStatus status, ComicMediaType type);
     Optional<ComicMetadataResult> fetch(String externalId);
     String getSourceSlug();
 }

@@ -102,7 +102,7 @@ Key modeling decisions worth knowing before touching this area:
 - Reading progress (`ReadingState.chapters`) is a single mutable int (+/- controls), not a per-chapter log. `Follow` (new-chapter notifications) and `ChapterReadingEntry` (per-chapter history) are separate, not-yet-implemented concepts — don't conflate them with `ReadingState`.
 - Catalog search uses a single primary metadata source live per query (no batch preload); `Comic` is only persisted the first time a user opens that work's detail page (cache-aside). Multi-source merging applies to the *detail* view, not catalog search.
 - `ComicMetadataProvider` returns `ComicMetadataResult` (externalId + a transient `Comic`), reusing `Comic`'s shape instead of a parallel type.
-- `[Site]ComicMetadataProvider` naming can use the actual API/library called instead of the site name when they differ (e.g. `JikanComicMetadataProvider` for `myanimelist`).
+- `[Site]ComicMetadataProvider` naming can use the actual API/library called instead of the site name when they differ (e.g. `TenraiComicMetadataProvider` for `myanimelist`).
 
 ### Frontend structure (planned)
 
@@ -127,6 +127,8 @@ src/
 - **`FetchType.LAZY` by default** on all JPA relations.
 - **Schema managed via versioned `schema.sql`/`data.sql`**, `spring.jpa.hibernate.ddl-auto=validate` (fails fast on startup if the entities and `schema.sql` drift apart, without letting Hibernate alter the schema itself). No Flyway/Liquibase. Note `spring.sql.init.mode=always` is required for these scripts to run at all against an external (non-embedded) Postgres — currently set in `application.yml`; should not stay `always` once a real deployment exists (it would rerun on every restart).
 - **CORS** needs configuring in `web/security/SecurityConfig` (frontend and backend run on different origins) — not yet implemented.
+- **Metadata/reading adapters calling external HTTP APIs**: base URL via `@Value("${provider.api.base-url:https://actual-default}")` on the constructor param (real default inline, overridable, no `application.yml` entry required) — not a hardcoded constant, not required config.
+- **Jackson is v3 here** (`spring-boot-starter-jackson`, Spring Boot 4): `ObjectMapper`/`JsonMapper`/`PropertyNamingStrategies`/`@JsonNaming` live under `tools.jackson.*`, not `com.fasterxml.jackson.databind.*` — except `jackson-annotations` (`@JsonProperty`, `@JsonIgnoreProperties`...), which stays `com.fasterxml.jackson.annotation` in both Jackson 2 and 3.
 - **Spring Security 7 note:** CSRF is on by default even for stateless JWT APIs and must be explicitly disabled (`http.csrf(AbstractHttpConfigurer::disable)`); `authorizeRequests()` no longer exists, only `authorizeHttpRequests()`.
 - Frontend HTTP client is **Axios**; linter is **ESLint** (not Oxlint); formatter (Prettier) is undecided/not set up.
 

@@ -15,7 +15,7 @@ import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.Genre;
 import com.github.kio7po.comic_tracker.domain.entities.Tag;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
-import com.github.kio7po.comic_tracker.domain.enums.MediaType;
+import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
 import com.github.kio7po.comic_tracker.domain.port.metadata.ComicMetadataResult;
 
@@ -110,18 +110,18 @@ final class TenraiComicMapper {
         });
     }
 
-    private static MediaType toMediaType(String type) {
+    private static ComicMediaType toMediaType(String type) {
         if (type == null) {
             return null;
         }
         return switch (type) {
-            case "Manga" -> MediaType.MANGA;
-            case "Novel", "Light Novel" -> MediaType.NOVEL;
-            case "One-shot" -> MediaType.ONE_SHOT;
-            case "Doujinshi" -> MediaType.DOUJINSHI;
-            case "Manhwa" -> MediaType.MANHWA;
-            case "Manhua" -> MediaType.MANHUA;
-            default -> MediaType.OTHER;
+            case "Manga" -> ComicMediaType.MANGA;
+            case "Novel", "Light Novel" -> ComicMediaType.NOVEL;
+            case "One-shot" -> ComicMediaType.ONE_SHOT;
+            case "Doujinshi" -> ComicMediaType.DOUJINSHI;
+            case "Manhwa" -> ComicMediaType.MANHWA;
+            case "Manhua" -> ComicMediaType.MANHUA;
+            default -> ComicMediaType.OTHER;
         };
     }
 
@@ -156,7 +156,7 @@ final class TenraiComicMapper {
         };
     }
 
-    static Optional<String> toTenraiType(MediaType type) {
+    static Optional<String> toTenraiType(ComicMediaType type) {
         if (type == null) {
             return Optional.empty();
         }

@@ -3,6 +3,7 @@ package com.github.kio7po.comic_tracker.adapter.metadata;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -10,7 +11,7 @@ import org.springframework.web.util.UriBuilder;
 
 import com.github.kio7po.comic_tracker.domain.common.Page;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
-import com.github.kio7po.comic_tracker.domain.enums.MediaType;
+import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
 import com.github.kio7po.comic_tracker.domain.port.metadata.ComicMetadataProvider;
 import com.github.kio7po.comic_tracker.domain.port.metadata.ComicMetadataResult;
@@ -19,17 +20,17 @@ import com.github.kio7po.comic_tracker.domain.port.metadata.ComicMetadataResult;
 public class TenraiComicMetadataProvider implements ComicMetadataProvider {
 
     private static final String SLUG = "myanimelist";
-    private static final String BASE_URL = "https://api.tenrai.org/v1";
 
     private final RestClient restClient;
 
-    public TenraiComicMetadataProvider(RestClient.Builder restClientBuilder) {
-        this.restClient = restClientBuilder.baseUrl(BASE_URL).build();
+    public TenraiComicMetadataProvider(RestClient.Builder restClientBuilder,
+            @Value("${tenrai.api.base-url:https://api.tenrai.org/v1}") String baseUrl) {
+        this.restClient = restClientBuilder.baseUrl(baseUrl).build();
     }
 
     @Override
-    public Page<ComicMetadataResult> search(String keywords, int limit, int offset, NsfwRating nsft, ComicStatus status,
-            MediaType type) {
+    public Page<ComicMetadataResult> search(String keywords, int limit, int offset, NsfwRating nsfw, ComicStatus status,
+            ComicMediaType type) {
         int page = (offset / limit) + 1;
 
         TenraiMangaSearchResponseDto response = restClient.get()
@@ -38,7 +39,7 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
                             .queryParam("q", keywords)
                             .queryParam("page", page)
                             .queryParam("limit", limit);
-                    applyNsfwFilter(uriBuilder, nsft);
+                    applyNsfwFilter(uriBuilder, nsfw);
                     TenraiComicMapper.toTenraiStatus(status).ifPresent(value -> uriBuilder.queryParam("status", value));
                     TenraiComicMapper.toTenraiType(type).ifPresent(value -> uriBuilder.queryParam("type", value));
                     return uriBuilder.build();
@@ -57,11 +58,11 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
         return new Page<>(items, existMoreItems);
     }
 
-    private static void applyNsfwFilter(UriBuilder uriBuilder, NsfwRating nsft) {
-        if (nsft == null) {
+    private static void applyNsfwFilter(UriBuilder uriBuilder, NsfwRating nsfw) {
+        if (nsfw == null) {
             return;
         }
-        switch (nsft) {
+        switch (nsfw) {
             case NONE -> uriBuilder.queryParam("sfw-strict", "true");
             case SUGGESTIVE -> uriBuilder.queryParam("sfw", "true");
             case EXPLICIT -> {
