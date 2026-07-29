@@ -18,6 +18,26 @@ CREATE SEQUENCE IF NOT EXISTS tag_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_metadata_source_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_metadata_entry_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS app_user_seq START WITH 1 INCREMENT BY 50;
+
+-- ─── Usuario
+
+-- Se llama app_user y no user: "user" es palabra reservada en PostgreSQL.
+CREATE TABLE IF NOT EXISTS app_user (
+    id              BIGINT NOT NULL PRIMARY KEY,
+    username        VARCHAR(255) NOT NULL UNIQUE,
+    email           VARCHAR(255) NOT NULL UNIQUE,
+    password_hash   VARCHAR(255) NOT NULL,
+    display_name    VARCHAR(255) NOT NULL,
+    biography       VARCHAR(2048),
+    picture_url     VARCHAR(255),
+    -- Código de locale estándar (BCP 47, p.ej. "es-ES", "en-US"), no un enum cerrado
+    locale          VARCHAR(35),
+    role            VARCHAR(255) NOT NULL CHECK (role IN ('USER', 'ADMIN')),
+    created_at      TIMESTAMPTZ NOT NULL,
+    updated_at      TIMESTAMPTZ NOT NULL,
+    enabled         BOOLEAN NOT NULL DEFAULT TRUE
+);
 
 -- ─── Catálogo
 
