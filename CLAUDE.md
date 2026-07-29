@@ -80,6 +80,8 @@ web/
 
 `web/` is *not* under `adapter/` even though everything outside `domain/` is technically an adapter in Ports & Adapters terms: controllers call domain services directly, with no domain-defined use-case interface for them to implement, so there's no real port/adapter symmetry to justify grouping it with `persistence/metadata/source`. If a use-case interface layer is ever introduced in `domain/`, revisit this.
 
+**Persistence port pattern (established with `CatalogService`'s repositories):** `domain/port/persistence/` interfaces are plain Java with no Spring Data imports (e.g. `ComicRepository { Optional<Comic> findBySlug(String slug); Comic save(Comic comic); }`), so the domain layer stays framework-agnostic and independently testable. The `adapter/persistence/` counterpart is a *single* interface per entity that extends both `org.springframework.data.jpa.repository.JpaRepository<Entity, Long>` and the domain port (e.g. `JpaComicRepository extends JpaRepository<Comic, Long>, ComicRepository`) — Spring Data auto-implements the whole thing (generic `save`/`findById` from `JpaRepository`, custom finders like `findBySlug` derived from the method name), so there's no manual delegation class. Apply this same shape to the next repository needed (e.g. for `ComicReadingEntry`) instead of re-deriving it.
+
 ### Domain model and naming
 
 Full entity diagram: `docs/diagrams/domain.mmd`. Load-bearing naming convention (do not use the old informal names `FuenteMetadata`/`FuenteLectura` if you see them referenced anywhere):
@@ -131,6 +133,8 @@ src/
 - **Jackson is v3 here** (`spring-boot-starter-jackson`, Spring Boot 4): `ObjectMapper`/`JsonMapper`/`PropertyNamingStrategies`/`@JsonNaming` live under `tools.jackson.*`, not `com.fasterxml.jackson.databind.*` — except `jackson-annotations` (`@JsonProperty`, `@JsonIgnoreProperties`...), which stays `com.fasterxml.jackson.annotation` in both Jackson 2 and 3.
 - **Spring Security 7 note:** CSRF is on by default even for stateless JWT APIs and must be explicitly disabled (`http.csrf(AbstractHttpConfigurer::disable)`); `authorizeRequests()` no longer exists, only `authorizeHttpRequests()`.
 - Frontend HTTP client is **Axios**; linter is **ESLint** (not Oxlint); formatter (Prettier) is undecided/not set up.
+- **English for code-level identifiers and messages** (test method names, exception messages) even though comments and commit messages (per `docs/GIT.md`) are in Spanish — an explicit, repeated convention, not an oversight if you see it applied inconsistently in older code.
+- **Domain exceptions carry their failure data as fields** (e.g. `UnsupportedMetadataSourceException.getSourceSlug()`), not just baked into the exception message string — so a future `GlobalExceptionHandler` (or a test) can build a structured response / assert on the value without parsing prose.
 
 ## Git workflow (`docs/GIT.md`)
 
