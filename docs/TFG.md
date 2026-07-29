@@ -1,5 +1,7 @@
 # TFG — Juan Vázquez Longueira (UDC, Ingeniería de Software)
 
+*Nota de mantenimiento de este documento: registra decisiones de arquitectura y su razonamiento (qué se decidió, qué se descartó y por qué) — no firmas de métodos, tipos concretos ni otros detalles que ya viven en el código y que se desincronizarían de él. Al añadir contenido nuevo, colocarlo dentro de la sección existente a la que pertenece temáticamente, no por defecto como sección nueva al final.*
+
 ## Problema
 La información sobre dónde leer cómics/mangas en internet está dispersa, en formatos heterogéneos y sin garantías de calidad. No existe un punto centralizado que lo agregue.
 
@@ -51,6 +53,8 @@ Aplicación web de indexación colaborativa para búsqueda, seguimiento y locali
 ## Arquitectura de adaptadores
 
 Patrón común para dos tipos de integraciones externas. En ambos casos se define una interfaz y se implementa por cada fuente/sitio concreto. Al menos un adaptador concreto de cada tipo será implementado en el TFG.
+
+**Decidido: la URL base de la API externa de cada adaptador no se hardcodea, pero tampoco exige configuración obligatoria.** Valor por defecto embebido en el código, overrideable desde fuera sin recompilar (p. ej. `@Value("${provider.api.base-url:https://valor-por-defecto}")`). *Razón:* la URL de una API de terceros puede cambiar, o interesar apuntar a una instancia propia (p. ej. Jikan permite auto-hospedarse) sin perder el autocontenido por defecto. Ejemplo: `TenraiComicMetadataProvider`.
 
 ### Adaptadores de metadatos
 - Obtienen información del cómic desde fuentes externas (AniList, MangaDex…).
@@ -106,6 +110,7 @@ Nombres definitivos (sustituyen a "FuenteMetadata"/"FuenteLectura", que eran inf
 - **El prefijo `Comic` tiene dos motivaciones distintas según la entidad, no una sola:** en `ComicMetadataEntry`/`ComicReadingEntry` significa "vinculado a un cómic concreto" (la fila referencia un `comic_id`). En `ComicMetadataSource`/`ComicReadingSource` **no** hay vínculo a un cómic concreto — el prefijo ahí señala solo "del dominio de cómics" (p. ej. "fuente de metadata de cómics" en general, no de una obra en particular). Se deja anotado explícitamente para que no se asuma que una fila de `ComicMetadataSource` está atada a un cómic.
 - **Se descartaron los términos `Port` y `Adapter` para nombrar los conceptos genéricos** (puerto e implementación de Ports & Adapters), reservándolos para referirse al patrón en sí, y se usó en su lugar un nombre concreto del dominio: `Provider`.
 - **Convención puerto/implementación con `Provider`:** el puerto lleva el nombre genérico (`ComicMetadataProvider`), y cada implementación concreta antepone el nombre de la fuente al mismo nombre del puerto (`MangadexComicMetadataProvider`), en vez de usar un sufijo distinto tipo `...Adapter`. Es un patrón de nombrado extendido en Java/Spring (p. ej. `UserRepository` → `JpaUserRepository`; `PaymentGateway` → `StripePaymentGateway`): prefijo + mismo sufijo, en vez de sufijo distinto para cada nivel.
+- **Excepción a esta convención:** cuando una fuente no expone API pública propia y se accede vía una API de terceros con nombre propio, la implementación se nombra según esa API, no según el sitio — caso de MyAnimeList, implementado como `TenraiComicMetadataProvider` (antes `JikanComicMetadataProvider`, hasta que la API Jikan se volvió inestable) en vez de `MyAnimeListComicMetadataProvider`. El `slug` de `ComicMetadataSource` sigue identificando el sitio, no la API usada para acceder a él.
 - **Se corrige una inconsistencia previa del documento:** antes, el puerto del lado de lectura ya se llamaba `ReadingSourceAdapter` (con sufijo "Adapter", atípico para un puerto — rompía la convención que sí seguía el lado de metadatos, donde el puerto era `MetadataProvider` y solo las implementaciones llevaban "Adapter"). Con `ComicReadingProvider` como nuevo nombre del puerto, ambos lados (metadatos y lectura) siguen ahora el mismo criterio.
 
 ## Modelo de dominio
@@ -198,6 +203,8 @@ Las transiciones del workflow se han nombrado explícitamente (Project settings 
 
 **Estrategia de invalidación — adaptadores de metadatos: decidido.** TTL pasivo: cada entrada cacheada guarda el momento de la última consulta; al pedir ese cómic, si ha pasado más tiempo que el TTL configurado desde esa última consulta, se repite la llamada a los adaptadores antes de servir la respuesta; si no, se sirve el valor cacheado. No requiere infraestructura adicional (sin job programado). *Razón:* coherente con que estos datos cambian con poca frecuencia (ya establecido arriba) y con la estrategia "on-demand inicialmente" ya prevista en Adaptadores de metadatos — es su implementación concreta, no una decisión nueva independiente. **Pendiente:** el valor concreto del TTL no está fijado.
 
+**Pendiente — rate limiting en adaptadores de metadatos:** sin throttling ni retry todavía (p. ej. `TenraiComicMetadataProvider`, límite público documentado de 3 req/s). Previsiblemente necesario cuando exista el orquestador de llamadas en paralelo (ver "Adaptadores de metadatos asíncronos" más abajo); candidata: `RateLimiter` de Resilience4j.
+
 *Mejora futura planteada, no decidida:* complementar el TTL pasivo con un batch periódico dirigido (no a todo el catálogo, para no multiplicar consumo de rate limit por cómic) que refresque proactivamente los cómics con más tráfico o marcados como "en emisión", reduciendo la latencia que sufre el primer usuario que pide un dato ya caducado. Coherente con el "batch periódico a futuro" ya previsto en Adaptadores de metadatos.
 
 **Estrategia de invalidación — adaptadores de fuentes de lectura:** sigue sin decidir. La motivación es distinta (evitar llamadas repetidas en períodos cortos, no datos estables — ver arriba), por lo que el TTL pasivo decidido para metadatos no se traslada automáticamente a este caso.
@@ -208,7 +215,7 @@ La tecnología concreta de caché (almacén, etc.) no está decidida. Implementa
 
 **ORM:** `FetchType.LAZY` por defecto en todas las relaciones. Las fuentes de lectura se cargan únicamente al consultar el detalle de un cómic concreto, no en el catálogo general, por lo que el problema N+1 no aplica en los casos relevantes.
 
-**Testing de integración — Testcontainers, decidido.** Sustituye a una decisión anterior de este documento ("Testcontainers descartado por ahora"). *Motivo del cambio:* la integración `@ServiceConnection` (disponible desde Spring Boot 3.1, vigente en 4.x) elimina la fricción que originalmente motivó posponerlo — gestiona automáticamente el ciclo de vida de un contenedor PostgreSQL por clase de test, sin necesitar una segunda base de datos gestionada a mano ni coordinar un contenedor externo en CI. La clase de test por defecto generada por Initializr sigue este mismo patrón, para que la suite no dependa de tener el entorno de desarrollo local ya levantado.
+**Testing de integración — Testcontainers, decidido.** Sustituye a una decisión anterior de este documento ("Testcontainers descartado por ahora"). *Motivo del cambio:* la integración `@ServiceConnection` (disponible desde Spring Boot 3.1, vigente en 4.x) elimina la fricción que originalmente motivó posponerlo — gestiona automáticamente el ciclo de vida de un contenedor PostgreSQL por clase de test, sin necesitar una segunda base de datos gestionada a mano ni coordinar un contenedor externo en CI. La clase de test por defecto generada por Initializr (`ComicTrackerApplicationTests`) está pensada para seguir este mismo patrón, pero **todavía no lo hace**: hoy depende de tener `backend/.env` configurado y una Postgres real alcanzable, en vez de un `PostgreSQLContainer` con `@ServiceConnection`. Pendiente de corregir.
 
 **Cobertura backend — JaCoCo.** El goal `report` está atado a la fase `verify` del ciclo de vida de Maven (no a `test`). Decisión deliberada, no un descuido: si en el futuro se separan tests unitarios (Surefire, fase `test`) de tests de integración (Failsafe, fases `integration-test`/`verify`), el informe seguiría generándose correctamente después de ambos sin tener que revisar esta configuración — atarlo a `verify` no tiene coste hoy y evita un ajuste futuro.
 
@@ -274,16 +281,16 @@ backend/src/main/java/.../
 │                           ComicReadingEntry (nombres definitivos — ver "Convención de
 │                           nombres de entidades y adaptadores") (crecerá: p. ej.
 │                           Valoracion para moderación)
+│   ├── port/               puertos + sus tipos de contrato, sin implementaciones: metadata/, source/
+│   ├── common/             tipos de dominio genéricos reutilizables entre puertos
 │   ├── exceptions/         excepciones de dominio, sin conocimiento de HTTP
 │   └── service/             lógica de negocio: combinar adaptadores de metadatos por
 │                           prioridad, deduplicación, cálculo de progreso
 │
 ├── adapter/
 │   ├── persistence/         adaptador hacia BD: repositorios JPA
-│   ├── metadata/             ComicMetadataProvider (puerto) + AniListComicMetadataProvider,
-│                            MangaDexComicMetadataProvider...
-│   └── source/                ComicReadingProvider (puerto) + implementaciones por dominio
-│                            (p. ej. `[Sitio]ComicReadingProvider`)
+│   ├── metadata/             implementaciones de ComicMetadataProvider (AniList, MangaDex...)
+│   └── source/                implementaciones de ComicReadingProvider, detectadas por dominio
 │
 └── web/
     ├── controller/
@@ -297,10 +304,11 @@ backend/src/main/java/.../
 ```
 
 Razones puntuales:
+- **`domain/port/` como subpaquete dedicado a puertos, en vez de una capa `application/` intermedia:** se valoró introducir una tercera capa entre `domain/` y `adapter/` (estilo Clean Architecture) tras detectar que `ComicMetadataProvider` había acabado viviendo dentro de `adapter/metadata/`, junto a su propia implementación — contradiciendo la premisa de que el dominio define el puerto. Se descarta esa capa adicional: añade una frontera más que mantener consistente en todo este documento (incluida la clasificación de `web/`, ver siguiente punto) sin una necesidad demostrada a la escala de este TFG. La solución adoptada es más modesta: aislar los puertos en su propio subpaquete dentro de `domain/`, separados de `entities/`, sin crear una capa nueva.
 - **`web/` fuera de `adapter/`, pese a que estrictamente en Ports & Adapters todo lo que no es dominio es "un adaptador más":** los adaptadores agrupados en `adapter/` (`persistence`, `metadata`, `source`) tienen en común que **implementan un puerto definido por el dominio** (`ComicMetadataProvider`, `ComicReadingProvider`, los repositorios JPA) — el dominio define la interfaz, el adaptador la implementa, con inversión de dependencia real. `web/` no cumple esa condición: según `architecture.mmd`, los controllers llaman directamente a los services de dominio (`CTRL --> SVC_CAT`, etc.), sin que exista ninguna interfaz de caso de uso definida en `domain/` que el controller implemente o consuma como contrato. Al no haber puerto que implementar, no hay simetría real que justifique tratar `web/` como "un adaptador más" junto a los driven. **Nota importante:** la razón correcta es la ausencia de puerto de dominio, *no* que la API REST no vaya a tener varias implementaciones o formas de entrada alternativas (p. ej. GraphQL) — esa multiplicidad no es la condición que define un adaptador en Hexagonal (un adaptador con una sola implementación posible sigue siendo un adaptador si implementa un puerto); usar ese argumento no resistiría bien una pregunta directa sobre qué es un "puerto" en Ports & Adapters. **Pendiente, no decidido:** si en el futuro se introdujeran interfaces de caso de uso en `domain/` que los controllers consumieran como contrato (con o sin una segunda entrada como GraphQL), `web/` pasaría a cumplir la misma condición que los adaptadores driven y esta ubicación debería reconsiderarse.
 - **DTOs separados de entidades JPA:** motivado directamente por `FetchType.LAZY` (ya decidido) — serializar entidades JPA con relaciones lazy directamente como respuesta REST puede dar problemas (proxies, `LazyInitializationException`, ciclos).
 - **`security/` dentro de `web/`**, en lugar de un paquete propio al mismo nivel que `domain/`/`adapter/`/`web/`: justificado porque, en el alcance actual del TFG, el 100% de lo que protege el JWT son los endpoints REST — no hay otro punto de entrada (colas de mensajes, WebSocket...). Si en el futuro apareciera otro punto de entrada que también necesite autenticación, habría que reconsiderar esta ubicación.
-- **`exceptions/` dentro de `domain/`:** las excepciones de negocio no deben conocer HTTP; su traducción a códigos de estado se centraliza aparte, en `web/exception/`.
+- **`exceptions/` dentro de `domain/`:** las excepciones de negocio no deben conocer HTTP; su traducción a códigos de estado se centraliza aparte, en `web/exception/`. **Pendiente:** aún sin implementar.
 
 ### Estructura interna del frontend
 
