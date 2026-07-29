@@ -14,7 +14,7 @@ public class ComicMetadataEntry {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String externalId;
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "comic_id") // optional, defaults to this
