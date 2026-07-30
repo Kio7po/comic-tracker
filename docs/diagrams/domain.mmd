@@ -4,11 +4,15 @@ classDiagram
     class User {
         + username: string
         + email: string
-        + password: string
+        + passwordHash: string
+        + displayName: string
         + biography: string
-        + picture: string
-        + language: Enum
+        + pictureUrl: string
+        + locale: string
         + role: Enum
+        + createdAt: DateTime
+        + updatedAt: DateTime
+        + enabled: boolean
     }
 
     %% ─── Comic ──────────────────────────────────────────────────
