@@ -175,7 +175,7 @@ Las transiciones del workflow se han nombrado explícitamente (Project settings 
 - **Frontend — Linter: ESLint.** Se valoró Oxlint (Rust, del mismo equipo que mantiene Vite, órdenes de magnitud más rápido) pero se descarta por ahora: la cobertura de reglas TypeScript *type-aware* (las que detectan errores reales de tipos, no solo de estilo) sigue siendo más madura en ESLint/`typescript-eslint`, y la ganancia de velocidad de Oxlint no se justifica a la escala de este proyecto.
 - **Frontend — Formateador: Prettier — sin decidir.** ESLint no formatea código, solo detecta problemas; si se quiere formato automático consistente haría falta añadir Prettier aparte, con `eslint-config-prettier` para que no choquen reglas de estilo entre ambas herramientas.
 - **Frontend — Cliente HTTP: Axios**, decidido. La instancia configurada (`baseURL` desde variable de entorno + interceptor para adjuntar el JWT) queda pendiente de implementar en `common/api/`.
-- **Validación de entrada (backend): Bean Validation** (`spring-boot-starter-validation`), usada en los DTOs de `web/dto/` (no en las entidades de dominio), coherente con la separación DTO/entidad ya decidida. Cubre la validación de datos aportados por el usuario (enlaces y metadatos de fuentes de lectura, entre otros).
+- **Validación de entrada (backend): Bean Validation** (`spring-boot-starter-validation`), usada en los DTOs de `rest/dto/` (no en las entidades de dominio), coherente con la separación DTO/entidad ya decidida. Cubre la validación de datos aportados por el usuario (enlaces y metadatos de fuentes de lectura, entre otros).
 - **Lombok: descartado.** Motivo: interfiere con el autocompletado/depuración en algunos entornos y genera código no visible en el fuente (riesgo señalado especialmente en `equals`/`hashCode` autogenerados sobre entidades JPA con relaciones lazy). Getters/setters/constructores se escriben a mano.
 - **Mapeo entidad ↔ DTO: manual, sin MapStruct.** Se considera y se descarta explícitamente: el mapeo manual no se percibe como suficientemente costoso para justificar la dependencia adicional.
 - **Backend — Actuator: decidido no añadirlo por ahora.** Sin un entorno de despliegue definido (ver Modelo de despliegue), no hay nada que consuma sus endpoints de salud/métricas; es una dependencia de una línea el día que haga falta.
@@ -273,7 +273,7 @@ Estructura de carpetas de la raíz del repositorio (la estructura interna de `ba
 
 ### Estructura interna del backend
 
-**Patrón: Arquitectura Hexagonal (Ports & Adapters)**, adoptada y nombrada explícitamente. *Razón:* los adaptadores de metadatos y de fuentes de lectura no son "acceso a datos" en sentido estricto (no son una base de datos, y hay varios tipos distintos); el patrón Hexagonal resuelve esto tratando la persistencia como un adaptador más entre varios (hacia BD, hacia APIs externas, hacia sitios web de terceros), todos al mismo nivel, cada uno implementando un puerto (interfaz) definido por el dominio.
+**Patrón: Arquitectura Hexagonal (Ports & Adapters)**, adoptada y nombrada explícitamente. *Razón:* los adaptadores de metadatos y de fuentes de lectura no son "acceso a datos" en sentido estricto (no son una base de datos, y hay varios tipos distintos); el patrón Hexagonal resuelve esto tratando la persistencia como un adaptador más entre varios (hacia BD, hacia APIs externas, hacia sitios web de terceros), todos al mismo nivel, cada uno implementando un puerto (interfaz) definido por el dominio. Esto son adaptadores *driven*; el patrón también reconoce adaptadores *driving* (traducen una llamada externa en una llamada a los propios métodos del dominio, sin necesitar una interfaz de entrada explícita) — caso de `rest/`, ver más abajo.
 
 ```
 backend/src/main/java/.../
@@ -288,28 +288,20 @@ backend/src/main/java/.../
 │   └── service/             lógica de negocio: combinar adaptadores de metadatos por
 │                           prioridad, deduplicación, cálculo de progreso
 │
-├── adapter/
-│   ├── persistence/         adaptador hacia BD: repositorios JPA
-│   ├── metadata/             implementaciones de ComicMetadataProvider (AniList, MangaDex...)
-│   └── source/                implementaciones de ComicReadingProvider, detectadas por dominio
-│
-└── web/
-    ├── controller/
-    ├── dto/                  DTOs de request/response, separados de las entidades JPA
-    ├── mapper/               entidad ↔ DTO (manual — MapStruct descartado, ver Stack)
-    ├── exception/            GlobalExceptionHandler (@RestControllerAdvice), traduce
-    │                        excepciones de dominio a códigos HTTP (404, 409...)
-    └── security/             SecurityConfig, JwtAuthenticationFilter. Incluye también
-                             la configuración de CORS (necesaria porque frontend y backend
-                             corren en orígenes distintos).
+└── adapter/
+    ├── persistence/         adaptador hacia BD: repositorios JPA
+    ├── metadata/             implementaciones de ComicMetadataProvider (AniList, MangaDex...)
+    ├── source/                implementaciones de ComicReadingProvider, detectadas por dominio
+    └── rest/                  adaptador driving: controller/, dto/, mapper/, exception/
+                             (GlobalExceptionHandler), security/
 ```
 
 Razones puntuales:
-- **`domain/port/` como subpaquete dedicado a puertos, en vez de una capa `application/` intermedia:** se valoró introducir una tercera capa entre `domain/` y `adapter/` (estilo Clean Architecture) tras detectar que `ComicMetadataProvider` había acabado viviendo dentro de `adapter/metadata/`, junto a su propia implementación — contradiciendo la premisa de que el dominio define el puerto. Se descarta esa capa adicional: añade una frontera más que mantener consistente en todo este documento (incluida la clasificación de `web/`, ver siguiente punto) sin una necesidad demostrada a la escala de este TFG. La solución adoptada es más modesta: aislar los puertos en su propio subpaquete dentro de `domain/`, separados de `entities/`, sin crear una capa nueva.
-- **`web/` fuera de `adapter/`, pese a que estrictamente en Ports & Adapters todo lo que no es dominio es "un adaptador más":** los adaptadores agrupados en `adapter/` (`persistence`, `metadata`, `source`) tienen en común que **implementan un puerto definido por el dominio** (`ComicMetadataProvider`, `ComicReadingProvider`, los repositorios JPA) — el dominio define la interfaz, el adaptador la implementa, con inversión de dependencia real. `web/` no cumple esa condición: según `architecture.mmd`, los controllers llaman directamente a los services de dominio (`CTRL --> SVC_CAT`, etc.), sin que exista ninguna interfaz de caso de uso definida en `domain/` que el controller implemente o consuma como contrato. Al no haber puerto que implementar, no hay simetría real que justifique tratar `web/` como "un adaptador más" junto a los driven. **Nota importante:** la razón correcta es la ausencia de puerto de dominio, *no* que la API REST no vaya a tener varias implementaciones o formas de entrada alternativas (p. ej. GraphQL) — esa multiplicidad no es la condición que define un adaptador en Hexagonal (un adaptador con una sola implementación posible sigue siendo un adaptador si implementa un puerto); usar ese argumento no resistiría bien una pregunta directa sobre qué es un "puerto" en Ports & Adapters. **Pendiente, no decidido:** si en el futuro se introdujeran interfaces de caso de uso en `domain/` que los controllers consumieran como contrato (con o sin una segunda entrada como GraphQL), `web/` pasaría a cumplir la misma condición que los adaptadores driven y esta ubicación debería reconsiderarse.
-- **DTOs separados de entidades JPA:** motivado directamente por `FetchType.LAZY` (ya decidido) — serializar entidades JPA con relaciones lazy directamente como respuesta REST puede dar problemas (proxies, `LazyInitializationException`, ciclos).
-- **`security/` dentro de `web/`**, en lugar de un paquete propio al mismo nivel que `domain/`/`adapter/`/`web/`: justificado porque, en el alcance actual del TFG, el 100% de lo que protege el JWT son los endpoints REST — no hay otro punto de entrada (colas de mensajes, WebSocket...). Si en el futuro apareciera otro punto de entrada que también necesite autenticación, habría que reconsiderar esta ubicación.
-- **`exceptions/` dentro de `domain/`:** las excepciones de negocio no deben conocer HTTP; su traducción a códigos de estado se centraliza aparte, en `web/exception/`. **Pendiente:** aún sin implementar.
+- **`domain/port/` como subpaquete dedicado a puertos, en vez de una capa `application/` intermedia:** se valoró introducir una tercera capa entre `domain/` y `adapter/` (estilo Clean Architecture) tras detectar que `ComicMetadataProvider` había acabado viviendo dentro de `adapter/metadata/`, junto a su propia implementación — contradiciendo la premisa de que el dominio define el puerto. Se descarta esa capa adicional: añade una frontera más sin una necesidad demostrada a la escala de este TFG. La solución adoptada es más modesta: aislar los puertos en su propio subpaquete dentro de `domain/`, separados de `entities/`, sin crear una capa nueva.
+- **`rest/` (antes `web/`, separado de `adapter/`) sí va dentro de `adapter/`:** la razón anterior para mantenerlo fuera ("no hay puerto de dominio que implemente, luego no hay simetría con `persistence/metadata/source`") asumía que "puerto" solo aplica en el sentido *driven* — pero no es la condición que define un adaptador *driving*: los controllers REST adaptan igual, solo que en la dirección contraria de dependencia, con o sin interfaz de entrada explícita. Se renombra a `rest/` (no `web/`) por precisión: es lo que es.
+- **DTOs y mappers, dentro de `adapter/rest/`** (no en un paquete aparte reutilizable): exclusivos de esta vía de entrada por defecto, hasta que se demuestre una necesidad real de reutilizarlos desde otra. Separados de las entidades JPA por `FetchType.LAZY` (ya decidido) — serializarlas directamente como respuesta REST puede dar problemas (proxies, `LazyInitializationException`, ciclos).
+- **`security/` dentro de `adapter/rest/`**, en lugar de un paquete propio al mismo nivel que `domain/`/`adapter/`: justificado porque, en el alcance actual del TFG, el 100% de lo que protege el JWT son los endpoints REST — no hay otro punto de entrada. **Sigue abierto:** a diferencia de `dto/`/`mapper/`, no está tan ligado a REST específicamente (un futuro segundo punto de entrada podría reutilizar la misma configuración) — su ubicación final no está cerrada, a reconsiderar si aparece esa necesidad.
+- **`exceptions/` dentro de `domain/`:** las excepciones de negocio no deben conocer HTTP; su traducción a códigos de estado se centraliza aparte, en `adapter/rest/exception/`. **Pendiente:** aún sin implementar.
 
 ### Estructura interna del frontend
 
@@ -331,7 +323,7 @@ frontend/src/
 
 Razones puntuales:
 - **`services/` separado de `modules/`:** las entidades de negocio (Comic, ComicReadingEntry, Usuario) no corresponden 1:1 con los módulos de UI — una misma pantalla puede necesitar varias entidades a la vez (p. ej. detalle de cómic + sus fuentes), y un módulo de UI puede no mapear a una sola entidad. Mantenerlas separadas evita forzar esa correspondencia. Inspirado en el concepto de capa "entities" de Feature-Sliced Design, sin adoptar sus reglas estrictas de importación entre capas.
-- **Los tipos en `services/` son DTOs, no modelos de UI transformados:** simetría intencionada con `web/dto` del backend — ambos representan la forma del contrato HTTP, no un modelo de dominio enriquecido.
+- **Los tipos en `services/` son DTOs, no modelos de UI transformados:** simetría intencionada con `rest/dto` del backend — ambos representan la forma del contrato HTTP, no un modelo de dominio enriquecido.
 - **Sin capa de mapeo DTO → modelo de UI por ahora:** los componentes consumen los DTOs directamente. Se acepta el acoplamiento resultante (un cambio de forma en un DTO impacta a los componentes que lo usan) porque, al ser un proyecto de una sola persona controlando ambos extremos, el coste de ese acoplamiento cuando ocurra es manejable. **Revisar si:** (a) un componente necesita combinar DTOs de varias entidades a la vez, o (b) se necesita un campo derivado que no viene tal cual de la API — en cualquiera de esos casos, introducir el mapeo en ese módulo concreto, no en todos a la vez.
 - **`common/` fuera de `modules/`:** deliberado, para que cualquier módulo pueda importar de `common/` sin necesidad de una regla de excepción — al no ser un módulo más, no rompe el principio de que los módulos no se importan entre sí.
 
@@ -352,7 +344,7 @@ Ningún secreto (credenciales de BBDD, futuro secreto de firma del JWT) se hardc
 - **Backend:** Spring Boot no soporta ficheros `.env` de forma nativa. Se usa la dependencia **`springboot4-dotenv`** para cargar `backend/.env` (gitignorado), con las credenciales de conexión consumidas en `application.yml` vía placeholders.
 - **Docker Compose (raíz del repo):** lee su propio `.env` (gitignorado) de forma nativa, con las credenciales del contenedor Postgres. Es un fichero distinto al de `backend/.env`, con valores que hay que mantener sincronizados a mano entre ambos — no hay una única fuente de verdad automática, y no se ha considerado necesario añadir infraestructura para evitarlo a esta escala.
 - **Frontend:** Vite lee `.env`/`.env.local` de forma nativa. Convención decidida: solo se exponen al código cliente variables con prefijo `VITE_`. **A día de hoy no existe `frontend/.env.local`** — no hace falta todavía, porque el frontend no necesita ninguna variable de entorno en el punto actual del desarrollo; se creará cuando exista una (p. ej. la URL del backend). La URL del backend, en cualquier caso, no se trata como secreto real.
-- **CORS:** pendiente de implementar en `web/security/SecurityConfig` — necesario para que el frontend (origen distinto al del backend) pueda llamar a la API. No es una decisión de arquitectura, es un requisito de funcionamiento básico una vez ambos servicios corran de forma independiente.
+- **CORS:** pendiente de implementar en `SecurityConfig` — necesario para que el frontend (origen distinto al del backend) pueda llamar a la API. No es una decisión de arquitectura, es un requisito de funcionamiento básico una vez ambos servicios corran de forma independiente.
 
 ### Documentación de la API
 

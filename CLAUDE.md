@@ -69,16 +69,10 @@ adapter/
   persistence/  JPA repositories (implements a domain-defined port)
   metadata/     ComicMetadataProvider impls (AniList, MangaDex...)
   source/       ComicReadingProvider impls, detected by domain
-
-web/
-  controller/
-  dto/          request/response DTOs, kept separate from JPA entities
-  mapper/       manual entity <-> DTO mapping (no MapStruct)
-  exception/    GlobalExceptionHandler (@RestControllerAdvice): domain exceptions -> HTTP codes
-  security/     SecurityConfig, JwtAuthenticationFilter, CORS config
+  rest/         driving adapter: controller/, dto/, mapper/, exception/ (GlobalExceptionHandler), security/
 ```
 
-`web/` is *not* under `adapter/` even though everything outside `domain/` is technically an adapter in Ports & Adapters terms: controllers call domain services directly, with no domain-defined use-case interface for them to implement, so there's no real port/adapter symmetry to justify grouping it with `persistence/metadata/source`. If a use-case interface layer is ever introduced in `domain/`, revisit this.
+`rest/` lives under `adapter/` (not a separate `web/`): Ports & Adapters has driven adapters (`persistence/metadata/source`, implement a domain-defined port the domain depends on) and driving adapters (translate an external call into a call on the domain's own methods, dependency runs the other way, no inbound interface required). REST controllers are the latter — see `docs/TFG.md` for the full reasoning.
 
 **Persistence port pattern (established with `CatalogService`'s repositories):** `domain/port/persistence/` interfaces are plain Java with no Spring Data imports (e.g. `ComicRepository { Optional<Comic> findBySlug(String slug); Comic save(Comic comic); }`), so the domain layer stays framework-agnostic and independently testable. The `adapter/persistence/` counterpart is a *single* interface per entity that extends both `org.springframework.data.jpa.repository.JpaRepository<Entity, Long>` and the domain port (e.g. `JpaComicRepository extends JpaRepository<Comic, Long>, ComicRepository`) — Spring Data auto-implements the whole thing (generic `save`/`findById` from `JpaRepository`, custom finders like `findBySlug` derived from the method name), so there's no manual delegation class. Apply this same shape to the next repository needed (e.g. for `ComicReadingEntry`) instead of re-deriving it.
 
@@ -118,17 +112,17 @@ src/
   modules/      UI composition by feature (auth, catalog, tracking...)
 ```
 
-`services/` types are DTOs mirroring the backend's `web/dto` shape, not domain models — there's no DTO-to-UI-model mapping layer yet; components consume DTOs directly. Add a mapping layer locally in a module only when a component needs to combine multiple DTOs or a derived field, not preemptively everywhere. `common/` sits outside `modules/` so any module can import it without needing an exception to the "modules don't import each other" rule.
+`services/` types are DTOs mirroring the backend's `rest/dto` shape, not domain models — there's no DTO-to-UI-model mapping layer yet; components consume DTOs directly. Add a mapping layer locally in a module only when a component needs to combine multiple DTOs or a derived field, not preemptively everywhere. `common/` sits outside `modules/` so any module can import it without needing an exception to the "modules don't import each other" rule.
 
 ### Cross-cutting technical decisions that affect how you write code
 
 - **Java 21 virtual threads** are enabled (`spring.threads.virtual.enabled=true`). Metadata adapters are meant to be plain blocking I/O calls run in parallel via `Executors.newVirtualThreadPerTaskExecutor()` + `invokeAll(...)` from an orchestrator service — not `@Async`/`CompletableFuture` (rejected: leaks infra details through the port's return type). Avoid `synchronized` blocks around blocking I/O on a virtual thread (pinning; not fixed until JDK 24).
 - **No Lombok.** Write getters/setters/constructors by hand.
-- **No MapStruct.** Entity<->DTO mapping is manual, in `web/mapper/`.
-- **Bean Validation** (`spring-boot-starter-validation`) on DTOs in `web/dto/`, not on JPA entities.
+- **No MapStruct.** Entity<->DTO mapping is manual, in `rest/mapper/`.
+- **Bean Validation** (`spring-boot-starter-validation`) on DTOs in `rest/dto/`, not on JPA entities.
 - **`FetchType.LAZY` by default** on all JPA relations.
 - **Schema managed via versioned `schema.sql`/`data.sql`**, `spring.jpa.hibernate.ddl-auto=validate` (fails fast on startup if the entities and `schema.sql` drift apart, without letting Hibernate alter the schema itself). No Flyway/Liquibase. Note `spring.sql.init.mode=always` is required for these scripts to run at all against an external (non-embedded) Postgres — currently set in `application.yml`; should not stay `always` once a real deployment exists (it would rerun on every restart).
-- **CORS** needs configuring in `web/security/SecurityConfig` (frontend and backend run on different origins) — not yet implemented.
+- **CORS** needs configuring in `SecurityConfig` (frontend and backend run on different origins) — not yet implemented.
 - **Metadata/reading adapters calling external HTTP APIs**: base URL via `@Value("${provider.api.base-url:https://actual-default}")` on the constructor param (real default inline, overridable, no `application.yml` entry required) — not a hardcoded constant, not required config.
 - **Jackson is v3 here** (`spring-boot-starter-jackson`, Spring Boot 4): `ObjectMapper`/`JsonMapper`/`PropertyNamingStrategies`/`@JsonNaming` live under `tools.jackson.*`, not `com.fasterxml.jackson.databind.*` — except `jackson-annotations` (`@JsonProperty`, `@JsonIgnoreProperties`...), which stays `com.fasterxml.jackson.annotation` in both Jackson 2 and 3.
 - **Spring Security 7 note:** CSRF is on by default even for stateless JWT APIs and must be explicitly disabled (`http.csrf(AbstractHttpConfigurer::disable)`); `authorizeRequests()` no longer exists, only `authorizeHttpRequests()`.
