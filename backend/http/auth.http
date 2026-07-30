@@ -1,0 +1,49 @@
+@host = http://localhost:8080
+@contentType = application/json
+
+### Register - success
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "juan",
+  "email": "juan@example.com",
+  "password": "password123",
+  "displayName": "Juan"
+}
+
+### Register - duplicate username -> 409
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "juan",
+  "email": "other@example.com",
+  "password": "password123",
+  "displayName": "Juan2"
+}
+
+### Register - weak password -> 400 (WeakPasswordException)
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "weak",
+  "email": "weak@example.com",
+  "password": "123",
+  "displayName": "Weak"
+}
+
+### Register - bean validation failure (blank username, invalid email) -> 400
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "",
+  "email": "bad-email",
+  "password": "password123",
+  "displayName": "X"
+}
+
+### Any endpoint outside /api/auth/** -> 403 (denyAll)
+GET {{host}}/api/whatever
