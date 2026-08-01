@@ -30,6 +30,10 @@
 		<java.version>21</java.version>
 		<sonar.projectKey>kio7po_comic-tracker-backend</sonar.projectKey>
 		<sonar.organization>kio7po</sonar.organization>
+		<sonar.coverage.exclusions>
+			**/dto/**,
+			**/mapper/**
+		</sonar.coverage.exclusions>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
