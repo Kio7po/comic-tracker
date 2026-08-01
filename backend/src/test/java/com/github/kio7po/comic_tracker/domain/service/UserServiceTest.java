@@ -124,6 +124,26 @@ class UserServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    // ─── findById ───────────────────────────────────────────────
+
+    @Test
+    void findByIdReturnsUserWhenPresent() {
+        User user = existingUser();
+        user.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        User result = userService.findById(1L);
+
+        assertThat(result).isSameAs(user);
+    }
+
+    @Test
+    void findByIdThrowsInvalidCredentialsExceptionWhenNotFound() {
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.findById(1L)).isInstanceOf(InvalidCredentialsException.class);
+    }
+
     // ─── login ──────────────────────────────────────────────────
 
     @Test

@@ -6,10 +6,10 @@ POST {{host}}/api/auth/register
 Content-Type: {{contentType}}
 
 {
-  "username": "juan",
-  "email": "juan@example.com",
+  "username": "testuser",
+  "email": "testuser@example.com",
   "password": "password123",
-  "displayName": "Juan"
+  "displayName": "Test User"
 }
 
 ### Register - duplicate username -> 409
@@ -17,10 +17,10 @@ POST {{host}}/api/auth/register
 Content-Type: {{contentType}}
 
 {
-  "username": "juan",
+  "username": "testuser",
   "email": "other@example.com",
   "password": "password123",
-  "displayName": "Juan2"
+  "displayName": "Test User 2"
 }
 
 ### Register - weak password -> 400 (WeakPasswordException)
@@ -46,11 +46,12 @@ Content-Type: {{contentType}}
 }
 
 ### Login - success (sets refresh_token as HttpOnly cookie, body has the access token)
+# @name login
 POST {{host}}/api/auth/login
 Content-Type: {{contentType}}
 
 {
-  "usernameOrEmail": "juan",
+  "usernameOrEmail": "testuser",
   "password": "password123"
 }
 
@@ -59,9 +60,16 @@ POST {{host}}/api/auth/login
 Content-Type: {{contentType}}
 
 {
-  "usernameOrEmail": "juan",
+  "usernameOrEmail": "testuser",
   "password": "wrong-password"
 }
+
+### Me - returns the authenticated user, chained from the login request above -> 200
+GET {{host}}/api/auth/me
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Me - no Authorization header -> 401
+GET {{host}}/api/auth/me
 
 ### Refresh - reads refresh_token cookie set by the client (login above), rotates it
 POST {{host}}/api/auth/refresh

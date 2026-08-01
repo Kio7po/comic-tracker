@@ -42,6 +42,7 @@ class NimbusJwtIssuerTest {
 
     private static User user() {
         User user = new User();
+        user.setId(1L);
         user.setUsername("testuser");
         user.setRole(UserRole.USER);
         return user;
@@ -56,7 +57,7 @@ class NimbusJwtIssuerTest {
         String token = jwtIssuer.issue(user());
         Jwt decoded = jwtDecoder.decode(token);
 
-        assertThat(decoded.getSubject()).isEqualTo("testuser");
+        assertThat(decoded.getSubject()).isEqualTo("1");
         assertThat(decoded.getClaimAsString("iss")).isEqualTo(ISSUER);
         assertThat(decoded.getAudience()).containsExactly(AUDIENCE);
         assertThat(decoded.getClaimAsString("role")).isEqualTo("USER");

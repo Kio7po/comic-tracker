@@ -65,6 +65,10 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public User findById(Long id) {
+        return userRepository.findById(id).orElseThrow(InvalidCredentialsException::new);
+    }
+
     @Transactional
     public TokenPair login(String usernameOrEmail, String rawPassword) {
         User user = userRepository.findByUsername(usernameOrEmail)

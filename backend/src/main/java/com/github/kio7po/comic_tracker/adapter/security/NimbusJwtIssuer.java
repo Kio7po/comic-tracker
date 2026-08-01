@@ -40,7 +40,7 @@ public class NimbusJwtIssuer implements JwtIssuer {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .audience(List.of(audience))
-                .subject(user.getUsername())
+                .subject(String.valueOf(user.getId()))
                 .issuedAt(now)
                 .expiresAt(now.plus(accessTokenExpirationMinutes, ChronoUnit.MINUTES))
                 .claim("role", user.getRole().name())

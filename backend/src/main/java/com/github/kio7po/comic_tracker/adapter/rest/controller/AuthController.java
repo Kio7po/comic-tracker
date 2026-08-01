@@ -7,7 +7,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +23,7 @@ import com.github.kio7po.comic_tracker.adapter.rest.dto.TokenResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.UserResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.mapper.UserMapper;
 import com.github.kio7po.comic_tracker.domain.entities.User;
+import com.github.kio7po.comic_tracker.domain.exceptions.InvalidCredentialsException;
 import com.github.kio7po.comic_tracker.domain.service.TokenPair;
 import com.github.kio7po.comic_tracker.domain.service.UserService;
 
@@ -66,6 +70,23 @@ public class AuthController {
             @CookieValue(value = REFRESH_TOKEN_COOKIE, required = false) String refreshToken) {
         TokenPair tokenPair = userService.refresh(refreshToken);
         return tokenResponse(tokenPair);
+    }
+
+    @GetMapping("/me")
+    public UserResponseDto me(@AuthenticationPrincipal Jwt jwt) {
+        String subject = jwt.getSubject();
+        if (subject == null) {
+            // "sub" is optional per the JWT spec; token is external input, so don't assume it.
+            throw new InvalidCredentialsException();
+        }
+        Long userId;
+        try {
+            userId = Long.valueOf(subject);
+        } catch (NumberFormatException e) {
+            throw new InvalidCredentialsException();
+        }
+        User user = userService.findById(userId);
+        return UserMapper.toResponseDto(user);
     }
 
     @PostMapping("/logout")
