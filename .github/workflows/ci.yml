@@ -49,6 +49,7 @@ jobs:
       - name: Build, test y cobertura # (Testcontainers necesita Docker, ya disponible en el runner)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          JWT_SIGN_KEY: ${{ secrets.JWT_SIGN_KEY }}
         run: >
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
   frontend:
