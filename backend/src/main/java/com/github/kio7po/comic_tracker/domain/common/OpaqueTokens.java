@@ -17,6 +17,7 @@ public final class OpaqueTokens {
     public static String generate() {
         byte[] bytes = new byte[TOKEN_BYTES];
         SECURE_RANDOM.nextBytes(bytes);
+        // url-safe base64 sin padding para poder enviar en urls/cookies/headers
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
