@@ -19,6 +19,7 @@ CREATE SEQUENCE IF NOT EXISTS comic_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_metadata_source_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_metadata_entry_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS app_user_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS refresh_token_seq START WITH 1 INCREMENT BY 50;
 
 -- ─── Usuario
 
@@ -37,6 +38,17 @@ CREATE TABLE IF NOT EXISTS app_user (
     created_at      TIMESTAMPTZ NOT NULL,
     updated_at      TIMESTAMPTZ NOT NULL,
     enabled         BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- Token opaco de refresco (no JWT): se guarda solo su hash, nunca el valor en claro.
+-- Rotado en cada uso (revoked_at se rellena en el usado, fila nueva emitida).
+CREATE TABLE IF NOT EXISTS refresh_token (
+    id         BIGINT NOT NULL PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES app_user (id),
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL
 );
 
 -- ─── Catálogo

@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.github.kio7po.comic_tracker.domain.exceptions.EmailAlreadyExistsException;
+import com.github.kio7po.comic_tracker.domain.exceptions.InvalidCredentialsException;
+import com.github.kio7po.comic_tracker.domain.exceptions.InvalidRefreshTokenException;
 import com.github.kio7po.comic_tracker.domain.exceptions.UsernameAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.WeakPasswordException;
 
@@ -20,6 +22,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(WeakPasswordException.class)
     public ProblemDetail handleWeakPassword(WeakPasswordException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler({ InvalidCredentialsException.class, InvalidRefreshTokenException.class })
+    public ProblemDetail handleUnauthorized(RuntimeException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
 }

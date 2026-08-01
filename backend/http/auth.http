@@ -45,5 +45,29 @@ Content-Type: {{contentType}}
   "displayName": "X"
 }
 
+### Login - success (sets refresh_token as HttpOnly cookie, body has the access token)
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "usernameOrEmail": "juan",
+  "password": "password123"
+}
+
+### Login - wrong password -> 401
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "usernameOrEmail": "juan",
+  "password": "wrong-password"
+}
+
+### Refresh - reads refresh_token cookie set by the client (login above), rotates it
+POST {{host}}/api/auth/refresh
+
+### Logout - revokes the refresh_token cookie
+POST {{host}}/api/auth/logout
+
 ### Any endpoint outside /api/auth/** -> 403 (denyAll)
 GET {{host}}/api/whatever
