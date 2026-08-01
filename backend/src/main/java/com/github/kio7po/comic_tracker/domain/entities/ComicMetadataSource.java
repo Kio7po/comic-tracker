@@ -11,11 +11,11 @@ public class ComicMetadataSource {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 255)
     private String slug;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String name;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String baseUrl;
     
     public ComicMetadataSource() {

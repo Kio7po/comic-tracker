@@ -30,6 +30,10 @@
 		<java.version>21</java.version>
 		<sonar.projectKey>kio7po_comic-tracker-backend</sonar.projectKey>
 		<sonar.organization>kio7po</sonar.organization>
+		<sonar.coverage.exclusions>
+			**/dto/**,
+			**/mapper/**
+		</sonar.coverage.exclusions>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -50,6 +54,18 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-oauth2-jose</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.jspecify</groupId>
+			<artifactId>jspecify</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

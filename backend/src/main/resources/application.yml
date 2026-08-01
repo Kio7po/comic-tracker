@@ -14,3 +14,14 @@ spring:
   threads:
     virtual:
       enabled: 'true'
+  mvc:
+    problemdetails:
+      enabled: true
+
+jwt:
+  sign-key: ${JWT_SIGN_KEY}
+  issuer: comic-tracker
+  audience: comic-tracker
+  access-token-expiration-minutes: 15
+  refresh-token-expiration-days: 30
+  refresh-token-secure: true

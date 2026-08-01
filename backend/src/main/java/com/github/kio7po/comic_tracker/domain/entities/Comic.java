@@ -26,11 +26,13 @@ public class Comic {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 255)
     private String slug;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String title;
+    @Column(length = 2048)
     private String synopsis;
+    @Column(length = 255)
     private String coverUrl;
     /*
         Usa la tabla por defecto <entity>_<attribute>
@@ -39,6 +41,7 @@ public class Comic {
         Importante, por defecto camelCase -> snake_case
     */
     @ElementCollection(fetch = FetchType.LAZY)
+    @Column(length = 255)
     private Set<String> alternativeTitles = new HashSet<>();
     private LocalDate startDate;
     private LocalDate endDate;

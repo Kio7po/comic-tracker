@@ -18,6 +18,38 @@ CREATE SEQUENCE IF NOT EXISTS tag_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_metadata_source_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_metadata_entry_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS app_user_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS refresh_token_seq START WITH 1 INCREMENT BY 50;
+
+-- ─── Usuario
+
+-- Se llama app_user y no user: "user" es palabra reservada en PostgreSQL.
+CREATE TABLE IF NOT EXISTS app_user (
+    id              BIGINT NOT NULL PRIMARY KEY,
+    username        VARCHAR(255) NOT NULL UNIQUE,
+    email           VARCHAR(255) NOT NULL UNIQUE,
+    password_hash   VARCHAR(255) NOT NULL,
+    display_name    VARCHAR(255) NOT NULL,
+    biography       VARCHAR(2048),
+    picture_url     VARCHAR(255),
+    -- Código de locale estándar (BCP 47, p.ej. "es-ES", "en-US"), no un enum cerrado
+    locale          VARCHAR(35),
+    role            VARCHAR(255) NOT NULL CHECK (role IN ('USER', 'ADMIN')),
+    created_at      TIMESTAMPTZ NOT NULL,
+    updated_at      TIMESTAMPTZ NOT NULL,
+    enabled         BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- Token opaco de refresco (no JWT): se guarda solo su hash, nunca el valor en claro.
+-- Rotado en cada uso (revoked_at se rellena en el usado, fila nueva emitida).
+CREATE TABLE IF NOT EXISTS refresh_token (
+    id         BIGINT NOT NULL PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES app_user (id),
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL
+);
 
 -- ─── Catálogo
 
