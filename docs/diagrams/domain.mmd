@@ -15,6 +15,18 @@ classDiagram
         + enabled: boolean
     }
 
+    %% Token opaco de refresco (no JWT) para renovar el access token sin volver a
+    %% pedir credenciales. Se guarda solo el hash (tokenHash), nunca el valor en claro.
+    %% Rotado en cada uso: revokedAt se rellena en el token usado y se emite uno nuevo,
+    %% lo que permite detectar reutilización de un token ya rotado (robo) y revocar
+    %% sesiones individuales sin tocar la contraseña.
+    class RefreshToken {
+        + tokenHash: string
+        + expiresAt: DateTime
+        + revokedAt: DateTime
+        + createdAt: DateTime
+    }
+
     %% ─── Comic ──────────────────────────────────────────────────
     %% Entidad canónica del catálogo. No representa los datos crudos de ninguna fuente
     %% en particular, sino los valores ya fusionados por prioridad que el sistema presenta
@@ -205,6 +217,8 @@ classDiagram
     List "0..*" --> "0..*" Comic
 
     ReadingState "0..*" --> "1" User
+
+    RefreshToken "0..*" --> "1" User
 
     Follow "0..*" --> "1" User : pendiente de implementación
     Follow "0..*" --> "1" ComicReadingEntry : pendiente de implementación
