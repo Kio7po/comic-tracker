@@ -2,3 +2,6 @@ spring:
   web:
     error:
       include-message: always
+
+jwt:
+  refresh-token-secure: false

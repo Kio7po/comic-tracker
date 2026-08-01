@@ -2,13 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
   pull_request: # PRs to the following branches will trigger the workflow
-    branches: [main]
+    branches:
+      - main
+      - develop
 
 jobs:
   changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read       # requerido si el job hace checkout, es el default del repo pero al especificar permissions se sobreescribe con lo más restrictivo
+      pull-requests: read  # requerido por dorny/paths-filter en una pr porque llama a la api de github
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
@@ -42,6 +49,7 @@ jobs:
       - name: Build, test y cobertura # (Testcontainers necesita Docker, ya disponible en el runner)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          JWT_SIGN_KEY: ${{ secrets.JWT_SIGN_KEY }}
         run: >
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
   frontend:

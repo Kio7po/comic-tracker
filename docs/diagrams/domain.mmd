@@ -4,11 +4,27 @@ classDiagram
     class User {
         + username: string
         + email: string
-        + password: string
+        + passwordHash: string
+        + displayName: string
         + biography: string
-        + picture: string
-        + language: Enum
+        + pictureUrl: string
+        + locale: string
         + role: Enum
+        + createdAt: DateTime
+        + updatedAt: DateTime
+        + enabled: boolean
+    }
+
+    %% Token opaco de refresco (no JWT) para renovar el access token sin volver a
+    %% pedir credenciales. Se guarda solo el hash (tokenHash), nunca el valor en claro.
+    %% Rotado en cada uso: revokedAt se rellena en el token usado y se emite uno nuevo,
+    %% lo que permite detectar reutilización de un token ya rotado (robo) y revocar
+    %% sesiones individuales sin tocar la contraseña.
+    class RefreshToken {
+        + tokenHash: string
+        + expiresAt: DateTime
+        + revokedAt: DateTime
+        + createdAt: DateTime
     }
 
     %% ─── Comic ──────────────────────────────────────────────────
@@ -17,6 +33,7 @@ classDiagram
     %% al usuario. Se persiste la primera vez que un usuario entra al detalle de una obra
     %% (cache-aside); hasta entonces existe solo en la fuente externa de búsqueda.
     class Comic {
+        + slug: string
         + title: string
         + synopsis: string
         + cover: string
@@ -27,18 +44,20 @@ classDiagram
         + media_type: Enum
         + status: Enum
         + chapters: int
-        + authors: string
-        + slug: string
     }
 
-    %% Genre y Tag son entidades propias (no enums) para permitir
-    %% que las fuentes de metadatos aporten valores distintos sin
-    %% estar restringidas a un conjunto cerrado predefinido.
+    %% Genre, Tag y Author son entidades propias (no enums/campos escalares)
+    %% para permitir que las fuentes de metadatos aporten valores distintos
+    %% sin estar restringidas a un conjunto cerrado predefinido.
     class Genre {
         + name: string
     }
 
     class Tag {
+        + name: string
+    }
+
+    class Author {
         + name: string
     }
 
@@ -173,6 +192,7 @@ classDiagram
 
     Comic "0..*" --> "0..*" Genre
     Comic "0..*" --> "0..*" Tag
+    Comic "0..*" --> "0..*" Author
     Comic "1" --> "1..*" ComicMetadataEntry
     Comic "1" --> "0..*" ComicReadingEntry
     Comic "1" --> "0..*" ComicReview
@@ -197,6 +217,8 @@ classDiagram
     List "0..*" --> "0..*" Comic
 
     ReadingState "0..*" --> "1" User
+
+    RefreshToken "0..*" --> "1" User
 
     Follow "0..*" --> "1" User : pendiente de implementación
     Follow "0..*" --> "1" ComicReadingEntry : pendiente de implementación

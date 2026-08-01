@@ -1,0 +1,81 @@
+@host = http://localhost:8080
+@contentType = application/json
+
+### Register - success
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "testuser",
+  "email": "testuser@example.com",
+  "password": "password123",
+  "displayName": "Test User"
+}
+
+### Register - duplicate username -> 409
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "testuser",
+  "email": "other@example.com",
+  "password": "password123",
+  "displayName": "Test User 2"
+}
+
+### Register - weak password -> 400 (WeakPasswordException)
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "weak",
+  "email": "weak@example.com",
+  "password": "123",
+  "displayName": "Weak"
+}
+
+### Register - bean validation failure (blank username, invalid email) -> 400
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "",
+  "email": "bad-email",
+  "password": "password123",
+  "displayName": "X"
+}
+
+### Login - success (sets refresh_token as HttpOnly cookie, body has the access token)
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "usernameOrEmail": "testuser",
+  "password": "password123"
+}
+
+### Login - wrong password -> 401
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "usernameOrEmail": "testuser",
+  "password": "wrong-password"
+}
+
+### Me - returns the authenticated user, chained from the login request above -> 200
+GET {{host}}/api/auth/me
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Me - no Authorization header -> 401
+GET {{host}}/api/auth/me
+
+### Refresh - reads refresh_token cookie set by the client (login above), rotates it
+POST {{host}}/api/auth/refresh
+
+### Logout - revokes the refresh_token cookie
+POST {{host}}/api/auth/logout
+
+### Any endpoint outside /api/auth/** -> 403 (denyAll)
+GET {{host}}/api/whatever

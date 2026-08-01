@@ -1,5 +1,9 @@
 # TFG — Juan Vázquez Longueira (UDC, Ingeniería de Software)
 
+*Nota de mantenimiento de este documento: registra decisiones de arquitectura y su razonamiento (qué se decidió, qué se descartó y por qué) — no firmas de métodos, tipos concretos ni otros detalles que ya viven en el código y que se desincronizarían de él. Al añadir contenido nuevo, colocarlo dentro de la sección existente a la que pertenece temáticamente, no por defecto como sección nueva al final.*
+
+*No es un log de cambios: no narrar qué se hizo en una sesión de trabajo concreta, ni enumerar campos o propiedades añadidos/renombrados en una entidad (eso ya lo tiene el historial de git), ni mencionar detalles de implementación como una ruta HTTP o un verbo concreto — nada de eso es una decisión. Cada entrada debe ser la decisión más la razón real que la motivó, de forma concisa, sin reexplorar alternativas que no aporten nada nuevo; si la razón real no está clara, no rellenarla con una plausible inventada a posteriori. Aplicar un patrón ya establecido en el proyecto no es una decisión nueva y no necesita entrada propia. Los estándares de cómo escribir código a nivel general (convenciones de código, no decisiones de arquitectura o de producto) van en `CLAUDE.md`, no aquí.*
+
 ## Problema
 La información sobre dónde leer cómics/mangas en internet está dispersa, en formatos heterogéneos y sin garantías de calidad. No existe un punto centralizado que lo agregue.
 
@@ -52,6 +56,8 @@ Aplicación web de indexación colaborativa para búsqueda, seguimiento y locali
 
 Patrón común para dos tipos de integraciones externas. En ambos casos se define una interfaz y se implementa por cada fuente/sitio concreto. Al menos un adaptador concreto de cada tipo será implementado en el TFG.
 
+**Decidido: la URL base de la API externa de cada adaptador no se hardcodea, pero tampoco exige configuración obligatoria.** Valor por defecto embebido en el código, overrideable desde fuera sin recompilar (p. ej. `@Value("${provider.api.base-url:https://valor-por-defecto}")`). *Razón:* la URL de una API de terceros puede cambiar, o interesar apuntar a una instancia propia (p. ej. Jikan permite auto-hospedarse) sin perder el autocontenido por defecto. Ejemplo: `TenraiComicMetadataProvider`.
+
 ### Adaptadores de metadatos
 - Obtienen información del cómic desde fuentes externas (AniList, MangaDex…).
 - Combinables con prioridad configurable para completar información. **Aplica al detalle de un cómic ya identificado** (fusión de campos sobre una misma entidad); para la búsqueda de catálogo se usa una única fuente principal — ver sección Catálogo — por ser un problema distinto (fusión de conjuntos de resultados, no de campos). Modelo de datos de la fusión y de la deduplicación: ver sección "Deduplicación y fusión de metadatos".
@@ -74,6 +80,7 @@ Hay dos cosas que se mantenían mezcladas en redacciones anteriores de este docu
 - **`ComicMetadataSource`** (nombre definitivo — ver "Convención de nombres de entidades y adaptadores"): el sitio de metadatos en sí (AniList, MangaDex…), como entidad propia.
 - **`ComicMetadataEntry`** (nombre definitivo, antes "FuenteMetadata" — ver "Convención de nombres de entidades y adaptadores"): una fila por (`comic_metadata_source_id`, id externo, comic_id), con restricción de unicidad sobre (`comic_metadata_source_id`, id externo). Guarda el dato crudo normalizado tal como lo devuelve esa fuente. Nombrada por simetría con `ComicReadingEntry`, ya existente. **Nota de migración de modelo:** al pasar `ComicMetadataSource` a ser una entidad real, la restricción de unicidad deja de apoyarse en un valor de fuente suelto (string/enum) y pasa a ser una FK a `ComicMetadataSource`.
 - La equivalencia entre dos fuentes para el mismo cómic **no se guarda como una tabla de pares "id↔id"** — se deduce porque ambas filas de `ComicMetadataEntry` apuntan al mismo `comic_id`. Se descarta explícitamente el diseño de pares sueltos porque, con tres o más fuentes, introduce un problema de cierre transitivo (A≈B y B≈C conocidos, pero A≈C no registrado directamente) que el modelo anclado al Comic no tiene.
+- **Pendiente:** `ComicMetadataEntry`, tal y como está modelada hoy, no tiene columnas para el dato crudo por campo (título, sinopsis, géneros…) — solo enlaza (`source_id`, `external_id`) → `comic_id`. Esto basta para la deduplicación (paso 1 de "Proceso de alta de una fuente nueva", abajo) pero no para la fusión por prioridad real descrita arriba: con un único provider activo no hay nada que fusionar todavía, así que el hueco no se nota. Antes de añadir un segundo provider habrá que decidir cómo y dónde se guarda el valor crudo por fuente y por campo.
 
 **Proceso de alta de una fuente nueva — orden de resolución, decidido:**
 1. Si el id externo ya está registrado en `ComicMetadataEntry`, se reutiliza su `comic_id` — no se crea un Comic nuevo.
@@ -106,6 +113,7 @@ Nombres definitivos (sustituyen a "FuenteMetadata"/"FuenteLectura", que eran inf
 - **El prefijo `Comic` tiene dos motivaciones distintas según la entidad, no una sola:** en `ComicMetadataEntry`/`ComicReadingEntry` significa "vinculado a un cómic concreto" (la fila referencia un `comic_id`). En `ComicMetadataSource`/`ComicReadingSource` **no** hay vínculo a un cómic concreto — el prefijo ahí señala solo "del dominio de cómics" (p. ej. "fuente de metadata de cómics" en general, no de una obra en particular). Se deja anotado explícitamente para que no se asuma que una fila de `ComicMetadataSource` está atada a un cómic.
 - **Se descartaron los términos `Port` y `Adapter` para nombrar los conceptos genéricos** (puerto e implementación de Ports & Adapters), reservándolos para referirse al patrón en sí, y se usó en su lugar un nombre concreto del dominio: `Provider`.
 - **Convención puerto/implementación con `Provider`:** el puerto lleva el nombre genérico (`ComicMetadataProvider`), y cada implementación concreta antepone el nombre de la fuente al mismo nombre del puerto (`MangadexComicMetadataProvider`), en vez de usar un sufijo distinto tipo `...Adapter`. Es un patrón de nombrado extendido en Java/Spring (p. ej. `UserRepository` → `JpaUserRepository`; `PaymentGateway` → `StripePaymentGateway`): prefijo + mismo sufijo, en vez de sufijo distinto para cada nivel.
+- **Excepción a esta convención:** cuando una fuente no expone API pública propia y se accede vía una API de terceros con nombre propio, la implementación se nombra según esa API, no según el sitio — caso de MyAnimeList, implementado como `TenraiComicMetadataProvider` (antes `JikanComicMetadataProvider`, hasta que la API Jikan se volvió inestable) en vez de `MyAnimeListComicMetadataProvider`. El `slug` de `ComicMetadataSource` sigue identificando el sitio, no la API usada para acceder a él.
 - **Se corrige una inconsistencia previa del documento:** antes, el puerto del lado de lectura ya se llamaba `ReadingSourceAdapter` (con sufijo "Adapter", atípico para un puerto — rompía la convención que sí seguía el lado de metadatos, donde el puerto era `MetadataProvider` y solo las implementaciones llevaban "Adapter"). Con `ComicReadingProvider` como nuevo nombre del puerto, ambos lados (metadatos y lectura) siguen ahora el mismo criterio.
 
 ## Modelo de dominio
@@ -117,6 +125,20 @@ El diagrama de clases de dominio se encuentra en `docs/domain.mmd`. En él se in
 - **Visitante:** puede navegar y consultar el catálogo.
 - **Usuario registrado:** puede además aportar fuentes y valorar las existentes.
 - **Administrador:** acceso total a todas las entidades del sistema, incluyendo cuentas de usuario. Alcance exacto de las operaciones por concretar.
+
+## Usuario: modelo de datos, registro e inicio de sesión
+
+- **Tabla `app_user`, no `user`:** `user` es palabra reservada en PostgreSQL (verificado: `CREATE TABLE user (...)` falla sin comillas). Se descarta usarla entrecomillada — forzaría entrecomillar la tabla en todo el SQL y el mapeo JPA de por vida de la tabla, sin ninguna ventaja a cambio.
+- **`created_at`/`updated_at` añadidos a `User`** (gestionados por Hibernate vía `@CreationTimestamp`/`@UpdateTimestamp`, no a mano): pensados como estándar de auditoría a futuro, con valor especial en una entidad como `User` (altas, bajas, cambios de cuenta).
+- **`locale`: string libre con formato de locale estándar (BCP 47, p. ej. `es-ES`, `en-US`), no un enum cerrado.** *Razón:* soportar cualquier idioma a futuro sin migrar el esquema cada vez que se añada uno. Alternativas descartadas: enum cerrado `ES`/`EN`, o `ES`/`EN`/`GL` (coherente con que el TFG es de la UDC).
+- **Longitud mínima de contraseña: regla de dominio (`UserService`), no de DTO.** Es una regla de seguridad, no una restricción de forma del *payload* — debe cumplirse sin importar la vía de entrada (REST hoy, cualquier otra en el futuro).
+- **Hash de contraseña: puerto de dominio (`PasswordHasher`), no un tipo de Spring Security filtrado directamente en el dominio.** Implementado como adaptador *driven* (`BCryptPasswordHasher`), fuera de `adapter/rest/security/` — lo específico de REST (filtros, CORS) va ahí; lo que el dominio necesita como capacidad (hashing, y JWT — ver más abajo) se modela como puerto+adaptador aparte, hermano de `persistence/`.
+- **Política de acceso por defecto: `denyAll()`, no `authenticated()`, para todo lo que no sea `/api/auth/**`.** *Razón:* fuerza a declarar explícitamente qué rutas son accesibles y con qué requisito, en vez de asumir por defecto que "cualquier usuario autenticado" basta — postura más estricta (denegar por defecto, permitir explícitamente) que además evita, hoy, que el resto de la aplicación quede accesible de facto a través del usuario en memoria que Spring Boot autogenera automáticamente mientras no exista un mecanismo de autenticación real.
+- **Formato de respuesta de error: RFC 9457**, decidido. RFC 9457 ("Problem Details for HTTP APIs") obsoleta a la RFC 7807 anterior del mismo nombre, manteniendo el mismo formato de cuerpo (`type`, `title`, `status`, `detail`, `instance`) y tipo de contenido `application/problem+json` — es, a día de hoy, el estándar vigente para errores HTTP estructurados, no una elección arbitraria. Se usa el tipo `ProblemDetail` ya incluido en Spring Framework 6+ (sin librería adicional), habilitado globalmente con `spring.mvc.problemdetails.enabled=true` — esto cubre automáticamente los fallos de Bean Validation con el mismo formato, sin necesitar un `@ExceptionHandler` propio para ellos. Se descarta explícitamente definir un DTO de error propio: sería reinventar un estándar que el framework ya soporta de forma nativa.
+- **Firma del JWT: HS256 (HMAC-SHA256) con secreto simétrico, no RSA/EC/Ed25519.** *Razón:* la ventaja de una clave asimétrica es separar quién puede firmar de quién puede verificar — no aplica aquí, donde el mismo backend emite y valida sus propios tokens (mismo dominio de confianza); comprometer ese backend compromete la firma da igual el tipo de clave. Comprobado además, no asumido, que el soporte de conveniencia de `spring-security-oauth2-jose` (`NimbusJwtEncoder`/`NimbusJwtDecoder`) tiene huecos reales para EC/Ed25519 — el lado de decodificación solo trae builder dedicado para RSA y para clave simétrica — mientras que HMAC es la única vía totalmente soportada en ambos lados sin bajar al `JWKSource` genérico de Nimbus. Ed25519 en concreto es criptográficamente más robusto (firma determinista, sin el riesgo de reutilización de nonce que tiene ECDSA) pero esa ventaja no compensa el hueco de soporte para el caso de uso actual.
+- **Refresh token: opaco (no JWT), hasheado (SHA-256) en BBDD, rotado en cada uso.** *Razón:* un JWT de refresco sin estado no se puede revocar sin añadir de todos modos una blocklist — pierde en la práctica la ventaja de no tener estado que se busca al usar JWT. La rotación en cada uso permite detectar robo de token: si el mismo token ya rotado se reutiliza, la petición falla, delatando que hay una copia filtrada circulando.
+- **Refresh token viaja como cookie `HttpOnly` + `Secure` + `SameSite=Lax`, nunca en el body JSON de la respuesta.** *Razón:* un token de vida larga accesible desde JavaScript es robable por XSS; `HttpOnly` lo hace inalcanzable desde JS. `SameSite=Lax` y no `Strict` porque el modelo de despliegue (dominio de frontend/backend) sigue sin decidir (ver Modelo de despliegue) — `Strict` podría romper la cookie si acaban siendo dominios distintos; a revisar cuando se cierre esa decisión.
+- **Respuesta de login/refresh en formato estándar OAuth 2.0** (`access_token`, `token_type: "Bearer"`, `expires_in` en segundos — RFC 6749 §5.1), vía `@JsonNaming` snake_case sobre el DTO en vez de nombrar los campos a mano. No incluye `refresh_token`: ese va solo por cookie, por el punto anterior.
 
 ## Metodología
 
@@ -169,7 +191,7 @@ Las transiciones del workflow se han nombrado explícitamente (Project settings 
 - **Frontend — Linter: ESLint.** Se valoró Oxlint (Rust, del mismo equipo que mantiene Vite, órdenes de magnitud más rápido) pero se descarta por ahora: la cobertura de reglas TypeScript *type-aware* (las que detectan errores reales de tipos, no solo de estilo) sigue siendo más madura en ESLint/`typescript-eslint`, y la ganancia de velocidad de Oxlint no se justifica a la escala de este proyecto.
 - **Frontend — Formateador: Prettier — sin decidir.** ESLint no formatea código, solo detecta problemas; si se quiere formato automático consistente haría falta añadir Prettier aparte, con `eslint-config-prettier` para que no choquen reglas de estilo entre ambas herramientas.
 - **Frontend — Cliente HTTP: Axios**, decidido. La instancia configurada (`baseURL` desde variable de entorno + interceptor para adjuntar el JWT) queda pendiente de implementar en `common/api/`.
-- **Validación de entrada (backend): Bean Validation** (`spring-boot-starter-validation`), usada en los DTOs de `web/dto/` (no en las entidades de dominio), coherente con la separación DTO/entidad ya decidida. Cubre la validación de datos aportados por el usuario (enlaces y metadatos de fuentes de lectura, entre otros).
+- **Validación de entrada (backend): Bean Validation** (`spring-boot-starter-validation`), usada en los DTOs de `rest/dto/` (no en las entidades de dominio), coherente con la separación DTO/entidad ya decidida. Cubre la validación de datos aportados por el usuario (enlaces y metadatos de fuentes de lectura, entre otros).
 - **Lombok: descartado.** Motivo: interfiere con el autocompletado/depuración en algunos entornos y genera código no visible en el fuente (riesgo señalado especialmente en `equals`/`hashCode` autogenerados sobre entidades JPA con relaciones lazy). Getters/setters/constructores se escriben a mano.
 - **Mapeo entidad ↔ DTO: manual, sin MapStruct.** Se considera y se descarta explícitamente: el mapeo manual no se percibe como suficientemente costoso para justificar la dependencia adicional.
 - **Backend — Actuator: decidido no añadirlo por ahora.** Sin un entorno de despliegue definido (ver Modelo de despliegue), no hay nada que consuma sus endpoints de salud/métricas; es una dependencia de una línea el día que haga falta.
@@ -198,6 +220,8 @@ Las transiciones del workflow se han nombrado explícitamente (Project settings 
 
 **Estrategia de invalidación — adaptadores de metadatos: decidido.** TTL pasivo: cada entrada cacheada guarda el momento de la última consulta; al pedir ese cómic, si ha pasado más tiempo que el TTL configurado desde esa última consulta, se repite la llamada a los adaptadores antes de servir la respuesta; si no, se sirve el valor cacheado. No requiere infraestructura adicional (sin job programado). *Razón:* coherente con que estos datos cambian con poca frecuencia (ya establecido arriba) y con la estrategia "on-demand inicialmente" ya prevista en Adaptadores de metadatos — es su implementación concreta, no una decisión nueva independiente. **Pendiente:** el valor concreto del TTL no está fijado.
 
+**Pendiente — rate limiting en adaptadores de metadatos:** sin throttling ni retry todavía (p. ej. `TenraiComicMetadataProvider`, límite público documentado de 3 req/s). Previsiblemente necesario cuando exista el orquestador de llamadas en paralelo (ver "Adaptadores de metadatos asíncronos" más abajo); candidata: `RateLimiter` de Resilience4j.
+
 *Mejora futura planteada, no decidida:* complementar el TTL pasivo con un batch periódico dirigido (no a todo el catálogo, para no multiplicar consumo de rate limit por cómic) que refresque proactivamente los cómics con más tráfico o marcados como "en emisión", reduciendo la latencia que sufre el primer usuario que pide un dato ya caducado. Coherente con el "batch periódico a futuro" ya previsto en Adaptadores de metadatos.
 
 **Estrategia de invalidación — adaptadores de fuentes de lectura:** sigue sin decidir. La motivación es distinta (evitar llamadas repetidas en períodos cortos, no datos estables — ver arriba), por lo que el TTL pasivo decidido para metadatos no se traslada automáticamente a este caso.
@@ -208,7 +232,7 @@ La tecnología concreta de caché (almacén, etc.) no está decidida. Implementa
 
 **ORM:** `FetchType.LAZY` por defecto en todas las relaciones. Las fuentes de lectura se cargan únicamente al consultar el detalle de un cómic concreto, no en el catálogo general, por lo que el problema N+1 no aplica en los casos relevantes.
 
-**Testing de integración — Testcontainers, decidido.** Sustituye a una decisión anterior de este documento ("Testcontainers descartado por ahora"). *Motivo del cambio:* la integración `@ServiceConnection` (disponible desde Spring Boot 3.1, vigente en 4.x) elimina la fricción que originalmente motivó posponerlo — gestiona automáticamente el ciclo de vida de un contenedor PostgreSQL por clase de test, sin necesitar una segunda base de datos gestionada a mano ni coordinar un contenedor externo en CI. La clase de test por defecto generada por Initializr sigue este mismo patrón, para que la suite no dependa de tener el entorno de desarrollo local ya levantado.
+**Testing de integración — Testcontainers, decidido.** Sustituye a una decisión anterior de este documento ("Testcontainers descartado por ahora"). *Motivo del cambio:* la integración `@ServiceConnection` (disponible desde Spring Boot 3.1, vigente en 4.x) elimina la fricción que originalmente motivó posponerlo — gestiona automáticamente el ciclo de vida de un contenedor PostgreSQL por clase de test, sin necesitar una segunda base de datos gestionada a mano ni coordinar un contenedor externo en CI. La clase de test por defecto generada por Initializr (`ComicTrackerApplicationTests`) está pensada para seguir este mismo patrón, pero **todavía no lo hace**: hoy depende de tener `backend/.env` configurado y una Postgres real alcanzable, en vez de un `PostgreSQLContainer` con `@ServiceConnection`. Pendiente de corregir.
 
 **Cobertura backend — JaCoCo.** El goal `report` está atado a la fase `verify` del ciclo de vida de Maven (no a `test`). Decisión deliberada, no un descuido: si en el futuro se separan tests unitarios (Surefire, fase `test`) de tests de integración (Failsafe, fases `integration-test`/`verify`), el informe seguiría generándose correctamente después de ambos sin tener que revisar esta configuración — atarlo a `verify` no tiene coste hoy y evita un ajuste futuro.
 
@@ -265,7 +289,7 @@ Estructura de carpetas de la raíz del repositorio (la estructura interna de `ba
 
 ### Estructura interna del backend
 
-**Patrón: Arquitectura Hexagonal (Ports & Adapters)**, adoptada y nombrada explícitamente. *Razón:* los adaptadores de metadatos y de fuentes de lectura no son "acceso a datos" en sentido estricto (no son una base de datos, y hay varios tipos distintos); el patrón Hexagonal resuelve esto tratando la persistencia como un adaptador más entre varios (hacia BD, hacia APIs externas, hacia sitios web de terceros), todos al mismo nivel, cada uno implementando un puerto (interfaz) definido por el dominio.
+**Patrón: Arquitectura Hexagonal (Ports & Adapters)**, adoptada y nombrada explícitamente. *Razón:* los adaptadores de metadatos y de fuentes de lectura no son "acceso a datos" en sentido estricto (no son una base de datos, y hay varios tipos distintos); el patrón Hexagonal resuelve esto tratando la persistencia como un adaptador más entre varios (hacia BD, hacia APIs externas, hacia sitios web de terceros), todos al mismo nivel, cada uno implementando un puerto (interfaz) definido por el dominio. Esto son adaptadores *driven*; el patrón también reconoce adaptadores *driving* (traducen una llamada externa en una llamada a los propios métodos del dominio, sin necesitar una interfaz de entrada explícita) — caso de `rest/`, ver más abajo.
 
 ```
 backend/src/main/java/.../
@@ -274,33 +298,26 @@ backend/src/main/java/.../
 │                           ComicReadingEntry (nombres definitivos — ver "Convención de
 │                           nombres de entidades y adaptadores") (crecerá: p. ej.
 │                           Valoracion para moderación)
+│   ├── port/               puertos + sus tipos de contrato, sin implementaciones: metadata/, source/
+│   ├── common/             tipos de dominio genéricos reutilizables entre puertos
 │   ├── exceptions/         excepciones de dominio, sin conocimiento de HTTP
 │   └── service/             lógica de negocio: combinar adaptadores de metadatos por
 │                           prioridad, deduplicación, cálculo de progreso
 │
-├── adapter/
-│   ├── persistence/         adaptador hacia BD: repositorios JPA
-│   ├── metadata/             ComicMetadataProvider (puerto) + AniListComicMetadataProvider,
-│                            MangaDexComicMetadataProvider...
-│   └── source/                ComicReadingProvider (puerto) + implementaciones por dominio
-│                            (p. ej. `[Sitio]ComicReadingProvider`)
-│
-└── web/
-    ├── controller/
-    ├── dto/                  DTOs de request/response, separados de las entidades JPA
-    ├── mapper/               entidad ↔ DTO (manual — MapStruct descartado, ver Stack)
-    ├── exception/            GlobalExceptionHandler (@RestControllerAdvice), traduce
-    │                        excepciones de dominio a códigos HTTP (404, 409...)
-    └── security/             SecurityConfig, JwtAuthenticationFilter. Incluye también
-                             la configuración de CORS (necesaria porque frontend y backend
-                             corren en orígenes distintos).
+└── adapter/
+    ├── persistence/         adaptador hacia BD: repositorios JPA
+    ├── metadata/             implementaciones de ComicMetadataProvider (AniList, MangaDex...)
+    ├── source/                implementaciones de ComicReadingProvider, detectadas por dominio
+    └── rest/                  adaptador driving: controller/, dto/, mapper/, exception/
+                             (GlobalExceptionHandler), security/
 ```
 
 Razones puntuales:
-- **`web/` fuera de `adapter/`, pese a que estrictamente en Ports & Adapters todo lo que no es dominio es "un adaptador más":** los adaptadores agrupados en `adapter/` (`persistence`, `metadata`, `source`) tienen en común que **implementan un puerto definido por el dominio** (`ComicMetadataProvider`, `ComicReadingProvider`, los repositorios JPA) — el dominio define la interfaz, el adaptador la implementa, con inversión de dependencia real. `web/` no cumple esa condición: según `architecture.mmd`, los controllers llaman directamente a los services de dominio (`CTRL --> SVC_CAT`, etc.), sin que exista ninguna interfaz de caso de uso definida en `domain/` que el controller implemente o consuma como contrato. Al no haber puerto que implementar, no hay simetría real que justifique tratar `web/` como "un adaptador más" junto a los driven. **Nota importante:** la razón correcta es la ausencia de puerto de dominio, *no* que la API REST no vaya a tener varias implementaciones o formas de entrada alternativas (p. ej. GraphQL) — esa multiplicidad no es la condición que define un adaptador en Hexagonal (un adaptador con una sola implementación posible sigue siendo un adaptador si implementa un puerto); usar ese argumento no resistiría bien una pregunta directa sobre qué es un "puerto" en Ports & Adapters. **Pendiente, no decidido:** si en el futuro se introdujeran interfaces de caso de uso en `domain/` que los controllers consumieran como contrato (con o sin una segunda entrada como GraphQL), `web/` pasaría a cumplir la misma condición que los adaptadores driven y esta ubicación debería reconsiderarse.
-- **DTOs separados de entidades JPA:** motivado directamente por `FetchType.LAZY` (ya decidido) — serializar entidades JPA con relaciones lazy directamente como respuesta REST puede dar problemas (proxies, `LazyInitializationException`, ciclos).
-- **`security/` dentro de `web/`**, en lugar de un paquete propio al mismo nivel que `domain/`/`adapter/`/`web/`: justificado porque, en el alcance actual del TFG, el 100% de lo que protege el JWT son los endpoints REST — no hay otro punto de entrada (colas de mensajes, WebSocket...). Si en el futuro apareciera otro punto de entrada que también necesite autenticación, habría que reconsiderar esta ubicación.
-- **`exceptions/` dentro de `domain/`:** las excepciones de negocio no deben conocer HTTP; su traducción a códigos de estado se centraliza aparte, en `web/exception/`.
+- **`domain/port/` como subpaquete dedicado a puertos, en vez de una capa `application/` intermedia:** se valoró introducir una tercera capa entre `domain/` y `adapter/` (estilo Clean Architecture) tras detectar que `ComicMetadataProvider` había acabado viviendo dentro de `adapter/metadata/`, junto a su propia implementación — contradiciendo la premisa de que el dominio define el puerto. Se descarta esa capa adicional: añade una frontera más sin una necesidad demostrada a la escala de este TFG. La solución adoptada es más modesta: aislar los puertos en su propio subpaquete dentro de `domain/`, separados de `entities/`, sin crear una capa nueva.
+- **`rest/` (antes `web/`, separado de `adapter/`) sí va dentro de `adapter/`:** la razón anterior para mantenerlo fuera ("no hay puerto de dominio que implemente, luego no hay simetría con `persistence/metadata/source`") asumía que "puerto" solo aplica en el sentido *driven* — pero no es la condición que define un adaptador *driving*: los controllers REST adaptan igual, solo que en la dirección contraria de dependencia, con o sin interfaz de entrada explícita. Se renombra a `rest/` (no `web/`) por precisión: es lo que es.
+- **DTOs y mappers, dentro de `adapter/rest/`** (no en un paquete aparte reutilizable): exclusivos de esta vía de entrada por defecto, hasta que se demuestre una necesidad real de reutilizarlos desde otra. Separados de las entidades JPA por `FetchType.LAZY` (ya decidido) — serializarlas directamente como respuesta REST puede dar problemas (proxies, `LazyInitializationException`, ciclos).
+- **`security/` dentro de `adapter/rest/`**, en lugar de un paquete propio al mismo nivel que `domain/`/`adapter/`: justificado porque, en el alcance actual del TFG, el 100% de lo que protege el JWT son los endpoints REST — no hay otro punto de entrada. **Parcialmente resuelto** (ver "Usuario: modelo de datos y registro"): lo que sí es específico de REST (`SecurityConfig`, futuro `JwtAuthenticationFilter`) se queda aquí; lo que no lo es (hash de contraseña, previsiblemente JWT) se modela aparte, como puerto de dominio + adaptador *driven*, hermano de `persistence/`.
+- **`exceptions/` dentro de `domain/`:** las excepciones de negocio no deben conocer HTTP; su traducción a códigos de estado se centraliza aparte, en `adapter/rest/exception/`. **Pendiente:** aún sin implementar.
 
 ### Estructura interna del frontend
 
@@ -322,7 +339,7 @@ frontend/src/
 
 Razones puntuales:
 - **`services/` separado de `modules/`:** las entidades de negocio (Comic, ComicReadingEntry, Usuario) no corresponden 1:1 con los módulos de UI — una misma pantalla puede necesitar varias entidades a la vez (p. ej. detalle de cómic + sus fuentes), y un módulo de UI puede no mapear a una sola entidad. Mantenerlas separadas evita forzar esa correspondencia. Inspirado en el concepto de capa "entities" de Feature-Sliced Design, sin adoptar sus reglas estrictas de importación entre capas.
-- **Los tipos en `services/` son DTOs, no modelos de UI transformados:** simetría intencionada con `web/dto` del backend — ambos representan la forma del contrato HTTP, no un modelo de dominio enriquecido.
+- **Los tipos en `services/` son DTOs, no modelos de UI transformados:** simetría intencionada con `rest/dto` del backend — ambos representan la forma del contrato HTTP, no un modelo de dominio enriquecido.
 - **Sin capa de mapeo DTO → modelo de UI por ahora:** los componentes consumen los DTOs directamente. Se acepta el acoplamiento resultante (un cambio de forma en un DTO impacta a los componentes que lo usan) porque, al ser un proyecto de una sola persona controlando ambos extremos, el coste de ese acoplamiento cuando ocurra es manejable. **Revisar si:** (a) un componente necesita combinar DTOs de varias entidades a la vez, o (b) se necesita un campo derivado que no viene tal cual de la API — en cualquiera de esos casos, introducir el mapeo en ese módulo concreto, no en todos a la vez.
 - **`common/` fuera de `modules/`:** deliberado, para que cualquier módulo pueda importar de `common/` sin necesidad de una regla de excepción — al no ser un módulo más, no rompe el principio de que los módulos no se importan entre sí.
 
@@ -343,7 +360,7 @@ Ningún secreto (credenciales de BBDD, futuro secreto de firma del JWT) se hardc
 - **Backend:** Spring Boot no soporta ficheros `.env` de forma nativa. Se usa la dependencia **`springboot4-dotenv`** para cargar `backend/.env` (gitignorado), con las credenciales de conexión consumidas en `application.yml` vía placeholders.
 - **Docker Compose (raíz del repo):** lee su propio `.env` (gitignorado) de forma nativa, con las credenciales del contenedor Postgres. Es un fichero distinto al de `backend/.env`, con valores que hay que mantener sincronizados a mano entre ambos — no hay una única fuente de verdad automática, y no se ha considerado necesario añadir infraestructura para evitarlo a esta escala.
 - **Frontend:** Vite lee `.env`/`.env.local` de forma nativa. Convención decidida: solo se exponen al código cliente variables con prefijo `VITE_`. **A día de hoy no existe `frontend/.env.local`** — no hace falta todavía, porque el frontend no necesita ninguna variable de entorno en el punto actual del desarrollo; se creará cuando exista una (p. ej. la URL del backend). La URL del backend, en cualquier caso, no se trata como secreto real.
-- **CORS:** pendiente de implementar en `web/security/SecurityConfig` — necesario para que el frontend (origen distinto al del backend) pueda llamar a la API. No es una decisión de arquitectura, es un requisito de funcionamiento básico una vez ambos servicios corran de forma independiente.
+- **CORS:** pendiente de implementar en `SecurityConfig` — necesario para que el frontend (origen distinto al del backend) pueda llamar a la API. No es una decisión de arquitectura, es un requisito de funcionamiento básico una vez ambos servicios corran de forma independiente.
 
 ### Documentación de la API
 

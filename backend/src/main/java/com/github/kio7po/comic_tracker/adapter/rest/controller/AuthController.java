@@ -1,0 +1,118 @@
+package com.github.kio7po.comic_tracker.adapter.rest.controller;
+
+import java.time.Duration;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.github.kio7po.comic_tracker.adapter.rest.dto.LoginRequestDto;
+import com.github.kio7po.comic_tracker.adapter.rest.dto.RegisterRequestDto;
+import com.github.kio7po.comic_tracker.adapter.rest.dto.TokenResponseDto;
+import com.github.kio7po.comic_tracker.adapter.rest.dto.UserResponseDto;
+import com.github.kio7po.comic_tracker.adapter.rest.mapper.UserMapper;
+import com.github.kio7po.comic_tracker.domain.entities.User;
+import com.github.kio7po.comic_tracker.domain.exceptions.InvalidCredentialsException;
+import com.github.kio7po.comic_tracker.domain.service.TokenPair;
+import com.github.kio7po.comic_tracker.domain.service.UserService;
+
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    private static final String REFRESH_TOKEN_COOKIE = "refresh_token";
+    private static final String REFRESH_TOKEN_COOKIE_PATH = "/api/auth";
+
+    private final UserService userService;
+    private final long accessTokenExpirationMinutes;
+    private final long refreshTokenExpirationDays;
+    private final boolean refreshTokenSecure;
+
+    public AuthController(UserService userService,
+            @Value("${jwt.access-token-expiration-minutes}") long accessTokenExpirationMinutes,
+            @Value("${jwt.refresh-token-expiration-days}") long refreshTokenExpirationDays,
+            @Value("${jwt.refresh-token-secure}") boolean refreshTokenSecure) {
+        this.userService = userService;
+        this.accessTokenExpirationMinutes = accessTokenExpirationMinutes;
+        this.refreshTokenExpirationDays = refreshTokenExpirationDays;
+        this.refreshTokenSecure = refreshTokenSecure;
+    }
+
+    @PostMapping("/register")
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserResponseDto register(@Valid @RequestBody RegisterRequestDto request) {
+        User user = userService.register(request.username(), request.email(), request.password(),
+                request.displayName());
+        return UserMapper.toResponseDto(user);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
+        TokenPair tokenPair = userService.login(request.usernameOrEmail(), request.password());
+        return tokenResponse(tokenPair);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponseDto> refresh(
+            @CookieValue(value = REFRESH_TOKEN_COOKIE, required = false) String refreshToken) {
+        TokenPair tokenPair = userService.refresh(refreshToken);
+        return tokenResponse(tokenPair);
+    }
+
+    @GetMapping("/me")
+    public UserResponseDto me(@AuthenticationPrincipal Jwt jwt) {
+        String subject = jwt.getSubject();
+        if (subject == null) {
+            // "sub" is optional per the JWT spec; token is external input, so don't assume it.
+            throw new InvalidCredentialsException();
+        }
+        Long userId;
+        try {
+            userId = Long.valueOf(subject);
+        } catch (NumberFormatException e) {
+            throw new InvalidCredentialsException();
+        }
+        User user = userService.findById(userId);
+        return UserMapper.toResponseDto(user);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @CookieValue(value = REFRESH_TOKEN_COOKIE, required = false) String refreshToken) {
+        userService.logout(refreshToken);
+        ResponseCookie clearCookie = refreshTokenCookie("", Duration.ZERO);
+        return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, clearCookie.toString()).build();
+    }
+
+    private ResponseEntity<TokenResponseDto> tokenResponse(TokenPair tokenPair) {
+        ResponseCookie refreshCookie = refreshTokenCookie(tokenPair.refreshToken(),
+                Duration.ofDays(refreshTokenExpirationDays));
+        TokenResponseDto body = new TokenResponseDto(tokenPair.accessToken(), "Bearer",
+                accessTokenExpirationMinutes * 60);
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, refreshCookie.toString()).body(body);
+    }
+
+    private ResponseCookie refreshTokenCookie(String value, Duration maxAge) {
+        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, value)
+                .httpOnly(true)
+                .secure(refreshTokenSecure)
+                .sameSite("Lax")
+                .path(REFRESH_TOKEN_COOKIE_PATH)
+                .maxAge(maxAge)
+                .build();
+    }
+
+}

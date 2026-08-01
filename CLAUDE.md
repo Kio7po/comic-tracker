@@ -6,7 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Comic Tracker is a TFG (bachelor's thesis, UDC) web app for indexing where to read comics/manga online: a public catalog with metadata pulled from external sources (AniList, MangaDex...), community-contributed reading sources (links to sites), and personal reading tracking. Monorepo with independent `backend/` (Spring Boot) and `frontend/` (React) services.
 
-**Current state: early skeleton.** `backend/` is an unmodified Spring Initializr project (one `@SpringBootApplication` class, no domain code yet) and `frontend/` is an unmodified Vite React+TS template. The architecture below is the *decided* design from `docs/TFG.md` that new code must follow — it does not yet exist in the tree. When implementing features, check `docs/TFG.md` for the specific decision and rationale before deviating from it; it records not just what was decided but what was considered and rejected, so re-litigating a settled question there wastes effort.
+The architecture below is the *decided* design from `docs/TFG.md` that new code must follow — the tree may lag behind it at any point in time, so check what's actually implemented (`git log`, directory listing) rather than trusting a hardcoded status here. When implementing features, check `docs/TFG.md` for the specific decision and rationale before deviating from it; it records not just what was decided but what was considered and rejected, so re-litigating a settled question there wastes effort.
+
+### Working notes for Claude Code sessions
+
+- Before asserting a bug or inconsistency from `find`/`grep`/`cat` output, check whether multiple files matched (e.g. a build artifact under `target/`/`node_modules/`/`dist/` duplicating a source file) before presenting it as fact.
+- While an architectural decision is still being actively discussed and not yet confirmed as final, don't execute file moves/renames or other structural changes — wait for an explicit go-ahead, especially right after the user pushes back or reconsiders.
+- When asked to document a session's work, `docs/TFG.md` has its own maintenance note at the top of that file governing what belongs there and how to write it (decisions + real rationale, not a changelog) — read and follow it rather than defaulting to a narrative writeup. Coding conventions/dev standards that apply repo-wide but aren't thesis-level architecture decisions (e.g. the `@Column(length=)` rule, error-response format) belong in this file's Architecture section instead, not in `docs/TFG.md`.
 
 ## Commands
 
@@ -54,24 +60,25 @@ Planned package layout under `backend/src/main/java/.../`:
 
 ```
 domain/
-  entities/    Comic, ComicMetadataSource, ComicMetadataEntry, ComicReadingSource, ComicReadingEntry, ...
+  entities/    Comic, ComicMetadataSource, ComicMetadataEntry, ComicReadingSource, ComicReadingEntry, User, ...
+  port/        ports (interfaces) + their contract types, no impls — metadata/, source/, persistence/, security/
+  common/      generic domain types shared across ports, e.g. Page<T>
   exceptions/  domain exceptions, no HTTP knowledge
   service/     business logic: metadata merge-by-priority, dedup, progress calculation
 
 adapter/
   persistence/  JPA repositories (implements a domain-defined port)
-  metadata/     ComicMetadataProvider (port) + [Site]ComicMetadataProvider impls (AniList, MangaDex...)
-  source/       ComicReadingProvider (port) + [Site]ComicReadingProvider impls, detected by domain
-
-web/
-  controller/
-  dto/          request/response DTOs, kept separate from JPA entities
-  mapper/       manual entity <-> DTO mapping (no MapStruct)
-  exception/    GlobalExceptionHandler (@RestControllerAdvice): domain exceptions -> HTTP codes
-  security/     SecurityConfig, JwtAuthenticationFilter, CORS config
+  metadata/     ComicMetadataProvider impls (AniList, MangaDex...)
+  source/       ComicReadingProvider impls, detected by domain
+  security/     driven adapters for domain-defined security ports, e.g. BCryptPasswordHasher (PasswordHasher)
+  rest/         driving adapter: controller/, dto/, mapper/, exception/ (GlobalExceptionHandler), security/ (REST-specific: SecurityConfig, CORS, future JwtAuthenticationFilter)
 ```
 
-`web/` is *not* under `adapter/` even though everything outside `domain/` is technically an adapter in Ports & Adapters terms: controllers call domain services directly, with no domain-defined use-case interface for them to implement, so there's no real port/adapter symmetry to justify grouping it with `persistence/metadata/source`. If a use-case interface layer is ever introduced in `domain/`, revisit this.
+`rest/` lives under `adapter/` (not a separate `web/`): Ports & Adapters has driven adapters (`persistence/metadata/source`, implement a domain-defined port the domain depends on) and driving adapters (translate an external call into a call on the domain's own methods, dependency runs the other way, no inbound interface required). REST controllers are the latter — see `docs/TFG.md` for the full reasoning.
+
+**Persistence port pattern (established with `CatalogService`'s repositories):** `domain/port/persistence/` interfaces are plain Java with no Spring Data imports (e.g. `ComicRepository { Optional<Comic> findBySlug(String slug); Comic save(Comic comic); }`), so the domain layer stays framework-agnostic and independently testable. The `adapter/persistence/` counterpart is a *single* interface per entity that extends both `org.springframework.data.jpa.repository.JpaRepository<Entity, Long>` and the domain port (e.g. `JpaComicRepository extends JpaRepository<Comic, Long>, ComicRepository`) — Spring Data auto-implements the whole thing (generic `save`/`findById` from `JpaRepository`, custom finders like `findBySlug` derived from the method name), so there's no manual delegation class. Apply this same shape to the next repository needed (e.g. for `ComicReadingEntry`) instead of re-deriving it.
+
+**Security port pattern (established with `UserService`/password hashing, confirmed with JWT issuing):** same idea as the persistence port pattern, applied to any security-related capability the domain needs without being REST-specific — e.g. `domain/port/security/PasswordHasher { String hash(String raw); boolean matches(String raw, String hash); }`, implemented by `adapter/security/BCryptPasswordHasher` (a `@Component`, driven adapter, sibling of `adapter/persistence/`). Rationale: keeps Spring Security types (`PasswordEncoder`) out of the domain layer, same reason DTOs stay out of `domain/`. Second instance of the same shape: `domain/port/security/JwtIssuer { String issue(User user); }`, implemented by `adapter/security/NimbusJwtIssuer`, which itself depends on a `JwtEncoder` bean built in `adapter/security/JwtEncoderConfig` (key/algorithm setup kept separate from the class that uses it, so the encoder can be injected rather than constructed inline). Don't confuse `adapter/security/` with `adapter/rest/security/` (`SecurityConfig`, CORS, future `JwtAuthenticationFilter`) — the latter is for what's genuinely tied to the HTTP entry point (reads `HttpServletRequest`, wires the filter chain). Apply the same split for JWT *validation* when that's implemented.
 
 ### Domain model and naming
 
@@ -94,6 +101,8 @@ Key modeling decisions worth knowing before touching this area:
 - Catalog search matches against the union of values across all metadata sources (not just the merged/priority value), so a tag present in only a lower-priority source still surfaces in search; the detail page shows the merged value.
 - Reading progress (`ReadingState.chapters`) is a single mutable int (+/- controls), not a per-chapter log. `Follow` (new-chapter notifications) and `ChapterReadingEntry` (per-chapter history) are separate, not-yet-implemented concepts — don't conflate them with `ReadingState`.
 - Catalog search uses a single primary metadata source live per query (no batch preload); `Comic` is only persisted the first time a user opens that work's detail page (cache-aside). Multi-source merging applies to the *detail* view, not catalog search.
+- `ComicMetadataProvider` returns `ComicMetadataResult` (externalId + a transient `Comic`), reusing `Comic`'s shape instead of a parallel type.
+- `[Site]ComicMetadataProvider` naming can use the actual API/library called instead of the site name when they differ (e.g. `TenraiComicMetadataProvider` for `myanimelist`).
 
 ### Frontend structure (planned)
 
@@ -107,19 +116,27 @@ src/
   modules/      UI composition by feature (auth, catalog, tracking...)
 ```
 
-`services/` types are DTOs mirroring the backend's `web/dto` shape, not domain models — there's no DTO-to-UI-model mapping layer yet; components consume DTOs directly. Add a mapping layer locally in a module only when a component needs to combine multiple DTOs or a derived field, not preemptively everywhere. `common/` sits outside `modules/` so any module can import it without needing an exception to the "modules don't import each other" rule.
+`services/` types are DTOs mirroring the backend's `rest/dto` shape, not domain models — there's no DTO-to-UI-model mapping layer yet; components consume DTOs directly. Add a mapping layer locally in a module only when a component needs to combine multiple DTOs or a derived field, not preemptively everywhere. `common/` sits outside `modules/` so any module can import it without needing an exception to the "modules don't import each other" rule.
 
 ### Cross-cutting technical decisions that affect how you write code
 
 - **Java 21 virtual threads** are enabled (`spring.threads.virtual.enabled=true`). Metadata adapters are meant to be plain blocking I/O calls run in parallel via `Executors.newVirtualThreadPerTaskExecutor()` + `invokeAll(...)` from an orchestrator service — not `@Async`/`CompletableFuture` (rejected: leaks infra details through the port's return type). Avoid `synchronized` blocks around blocking I/O on a virtual thread (pinning; not fixed until JDK 24).
 - **No Lombok.** Write getters/setters/constructors by hand.
-- **No MapStruct.** Entity<->DTO mapping is manual, in `web/mapper/`.
-- **Bean Validation** (`spring-boot-starter-validation`) on DTOs in `web/dto/`, not on JPA entities.
+- **No MapStruct.** Entity<->DTO mapping is manual, in `rest/mapper/`.
+- **Bean Validation** (`spring-boot-starter-validation`) on DTOs in `rest/dto/`, not on JPA entities.
 - **`FetchType.LAZY` by default** on all JPA relations.
-- **Schema managed via versioned `schema.sql`/`data.sql`**, `spring.jpa.hibernate.ddl-auto=none`. No Flyway/Liquibase. Note `spring.sql.init.mode=always` is required for these scripts to run at all against an external (non-embedded) Postgres — currently set in `application.yml`; should not stay `always` once a real deployment exists (it would rerun on every restart).
-- **CORS** needs configuring in `web/security/SecurityConfig` (frontend and backend run on different origins) — not yet implemented.
+- **Schema managed via versioned `schema.sql`/`data.sql`**, `spring.jpa.hibernate.ddl-auto=validate` (fails fast on startup if the entities and `schema.sql` drift apart, without letting Hibernate alter the schema itself). No Flyway/Liquibase. Note `spring.sql.init.mode=always` is required for these scripts to run at all against an external (non-embedded) Postgres — currently set in `application.yml`; should not stay `always` once a real deployment exists (it would rerun on every restart).
+- **CORS** needs configuring in `SecurityConfig` (frontend and backend run on different origins) — not yet implemented. That class currently only has a minimal `SecurityFilterChain`: stateless, CSRF disabled, `/api/auth/**` public, everything else `denyAll()` (deliberately not `authenticated()` — no real authentication mechanism exists yet, and `denyAll()` forces every future route to explicitly declare its own access rule instead of defaulting to "any authenticated user").
+- **Metadata/reading adapters calling external HTTP APIs**: base URL via `@Value("${provider.api.base-url:https://actual-default}")` on the constructor param (real default inline, overridable, no `application.yml` entry required) — not a hardcoded constant, not required config.
+- **Jackson is v3 here** (`spring-boot-starter-jackson`, Spring Boot 4): `ObjectMapper`/`JsonMapper`/`PropertyNamingStrategies`/`@JsonNaming` live under `tools.jackson.*`, not `com.fasterxml.jackson.databind.*` — except `jackson-annotations` (`@JsonProperty`, `@JsonIgnoreProperties`...), which stays `com.fasterxml.jackson.annotation` in both Jackson 2 and 3.
 - **Spring Security 7 note:** CSRF is on by default even for stateless JWT APIs and must be explicitly disabled (`http.csrf(AbstractHttpConfigurer::disable)`); `authorizeRequests()` no longer exists, only `authorizeHttpRequests()`.
 - Frontend HTTP client is **Axios**; linter is **ESLint** (not Oxlint); formatter (Prettier) is undecided/not set up.
+- **English for code-level identifiers and messages** (test method names, exception messages) even though comments and commit messages (per `docs/GIT.md`) are in Spanish — an explicit, repeated convention, not an oversight if you see it applied inconsistently in older code.
+- **Domain exceptions carry their failure data as fields** (e.g. `UnsupportedMetadataSourceException.getSourceSlug()`), not just baked into the exception message string — so a future `GlobalExceptionHandler` (or a test) can build a structured response / assert on the value without parsing prose.
+- **Business rules go in domain services as domain exceptions, not as Bean Validation on DTOs** — e.g. `UserService.register(...)` throws `WeakPasswordException` for a too-short password rather than `RegisterRequestDto` declaring `@Size(min=...)`. Bean Validation on DTOs is for payload *shape* only (blank checks, format, max length matching the DB column) — it stays valid regardless of who's calling the domain, but doesn't own actual business rules.
+- **`@Column(length = ...)` explicit on every plain-`String` field**, matching the real `VARCHAR(n)` in `schema.sql` (Hibernate's default of 255 otherwise goes undocumented in the Java code). Skip it on `@Enumerated(EnumType.STRING)` fields — their default of 255 already matches the `VARCHAR(255) CHECK(...)` columns, so it'd be redundant.
+- **Error responses: RFC 9457 `ProblemDetail`** (`org.springframework.http.ProblemDetail`, built into Spring Framework 6+), not a custom error DTO. `spring.mvc.problemdetails.enabled=true` in `application.yml` makes Spring's own default exception handling (e.g. Bean Validation failures) return the same shape for free; `GlobalExceptionHandler` (`adapter/rest/exception/`) only needs `@ExceptionHandler` methods for domain exceptions, each returning `ProblemDetail.forStatusAndDetail(status, ex.getMessage())`.
+- **Nullability: JSpecify (`org.jspecify:jspecify`; version already managed by Spring Boot's own BOM), adopted incrementally, annotations only — no build-time enforcement (NullAway etc.) added.** Mark a package `@NullMarked` via its `package-info.java` as you touch it (currently only `domain.service`), which makes every unannotated type in that package implicitly non-null; mark the actual exceptions `@Nullable` (e.g. `UserService.refresh`/`logout`'s `rawRefreshToken`, `null` when no cookie was presented). No full-codebase retrofit planned — existing untouched packages (with genuinely nullable fields like `Comic.synopsis`, `User.biography`) stay unannotated until touched. Once nullability is declared this way, don't keep a redundant runtime `== null` check for a parameter the type system already guarantees non-null (e.g. `UserService.register`'s `rawPassword` — the boundary check already happened via `@NotBlank` on the DTO); do keep the check where the parameter is genuinely `@Nullable`. **Observed once, not consistently reproduced:** a SonarLint pass flagged an `== null` check on an actually-`@Nullable` parameter as dead code (rule `java:S2589`), which would be a false positive if real — a later pass on the same code didn't repeat it. Inconclusive; don't assume every `S2589` hit on a `@Nullable`-marked parameter is legitimate without checking the annotation first, but don't treat this as a confirmed tooling bug either.
 
 ## Git workflow (`docs/GIT.md`)
 
