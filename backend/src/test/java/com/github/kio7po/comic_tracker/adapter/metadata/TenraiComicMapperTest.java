@@ -23,6 +23,8 @@ import com.github.kio7po.comic_tracker.domain.port.metadata.ComicMetadataResult;
 
 class TenraiComicMapperTest {
 
+    private static final String SOURCE_SLUG = "some-source";
+
     private static TenraiNamedResourceDto named(String name) {
         return new TenraiNamedResourceDto(name);
     }
@@ -68,14 +70,21 @@ class TenraiComicMapperTest {
 
     @Test
     void toResult_mapsExternalIdToMalIdAsString() {
-        ComicMetadataResult result = TenraiComicMapper.toResult(fullDto());
+        ComicMetadataResult result = TenraiComicMapper.toResult(fullDto(), SOURCE_SLUG);
 
         assertThat(result.getExternalId()).isEqualTo("2");
     }
 
     @Test
+    void toResult_mapsGivenSourceSlugAsIs() {
+        ComicMetadataResult result = TenraiComicMapper.toResult(fullDto(), SOURCE_SLUG);
+
+        assertThat(result.getSourceSlug()).isEqualTo(SOURCE_SLUG);
+    }
+
+    @Test
     void toResult_mapsBasicComicFields() {
-        Comic comic = TenraiComicMapper.toResult(fullDto()).getComic();
+        Comic comic = TenraiComicMapper.toResult(fullDto(), SOURCE_SLUG).getComic();
 
         assertThat(comic.getTitle()).isEqualTo("Berserk");
         assertThat(comic.getSynopsis()).isEqualTo("Guts is out for revenge.");
@@ -89,7 +98,7 @@ class TenraiComicMapperTest {
 
     @Test
     void toResult_combinesTitleEnglishJapaneseAndSynonymsIntoAlternativeTitles() {
-        Comic comic = TenraiComicMapper.toResult(fullDto()).getComic();
+        Comic comic = TenraiComicMapper.toResult(fullDto(), SOURCE_SLUG).getComic();
 
         assertThat(comic.getAlternativeTitles())
                 .containsExactlyInAnyOrder("Berserk", "ベルセルク", "Berserk: The Prototype");
@@ -102,14 +111,14 @@ class TenraiComicMapperTest {
                 null, null, null, null, null, null,
                 List.of(), List.of(), List.of(), List.of(), List.of());
 
-        Comic comic = TenraiComicMapper.toResult(dto).getComic();
+        Comic comic = TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic();
 
         assertThat(comic.getAlternativeTitles()).containsExactly("Real Synonym");
     }
 
     @Test
     void toResult_mapsAuthorsToAuthorSetByName() {
-        Comic comic = TenraiComicMapper.toResult(fullDto()).getComic();
+        Comic comic = TenraiComicMapper.toResult(fullDto(), SOURCE_SLUG).getComic();
 
         assertThat(comic.getAuthors())
                 .extracting(Author::getName)
@@ -120,7 +129,7 @@ class TenraiComicMapperTest {
     void toResult_mergesGenresAndExplicitGenresIntoOneGenreSet() {
         TenraiMangaDto dto = fullDtoWithExplicitGenres(List.of(named("Hentai")));
 
-        Comic comic = TenraiComicMapper.toResult(dto).getComic();
+        Comic comic = TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic();
 
         assertThat(comic.getGenres())
                 .extracting(Genre::getName)
@@ -129,7 +138,7 @@ class TenraiComicMapperTest {
 
     @Test
     void toResult_mergesThemesAndDemographicsIntoOneTagSet() {
-        Comic comic = TenraiComicMapper.toResult(fullDto()).getComic();
+        Comic comic = TenraiComicMapper.toResult(fullDto(), SOURCE_SLUG).getComic();
 
         assertThat(comic.getTags())
                 .extracting(Tag::getName)
@@ -143,7 +152,7 @@ class TenraiComicMapperTest {
                 null, null, null, null, null, null,
                 List.of(), List.of(), List.of(), List.of(), List.of());
 
-        assertThat(TenraiComicMapper.toResult(dto).getComic().getCoverUrl()).isNull();
+        assertThat(TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic().getCoverUrl()).isNull();
     }
 
     @Test
@@ -153,7 +162,7 @@ class TenraiComicMapperTest {
                 null, new TenraiImagesDto(null, null), null, null, null, null,
                 List.of(), List.of(), List.of(), List.of(), List.of());
 
-        assertThat(TenraiComicMapper.toResult(dto).getComic().getCoverUrl()).isNull();
+        assertThat(TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic().getCoverUrl()).isNull();
     }
 
     @Test
@@ -163,7 +172,7 @@ class TenraiComicMapperTest {
                 null, null, null, null, null, null,
                 List.of(), List.of(), List.of(), List.of(), List.of());
 
-        Comic comic = TenraiComicMapper.toResult(dto).getComic();
+        Comic comic = TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic();
 
         assertThat(comic.getStartDate()).isNull();
         assertThat(comic.getEndDate()).isNull();
@@ -173,12 +182,12 @@ class TenraiComicMapperTest {
     void toResult_nsfwIsExplicitWhenExplicitGenresPresent() {
         TenraiMangaDto dto = fullDtoWithExplicitGenres(List.of(named("Hentai")));
 
-        assertThat(TenraiComicMapper.toResult(dto).getComic().getNsfw()).isEqualTo(NsfwRating.EXPLICIT);
+        assertThat(TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic().getNsfw()).isEqualTo(NsfwRating.EXPLICIT);
     }
 
     @Test
     void toResult_nsfwIsNoneWhenNoExplicitGenres() {
-        assertThat(TenraiComicMapper.toResult(fullDto()).getComic().getNsfw()).isEqualTo(NsfwRating.NONE);
+        assertThat(TenraiComicMapper.toResult(fullDto(), SOURCE_SLUG).getComic().getNsfw()).isEqualTo(NsfwRating.NONE);
     }
 
     @ParameterizedTest
@@ -195,14 +204,14 @@ class TenraiComicMapperTest {
     void toResult_mapsTenraiTypeToMediaType(String tenraiType, ComicMediaType expected) {
         TenraiMangaDto dto = dtoWithTypeAndStatus(tenraiType, null);
 
-        assertThat(TenraiComicMapper.toResult(dto).getComic().getMediaType()).isEqualTo(expected);
+        assertThat(TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic().getMediaType()).isEqualTo(expected);
     }
 
     @Test
     void toResult_mediaTypeIsNullWhenTypeIsMissing() {
         TenraiMangaDto dto = dtoWithTypeAndStatus(null, null);
 
-        assertThat(TenraiComicMapper.toResult(dto).getComic().getMediaType()).isNull();
+        assertThat(TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic().getMediaType()).isNull();
     }
 
     @ParameterizedTest
@@ -216,14 +225,14 @@ class TenraiComicMapperTest {
     void toResult_mapsTenraiStatusToComicStatus(String tenraiStatus, ComicStatus expected) {
         TenraiMangaDto dto = dtoWithTypeAndStatus(null, tenraiStatus);
 
-        assertThat(TenraiComicMapper.toResult(dto).getComic().getStatus()).isEqualTo(expected);
+        assertThat(TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic().getStatus()).isEqualTo(expected);
     }
 
     @Test
     void toResult_statusIsNullWhenStatusIsMissing() {
         TenraiMangaDto dto = dtoWithTypeAndStatus(null, null);
 
-        assertThat(TenraiComicMapper.toResult(dto).getComic().getStatus()).isNull();
+        assertThat(TenraiComicMapper.toResult(dto, SOURCE_SLUG).getComic().getStatus()).isNull();
     }
 
     @ParameterizedTest

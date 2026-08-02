@@ -67,7 +67,7 @@ public class CatalogService {
      * distintos hasta que se implementen.
      */
     @Transactional
-    public Optional<Comic> getDetail(String sourceSlug, String externalId) {
+    public Optional<Comic> importComic(String sourceSlug, String externalId) {
         if (!metadataProvider.getSourceSlug().equals(sourceSlug)) {
             throw new UnsupportedMetadataSourceException(sourceSlug);
         }
