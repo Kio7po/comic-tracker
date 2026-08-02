@@ -2,6 +2,7 @@ package com.github.kio7po.comic_tracker.adapter.rest.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -28,6 +29,8 @@ public class SecurityConfig {
                     // matches rules top-to-bottom, first match wins.
                     .requestMatchers("/api/auth/me").authenticated()
                     .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/catalog/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/comics/**").permitAll()
                     .anyRequest().denyAll())
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(
                     jwt -> jwt.decoder(jwtDecoder).jwtAuthenticationConverter(jwtAuthenticationConverter)));

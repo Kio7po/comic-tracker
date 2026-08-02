@@ -1,0 +1,34 @@
+@host = http://localhost:8080
+@contentType = application/json
+
+### Search - success, returns a page of results with sourceSlug + externalId per item
+GET {{host}}/api/catalog/search?keywords=berserk
+
+### Search - with pagination and filters
+GET {{host}}/api/catalog/search?keywords=berserk&limit=5&offset=0&nsfw=NONE&status=ONGOING&type=MANGA
+
+### Search - missing required keywords param -> 400 (Bean Validation on the query param binding)
+GET {{host}}/api/catalog/search
+
+### Import - success, materializes the Comic (find-or-create), chained into the requests below
+# @name importComic
+POST {{host}}/api/catalog/myanimelist/2
+Content-Type: {{contentType}}
+
+### Import - same (sourceSlug, externalId) again -> 200, reuses the already-persisted Comic (no duplicate insert)
+POST {{host}}/api/catalog/myanimelist/2
+Content-Type: {{contentType}}
+
+### Import - unsupported source slug -> 400 (UnsupportedMetadataSourceException, doesn't match the active provider)
+POST {{host}}/api/catalog/anilist/2
+Content-Type: {{contentType}}
+
+### Import - sourceSlug matches the active provider but externalId doesn't exist upstream -> 404
+POST {{host}}/api/catalog/myanimelist/999999999
+Content-Type: {{contentType}}
+
+### Comic - read by slug, chained from the import above -> 200
+GET {{host}}/api/comics/{{importComic.response.body.$.slug}}
+
+### Comic - unknown slug -> 404
+GET {{host}}/api/comics/does-not-exist

@@ -24,8 +24,8 @@ final class TenraiComicMapper {
     private TenraiComicMapper() {
     }
 
-    static ComicMetadataResult toResult(TenraiMangaDto dto) {
-        return new ComicMetadataResult(String.valueOf(dto.malId()), toComic(dto));
+    static ComicMetadataResult toResult(TenraiMangaDto dto, String sourceSlug) {
+        return new ComicMetadataResult(sourceSlug, String.valueOf(dto.malId()), toComic(dto));
     }
 
     private static Comic toComic(TenraiMangaDto dto) {

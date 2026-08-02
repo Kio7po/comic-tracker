@@ -52,7 +52,7 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
         }
 
         List<ComicMetadataResult> items = response.data().stream()
-                .map(TenraiComicMapper::toResult)
+                .map(dto -> TenraiComicMapper.toResult(dto, SLUG))
                 .toList();
         boolean existMoreItems = response.pagination() != null && response.pagination().hasNextPage();
         return new Page<>(items, existMoreItems);
@@ -80,7 +80,7 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
                     .body(TenraiMangaResponseDto.class);
             return Optional.ofNullable(response)
                     .map(TenraiMangaResponseDto::data)
-                    .map(TenraiComicMapper::toResult);
+                    .map(dto -> TenraiComicMapper.toResult(dto, SLUG));
         } catch (HttpClientErrorException.NotFound e) {
             return Optional.empty();
         }

@@ -80,26 +80,26 @@ class CatalogServiceTest {
     }
 
     @Test
-    void getDetailThrowsWhenSourceSlugIsNotTheActiveProvider() {
+    void importComicThrowsWhenSourceSlugIsNotTheActiveProvider() {
         when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
 
-        assertThatThrownBy(() -> catalogService.getDetail("anilist", EXTERNAL_ID))
+        assertThatThrownBy(() -> catalogService.importComic("anilist", EXTERNAL_ID))
                 .isInstanceOf(UnsupportedMetadataSourceException.class);
 
         verify(comicMetadataSourceRepository, never()).findBySlug(any());
     }
 
     @Test
-    void getDetailThrowsWhenSourceIsNotSeeded() {
+    void importComicThrowsWhenSourceIsNotSeeded() {
         when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
         when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> catalogService.getDetail(SOURCE_SLUG, EXTERNAL_ID))
+        assertThatThrownBy(() -> catalogService.importComic(SOURCE_SLUG, EXTERNAL_ID))
                 .isInstanceOf(ComicMetadataSourceNotFoundException.class);
     }
 
     @Test
-    void getDetailReturnsExistingComicWithoutCallingProviderFetch() {
+    void importComicReturnsExistingComicWithoutCallingProviderFetch() {
         ComicMetadataSource source = new ComicMetadataSource();
         Comic existingComic = new Comic();
         ComicMetadataEntry entry = new ComicMetadataEntry();
@@ -110,7 +110,7 @@ class CatalogServiceTest {
         when(comicMetadataEntryRepository.findBySourceAndExternalId(source, EXTERNAL_ID))
                 .thenReturn(Optional.of(entry));
 
-        Optional<Comic> result = catalogService.getDetail(SOURCE_SLUG, EXTERNAL_ID);
+        Optional<Comic> result = catalogService.importComic(SOURCE_SLUG, EXTERNAL_ID);
 
         assertThat(result).contains(existingComic);
         verify(metadataProvider, never()).fetch(any());
@@ -118,7 +118,7 @@ class CatalogServiceTest {
     }
 
     @Test
-    void getDetailReturnsEmptyWhenProviderCannotFetchTheComic() {
+    void importComicReturnsEmptyWhenProviderCannotFetchTheComic() {
         ComicMetadataSource source = new ComicMetadataSource();
 
         when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
@@ -127,14 +127,14 @@ class CatalogServiceTest {
                 .thenReturn(Optional.empty());
         when(metadataProvider.fetch(EXTERNAL_ID)).thenReturn(Optional.empty());
 
-        Optional<Comic> result = catalogService.getDetail(SOURCE_SLUG, EXTERNAL_ID);
+        Optional<Comic> result = catalogService.importComic(SOURCE_SLUG, EXTERNAL_ID);
 
         assertThat(result).isEmpty();
         verify(comicRepository, never()).save(any());
     }
 
     @Test
-    void getDetailPersistsNewComicReusingExistingAuthorsGenresAndTags() {
+    void importComicPersistsNewComicReusingExistingAuthorsGenresAndTags() {
         ComicMetadataSource source = new ComicMetadataSource();
 
         Author fetchedAuthor = new Author();
@@ -155,7 +155,7 @@ class CatalogServiceTest {
         fetchedComic.setGenres(Set.of(fetchedGenre));
         fetchedComic.setTags(Set.of(fetchedTag));
 
-        ComicMetadataResult fetchResult = new ComicMetadataResult(EXTERNAL_ID, fetchedComic);
+        ComicMetadataResult fetchResult = new ComicMetadataResult(SOURCE_SLUG, EXTERNAL_ID, fetchedComic);
 
         when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
         when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.of(source));
@@ -174,7 +174,7 @@ class CatalogServiceTest {
         when(comicRepository.findBySlug("berserk")).thenReturn(Optional.empty());
         when(comicRepository.save(fetchedComic)).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Optional<Comic> result = catalogService.getDetail(SOURCE_SLUG, EXTERNAL_ID);
+        Optional<Comic> result = catalogService.importComic(SOURCE_SLUG, EXTERNAL_ID);
 
         assertThat(result).isPresent();
         Comic savedComic = result.get();
@@ -190,7 +190,7 @@ class CatalogServiceTest {
 
     @ParameterizedTest
     @CsvSource({ "152", "9999" })
-    void getDetailAppendsExternalIdToSlugOnCollision(String externalId) {
+    void importComicAppendsExternalIdToSlugOnCollision(String externalId) {
         ComicMetadataSource source = new ComicMetadataSource();
 
         Comic fetchedComic = new Comic();
@@ -199,7 +199,7 @@ class CatalogServiceTest {
         fetchedComic.setGenres(Set.of());
         fetchedComic.setTags(Set.of());
 
-        ComicMetadataResult fetchResult = new ComicMetadataResult(externalId, fetchedComic);
+        ComicMetadataResult fetchResult = new ComicMetadataResult(SOURCE_SLUG, externalId, fetchedComic);
 
         when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
         when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.of(source));
@@ -209,7 +209,7 @@ class CatalogServiceTest {
         when(comicRepository.findBySlug("berserk")).thenReturn(Optional.of(new Comic()));
         when(comicRepository.save(fetchedComic)).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Optional<Comic> result = catalogService.getDetail(SOURCE_SLUG, externalId);
+        Optional<Comic> result = catalogService.importComic(SOURCE_SLUG, externalId);
 
         assertThat(result).isPresent();
         assertThat(result.get().getSlug()).isEqualTo(Slugifier.slugify("Berserk") + "-" + externalId);
