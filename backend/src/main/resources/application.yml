@@ -25,3 +25,8 @@ jwt:
   access-token-expiration-minutes: 15
   refresh-token-expiration-days: 30
   refresh-token-secure: true
+
+scalar:
+  # default values, not needed, but nice to remember
+  enabled: true
+  path: /scalar

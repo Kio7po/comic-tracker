@@ -31,6 +31,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/catalog/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/comics/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/scalar/**").permitAll()
                     .anyRequest().denyAll())
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(
                     jwt -> jwt.decoder(jwtDecoder).jwtAuthenticationConverter(jwtAuthenticationConverter)));
