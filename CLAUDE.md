@@ -35,8 +35,12 @@ pnpm install --frozen-lockfile
 pnpm dev                        # Vite dev server; proxies /api -> http://localhost:8080 (see vite.config.ts)
 pnpm lint                       # ESLint
 pnpm build                      # tsc -b && vite build
-pnpm test -- --coverage         # Jest (not Vitest — see Stack notes below)
+pnpm test                       # Vitest
+pnpm test:coverage              # Vitest with coverage (what CI runs; don't use `pnpm test -- --coverage`,
+                                 # pnpm forwards the `--` literally and Vitest swallows the flag as a no-op filter)
 ```
+
+`frontend/pnpm-workspace.yaml` holds `minimumReleaseAge: 1440` and `strictDepBuilds: true` (supply-chain hardening, see `docs/TFG.md`); `frontend/package.json`'s `packageManager` field pins the exact pnpm version. Since pnpm v10+, non-auth/registry settings like these live in `pnpm-workspace.yaml`, not `.npmrc` — don't add them there.
 
 ### Local infra
 

@@ -3,5 +3,6 @@
     "java.project.sourcePaths": [
         "backend/src/main/java"
     ],
-    "java.dependency.packagePresentation": "flat"
+    "java.dependency.packagePresentation": "flat",
+    "java.compile.nullAnalysis.mode": "automatic"
 }
