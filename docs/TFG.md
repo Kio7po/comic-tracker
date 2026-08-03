@@ -243,7 +243,7 @@ La tecnología concreta de caché (almacén, etc.) no está decidida. Implementa
 
 **Análisis de calidad — SonarQube Cloud** (nombre de marca correcto; en versiones anteriores de este documento se refería como "SonarCloud"). La integración usada es distinta según el stack:
 - **Backend (Maven):** se usa el plugin oficial `sonar-maven-plugin`, invocado en la misma llamada de Maven que hace el build, dentro del propio workflow de CI (ver CI/CD más abajo) — no una action de GitHub. Los identificadores de proyecto (`sonar.projectKey`, `sonar.organization`) se declaran como `<properties>` en el propio `pom.xml`.
-- **Frontend (TypeScript):** al no existir un integrador de Maven/Gradle equivalente para npm/pnpm, sí se usa la action oficial de GitHub para SonarQube Cloud. Los identificadores de proyecto se declaran en `sonar-project.properties`, en la raíz de `frontend/`.  El analizador de JS/TS de Sonar interpreta JSX/TSX de forma nativa e incluye reglas propias orientadas a React, sin necesidad de plugin adicional; toma la cobertura del reporte LCOV que genera Jest con `--coverage` por defecto.
+- **Frontend (TypeScript):** al no existir un integrador de Maven/Gradle equivalente para npm/pnpm, sí se usa la action oficial de GitHub para SonarQube Cloud. Los identificadores de proyecto se declaran en `sonar-project.properties`, en la raíz de `frontend/`.  El analizador de JS/TS de Sonar interpreta JSX/TSX de forma nativa e incluye reglas propias orientadas a React, sin necesidad de plugin adicional; toma la cobertura del reporte LCOV que genera Vitest (`@vitest/coverage-v8`) con `--coverage`.
 - Se opta por **dos proyectos Sonar independientes** (uno por app) en vez de un único proyecto multi-módulo, por simplicidad a esta escala. Misma organización para ambos, y ambos proyectos comparten el mismo token de autenticación (`SONAR_TOKEN`) frente a la API de SonarQube Cloud. `SONAR_TOKEN` ya está dado de alta como secret del repositorio en GitHub Actions.
 
 ## Herramientas de desarrollo y build
@@ -375,9 +375,9 @@ Ningún secreto (credenciales de BBDD, futuro secreto de firma del JWT) se hardc
 
 - **Backend:** stack nativo de Spring Boot — JUnit 5 + Mockito.
 - **BBDD para tests de integración: Testcontainers, decidido** (revierte la decisión anterior de posponerlo — ver justificación en "Decisiones técnicas relevantes"). Usa la misma imagen y configuración de locale que en desarrollo.
-- **Frontend:** Jest (nativo). **Aviso pendiente:** al no ser Vite-nativo, su configuración necesitará pasos adicionales (`ts-jest`/`babel-jest`, y `moduleNameMapper` si se usan los alias de ruta del frontend) que no harían falta con Vitest. Se mantiene Jest como decisión; solo se deja constancia de la fricción esperable.
+- **Frontend: Vitest, revierte la decisión anterior de usar Jest.** *Razón del cambio:* la fricción que ya se anticipaba al elegir Jest (config adicional vía `ts-jest`/`babel-jest`, `moduleNameMapper` para el alias `@/*` que ya vive en `vite.config.ts`, mocks manuales para imports de CSS/assets que Jest no sabe interpretar) se confirmó en la práctica al configurarlo, sin que hubiera una razón de peso para mantener Jest en su lugar. Vitest reutiliza `vite.config.ts` tal cual (mismo alias, mismo manejo de CSS/assets que en dev/build) y su API es compatible con la de Jest (`describe`/`it`/`expect`), así que no cambia el paradigma de test. Revertido con coste cero: todavía no existía ningún fichero de test.
 - **Cobertura backend:** JaCoCo (plugin Maven), cuyo informe alimenta el análisis de SonarQube Cloud.
-- **Cobertura frontend:** Jest con la flag `--coverage` (no requiere herramienta adicional), en formato LCOV, consumido por el análisis de SonarQube Cloud del frontend.
+- **Cobertura frontend:** Vitest con `@vitest/coverage-v8` y la flag `--coverage`, en formato LCOV, consumido por el análisis de SonarQube Cloud del frontend.
 - **E2E (tentativo, no cerrado):** Playwright. Pendiente de confirmar cuando haya una arquitectura estable de endpoints y vistas.
 - **Rendimiento/carga (tentativo, no cerrado):** k6. Pendiente de confirmar más adelante.
 
@@ -389,7 +389,7 @@ Pipeline en un único `ci.yml` (contenido completo en el propio fichero del repo
 
 **Backend:** una única invocación de Maven que cubre build, tests (incluidos los de Testcontainers, que gestionan su propio contenedor Postgres sin nada adicional que preparar en el runner), cobertura (JaCoCo) y análisis de SonarQube Cloud — todo en la misma sesión de Maven, para que el análisis recoja los datos de cobertura de la ejecución que él mismo presencia, sin depender de qué sobreviva en disco entre comandos separados. Ya no hace falta declarar ningún servicio Postgres a nivel de job (a diferencia de un planteamiento anterior de este documento) — lo gestiona Testcontainers directamente.
 
-**Frontend:** instalación con `pnpm` (usando `pnpm/action-setup` antes de `actions/setup-node`, necesario porque pnpm no viene preinstalado en los runners), lint (ESLint), build, test con cobertura (Jest), y análisis de SonarQube Cloud vía la action oficial correspondiente.
+**Frontend:** instalación con `pnpm` (usando `pnpm/action-setup` antes de `actions/setup-node`, necesario porque pnpm no viene preinstalado en los runners), lint (ESLint), build, test con cobertura (Vitest), y análisis de SonarQube Cloud vía la action oficial correspondiente.
 
 **Calidad de código — SonarQube Cloud** (corrección de nombre de marca respecto a versiones anteriores de este documento, que decían "SonarCloud"; la action que se había anotado inicialmente, específica de SonarCloud, está deprecada en favor de una action unificada). Integración distinta según stack, según se detalla en "Decisiones técnicas relevantes".
 
