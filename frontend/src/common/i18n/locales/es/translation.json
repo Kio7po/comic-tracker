@@ -1,0 +1,9 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "browse": "Buscar"
+  },
+  "footer": {
+    "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
+  }
+}

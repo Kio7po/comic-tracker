@@ -114,8 +114,9 @@ Key modeling decisions worth knowing before touching this area:
 src/
   app/          routing + bootstrap
   common/
-    api/        Axios instance (baseURL + JWT interceptor) — not implemented yet
+    api/        fetch wrapper (baseURL + JWT header + refresh-and-retry on 401), generic response types
     components/ shared generic UI components
+    i18n/       react-i18next init + per-language dictionaries (locales/<lang>/translation.json)
   services/     DTOs + API calls, grouped by entity: comic/, source/, user/ (each: types/, api/)
   modules/      UI composition by feature (auth, catalog, tracking...)
 ```
@@ -134,7 +135,8 @@ src/
 - **Metadata/reading adapters calling external HTTP APIs**: base URL via `@Value("${provider.api.base-url:https://actual-default}")` on the constructor param (real default inline, overridable, no `application.yml` entry required) — not a hardcoded constant, not required config.
 - **Jackson is v3 here** (`spring-boot-starter-jackson`, Spring Boot 4): `ObjectMapper`/`JsonMapper`/`PropertyNamingStrategies`/`@JsonNaming` live under `tools.jackson.*`, not `com.fasterxml.jackson.databind.*` — except `jackson-annotations` (`@JsonProperty`, `@JsonIgnoreProperties`...), which stays `com.fasterxml.jackson.annotation` in both Jackson 2 and 3.
 - **Spring Security 7 note:** CSRF is on by default even for stateless JWT APIs and must be explicitly disabled (`http.csrf(AbstractHttpConfigurer::disable)`); `authorizeRequests()` no longer exists, only `authorizeHttpRequests()`.
-- Frontend HTTP client is **Axios**; linter is **ESLint** (not Oxlint); formatter (Prettier) is undecided/not set up.
+- Frontend HTTP client is a **hand-rolled `fetch` wrapper** (`common/api/client.ts`), not Axios (see `docs/TFG.md` for the rationale — interceptor-equivalent behavior fits in the one module every call already goes through). Linter is **ESLint** (not Oxlint); formatter (Prettier) is undecided/not set up. i18n is **react-i18next** (`common/i18n/`), default/fallback language English.
+- **UI components: shadcn/ui on Tailwind CSS v4 + Base UI** (not Radix) — see `docs/TFG.md` for rationale. `components.json`'s aliases are reconfigured after `init`/`add` to point at `common/` (`common/components/ui/`, `common/lib/`), not shadcn's own `src/components`/`src/lib` defaults. **shadcn CLI gotcha:** its alias resolver only reads `compilerOptions.paths` from the root `tsconfig.json`, ignoring `references` — the `@/*` alias must be duplicated there (it already lives in `tsconfig.app.json` for the real build) or the CLI silently writes files under a literal `./@/` folder instead of `src/`. `react-refresh/only-export-components` is downgraded to `warn` in `eslint.config.js` because shadcn's generated components pair a `cva()` variants constant with the component export in the same file.
 - **English for code-level identifiers and messages** (test method names, exception messages) even though comments and commit messages (per `docs/GIT.md`) are in Spanish — an explicit, repeated convention, not an oversight if you see it applied inconsistently in older code.
 - **Domain exceptions carry their failure data as fields** (e.g. `UnsupportedMetadataSourceException.getSourceSlug()`), not just baked into the exception message string — so a future `GlobalExceptionHandler` (or a test) can build a structured response / assert on the value without parsing prose.
 - **Business rules go in domain services as domain exceptions, not as Bean Validation on DTOs** — e.g. `UserService.register(...)` throws `WeakPasswordException` for a too-short password rather than `RegisterRequestDto` declaring `@Size(min=...)`. Bean Validation on DTOs is for payload *shape* only (blank checks, format, max length matching the DB column) — it stays valid regardless of who's calling the domain, but doesn't own actual business rules.
