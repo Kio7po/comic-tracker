@@ -16,7 +16,7 @@ function Header() {
         <Link to="/" className={navLinkClass}>
           {t('nav.home')}
         </Link>
-        <Link to="/" className={navLinkClass}>
+        <Link to="/catalog" className={navLinkClass}>
           {t('nav.browse')}
         </Link>
       </nav>

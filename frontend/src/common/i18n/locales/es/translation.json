@@ -5,5 +5,42 @@
   },
   "footer": {
     "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
+  },
+  "catalog": {
+    "searchPlaceholder": "Buscar...",
+    "loading": "Cargando…",
+    "loadError": "Ha ocurrido un error al cargar los cómics.",
+    "noResults": "No se han encontrado cómics.",
+    "filters": {
+      "type": "Tipo",
+      "status": "Estado",
+      "nsfw": "NSFW",
+      "allTypes": "Cualquier tipo",
+      "allStatuses": "Cualquier estado",
+      "limit": "Por página"
+    },
+    "nsfw": {
+      "NONE": "Ninguno",
+      "SUGGESTIVE": "Sugerente",
+      "EXPLICIT": "Explícito"
+    },
+    "mediaType": {
+      "MANGA": "Manga",
+      "MANHWA": "Manhwa",
+      "MANHUA": "Manhua",
+      "WEBTOON": "Webtoon",
+      "COMIC": "Cómic",
+      "NOVEL": "Novela",
+      "ONE_SHOT": "One-shot",
+      "DOUJINSHI": "Doujinshi",
+      "OTHER": "Otro"
+    },
+    "status": {
+      "ONGOING": "En emisión",
+      "COMPLETED": "Completado",
+      "HIATUS": "En pausa",
+      "CANCELLED": "Cancelado",
+      "OTHER": "Otro"
+    }
   }
 }

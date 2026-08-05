@@ -23,7 +23,7 @@ public final class CatalogMapper {
         List<ComicSearchResultResponseDto> items = page.getItems().stream()
                 .map(CatalogMapper::toSearchResultDto)
                 .toList();
-        return new PageResponseDto<>(items, page.isExistMoreItems());
+        return new PageResponseDto<>(items, page.isExistMoreItems(), page.getTotalItems());
     }
 
     public static ComicSearchResultResponseDto toSearchResultDto(ComicMetadataResult result) {

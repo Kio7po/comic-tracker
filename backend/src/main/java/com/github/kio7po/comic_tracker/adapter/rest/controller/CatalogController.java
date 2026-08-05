@@ -17,6 +17,9 @@ import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
 import com.github.kio7po.comic_tracker.domain.service.CatalogService;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+
 @RestController
 @RequestMapping("/api/catalog")
 public class CatalogController {
@@ -30,8 +33,8 @@ public class CatalogController {
     @GetMapping("/search")
     public PageResponseDto<ComicSearchResultResponseDto> search(
             @RequestParam String keywords,
-            @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit,
+            @RequestParam(defaultValue = "0") @Min(0) int offset,
             @RequestParam(required = false) NsfwRating nsfw,
             @RequestParam(required = false) ComicStatus status,
             @RequestParam(required = false) ComicMediaType type) {

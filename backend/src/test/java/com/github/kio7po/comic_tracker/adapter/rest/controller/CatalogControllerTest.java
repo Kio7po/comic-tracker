@@ -59,14 +59,27 @@ class CatalogControllerTest {
     void searchReturnsMappedResults() throws Exception {
         ComicMetadataResult result = new ComicMetadataResult(SOURCE_SLUG, EXTERNAL_ID, comic());
         when(catalogService.search(eq("berserk"), eq(20), eq(0), isNull(), isNull(), isNull()))
-                .thenReturn(new Page<>(List.of(result), false));
+                .thenReturn(new Page<>(List.of(result), false, 1));
 
         mockMvc.perform(get("/api/catalog/search").param("keywords", "berserk"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.existMoreItems").value(false))
+                .andExpect(jsonPath("$.totalItems").value(1))
                 .andExpect(jsonPath("$.items[0].sourceSlug").value(SOURCE_SLUG))
                 .andExpect(jsonPath("$.items[0].externalId").value(EXTERNAL_ID))
                 .andExpect(jsonPath("$.items[0].title").value("Berserk"));
+    }
+
+    @Test
+    void searchReturnsBadRequestWhenLimitExceedsTheMaximum() throws Exception {
+        mockMvc.perform(get("/api/catalog/search").param("keywords", "berserk").param("limit", "51"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void searchReturnsBadRequestWhenOffsetIsNegative() throws Exception {
+        mockMvc.perform(get("/api/catalog/search").param("keywords", "berserk").param("offset", "-1"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
