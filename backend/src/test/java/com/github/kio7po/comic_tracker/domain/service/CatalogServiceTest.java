@@ -71,7 +71,7 @@ class CatalogServiceTest {
 
     @Test
     void searchDelegatesToMetadataProvider() {
-        Page<ComicMetadataResult> expected = new Page<>(List.of(), false);
+        Page<ComicMetadataResult> expected = new Page<>(List.of(), false, null);
         when(metadataProvider.search("berserk", 20, 0, null, null, null)).thenReturn(expected);
 
         Page<ComicMetadataResult> result = catalogService.search("berserk", 20, 0, null, null, null);

@@ -186,8 +186,8 @@ class TenraiComicMapperTest {
     }
 
     @Test
-    void toResult_nsfwIsNoneWhenNoExplicitGenres() {
-        assertThat(TenraiComicMapper.toResult(fullDto(), SOURCE_SLUG).getComic().getNsfw()).isEqualTo(NsfwRating.NONE);
+    void toResult_nsfwIsUnsetWhenNoExplicitGenres() {
+        assertThat(TenraiComicMapper.toResult(fullDto(), SOURCE_SLUG).getComic().getNsfw()).isNull();
     }
 
     @ParameterizedTest

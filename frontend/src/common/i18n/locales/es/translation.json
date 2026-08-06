@@ -1,0 +1,62 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "browse": "Buscar"
+  },
+  "footer": {
+    "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
+  },
+  "catalog": {
+    "searchPlaceholder": "Buscar...",
+    "loading": "Cargando…",
+    "loadError": "Ha ocurrido un error al cargar los cómics.",
+    "noResults": "No se han encontrado cómics.",
+    "importError": "No se ha podido abrir este cómic. Inténtalo de nuevo.",
+    "filters": {
+      "type": "Tipo",
+      "status": "Estado",
+      "nsfw": "NSFW",
+      "allTypes": "Cualquier tipo",
+      "allStatuses": "Cualquier estado",
+      "limit": "Por página"
+    },
+    "nsfw": {
+      "NONE": "Ninguno",
+      "SUGGESTIVE": "Sugerente",
+      "EXPLICIT": "Explícito"
+    },
+    "mediaType": {
+      "MANGA": "Manga",
+      "MANHWA": "Manhwa",
+      "MANHUA": "Manhua",
+      "WEBTOON": "Webtoon",
+      "COMIC": "Cómic",
+      "NOVEL": "Novela",
+      "ONE_SHOT": "One-shot",
+      "DOUJINSHI": "Doujinshi",
+      "OTHER": "Otro"
+    },
+    "status": {
+      "ONGOING": "En emisión",
+      "COMPLETED": "Completado",
+      "HIATUS": "En pausa",
+      "CANCELLED": "Cancelado",
+      "OTHER": "Otro"
+    }
+  },
+  "detail": {
+    "addToLibrary": "Añadir a la biblioteca",
+    "chapters": "Capítulos",
+    "synopsis": "Sinopsis",
+    "noSynopsis": "No hay sinopsis disponible.",
+    "expandSynopsis": "Expandir sinopsis",
+    "collapseSynopsis": "Contraer sinopsis",
+    "readingSources": "Fuentes de Lectura",
+    "additionalInfo": "Información Adicional",
+    "authors": "Autores",
+    "startDate": "Fecha de inicio",
+    "tags": "Etiquetas",
+    "unknown": "Desconocido",
+    "loadError": "Ha ocurrido un error al cargar este cómic."
+  }
+}
