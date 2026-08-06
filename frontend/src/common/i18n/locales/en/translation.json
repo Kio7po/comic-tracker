@@ -11,6 +11,7 @@
     "loading": "Loading…",
     "loadError": "Something went wrong loading comics.",
     "noResults": "No comics found.",
+    "importError": "Couldn't open this comic. Try again.",
     "filters": {
       "type": "Type",
       "status": "Status",
@@ -42,5 +43,20 @@
       "CANCELLED": "Cancelled",
       "OTHER": "Other"
     }
+  },
+  "detail": {
+    "addToLibrary": "Add to library",
+    "chapters": "Chapters",
+    "synopsis": "Synopsis",
+    "noSynopsis": "No synopsis available.",
+    "expandSynopsis": "Expand synopsis",
+    "collapseSynopsis": "Collapse synopsis",
+    "readingSources": "Reading Sources",
+    "additionalInfo": "Additional Info",
+    "authors": "Authors",
+    "startDate": "Start date",
+    "tags": "Tags",
+    "unknown": "Unknown",
+    "loadError": "Something went wrong loading this comic."
   }
 }

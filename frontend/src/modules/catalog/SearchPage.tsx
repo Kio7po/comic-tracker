@@ -65,34 +65,36 @@ function SearchPage() {
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     // Reset loading/error before each new fetch; safe here since the effect
     // is keyed on the search params and cleanup guards against stale updates.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     setHasError(false);
-    search({ keywords, limit, offset: (page - 1) * limit, type, status, nsfw })
+    search(
+      { keywords, limit, offset: (page - 1) * limit, type, status, nsfw },
+      { signal: controller.signal },
+    )
       .then((response) => {
-        if (!cancelled) {
-          setResults(response.items);
-          setTotalItems(response.totalItems);
-          setExistMoreItems(response.existMoreItems);
-        }
+        setResults(response.items);
+        setTotalItems(response.totalItems);
+        setExistMoreItems(response.existMoreItems);
       })
-      .catch(() => {
-        if (!cancelled) {
-          setHasError(true);
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
         }
+        setHasError(true);
       })
       .finally(() => {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setIsLoading(false);
         }
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [page, keywords, type, status, nsfw, limit]);
 

@@ -11,6 +11,7 @@
     "loading": "Cargando…",
     "loadError": "Ha ocurrido un error al cargar los cómics.",
     "noResults": "No se han encontrado cómics.",
+    "importError": "No se ha podido abrir este cómic. Inténtalo de nuevo.",
     "filters": {
       "type": "Tipo",
       "status": "Estado",
@@ -42,5 +43,20 @@
       "CANCELLED": "Cancelado",
       "OTHER": "Otro"
     }
+  },
+  "detail": {
+    "addToLibrary": "Añadir a la biblioteca",
+    "chapters": "Capítulos",
+    "synopsis": "Sinopsis",
+    "noSynopsis": "No hay sinopsis disponible.",
+    "expandSynopsis": "Expandir sinopsis",
+    "collapseSynopsis": "Contraer sinopsis",
+    "readingSources": "Fuentes de Lectura",
+    "additionalInfo": "Información Adicional",
+    "authors": "Autores",
+    "startDate": "Fecha de inicio",
+    "tags": "Etiquetas",
+    "unknown": "Desconocido",
+    "loadError": "Ha ocurrido un error al cargar este cómic."
   }
 }

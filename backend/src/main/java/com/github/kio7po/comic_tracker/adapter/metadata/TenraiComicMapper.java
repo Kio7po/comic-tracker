@@ -139,8 +139,12 @@ final class TenraiComicMapper {
     }
 
     private static NsfwRating toNsfwRating(List<TenraiNamedResourceDto> explicitGenres) {
-        // se podría distinguir de manera más fina
-        return explicitGenres != null && !explicitGenres.isEmpty() ? NsfwRating.EXPLICIT : NsfwRating.NONE;
+        // Tenrai/MAL's explicit_genres field is unreliable as a "confirmed safe" signal — it's
+        // often left empty even for works that do have explicit content, so an empty list only
+        // means the field wasn't populated, not that the work was actually checked. A populated
+        // list is still a reasonable positive signal; the absence of one is left unset (null)
+        // rather than asserting NONE, since that would claim something we don't actually know.
+        return explicitGenres != null && !explicitGenres.isEmpty() ? NsfwRating.EXPLICIT : null;
     }
 
     static Optional<String> toTenraiStatus(ComicStatus status) {

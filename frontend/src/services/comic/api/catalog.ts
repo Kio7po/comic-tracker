@@ -11,7 +11,10 @@ export interface SearchParams {
   type?: ComicMediaType;
 }
 
-export function search(params: SearchParams): Promise<PageResponse<ComicSearchResult>> {
+export function search(
+  params: SearchParams,
+  options?: { signal?: AbortSignal },
+): Promise<PageResponse<ComicSearchResult>> {
   const query = new URLSearchParams({ keywords: params.keywords });
   if (params.limit !== undefined) query.set('limit', String(params.limit));
   if (params.offset !== undefined) query.set('offset', String(params.offset));
@@ -19,7 +22,9 @@ export function search(params: SearchParams): Promise<PageResponse<ComicSearchRe
   if (params.status) query.set('status', params.status);
   if (params.type) query.set('type', params.type);
 
-  return apiFetch<PageResponse<ComicSearchResult>>(`/catalog/search?${query.toString()}`);
+  return apiFetch<PageResponse<ComicSearchResult>>(`/catalog/search?${query.toString()}`, {
+    signal: options?.signal,
+  });
 }
 
 export function importComic(sourceSlug: string, externalId: string): Promise<Comic> {
