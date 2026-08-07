@@ -19,10 +19,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.github.kio7po.comic_tracker.adapter.rest.exception.ProblemType;
 import com.github.kio7po.comic_tracker.adapter.rest.security.JwtDecoderConfig;
 import com.github.kio7po.comic_tracker.adapter.rest.security.SecurityConfig;
 import com.github.kio7po.comic_tracker.domain.entities.User;
 import com.github.kio7po.comic_tracker.domain.enums.UserRole;
+import com.github.kio7po.comic_tracker.domain.exceptions.EmailAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.InvalidCredentialsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.UsernameAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.service.TokenPair;
@@ -91,7 +93,22 @@ class AuthControllerTest {
                 .content("""
                         {"username":"testuser","email":"testuser@example.com","password":"password123","displayName":"Test User"}
                         """))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value(ProblemType.USERNAME_ALREADY_EXISTS));
+    }
+
+    @Test
+    void registerReturnsConflictWhenEmailAlreadyExists() throws Exception {
+        when(userService.register(any(), any(), any(), any()))
+                .thenThrow(new EmailAlreadyExistsException("testuser@example.com"));
+
+        mockMvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username":"testuser","email":"testuser@example.com","password":"password123","displayName":"Test User"}
+                        """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value(ProblemType.EMAIL_ALREADY_EXISTS));
     }
 
     @Test
@@ -120,7 +137,8 @@ class AuthControllerTest {
                 .content("""
                         {"usernameOrEmail":"testuser","password":"wrong"}
                         """))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.type").value(ProblemType.INVALID_CREDENTIALS));
     }
 
     @Test

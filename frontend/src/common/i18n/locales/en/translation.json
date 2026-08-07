@@ -44,6 +44,36 @@
       "OTHER": "Other"
     }
   },
+  "auth": {
+    "register": {
+      "title": "Create an account",
+      "description": "Sign up to start tracking your comics.",
+      "username": "Username",
+      "usernamePlaceholder": "yourusername",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "How others will see you",
+      "password": "Password",
+      "passwordDescription": "Must be at least 8 characters long.",
+      "confirmPassword": "Confirm password",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "success": "Account created successfully.",
+      "backHome": "Back to home",
+      "errors": {
+        "usernameRequired": "Username is required.",
+        "emailRequired": "Email is required.",
+        "emailInvalid": "Enter a valid email address.",
+        "displayNameRequired": "Display name is required.",
+        "weakPassword": "At least 8 characters.",
+        "passwordMismatch": "Passwords don't match.",
+        "usernameTaken": "That username is already taken.",
+        "emailTaken": "That email is already registered.",
+        "generic": "Couldn't complete registration. Try again."
+      }
+    }
+  },
   "detail": {
     "addToLibrary": "Add to library",
     "chapters": "Chapters",
