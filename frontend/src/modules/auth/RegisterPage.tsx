@@ -28,7 +28,7 @@ interface RegisterFormState {
 
 type RegisterFormErrors = Partial<Record<keyof RegisterFormState, string>>;
 
-const EMAIL_PATTERN = /^\S+@\S+$/;
+const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+$/;
 
 const EMPTY_FORM: RegisterFormState = {
   username: '',
@@ -37,6 +37,15 @@ const EMPTY_FORM: RegisterFormState = {
   password: '',
   confirmPassword: '',
 };
+
+function validateEmail(email: string) {
+  if (email.trim().length === 0)
+    return 'auth.register.errors.emailRequired'
+  else if (!EMAIL_PATTERN.test(email))
+    return 'auth.register.errors.emailInvalid'
+  else
+    return undefined
+}
 
 function RegisterPage() {
   const { t } = useTranslation();
@@ -60,11 +69,7 @@ function RegisterPage() {
           ? 'auth.register.errors.usernameRequired'
           : undefined,
       email:
-        form.email.trim().length === 0
-          ? 'auth.register.errors.emailRequired'
-          : !EMAIL_PATTERN.test(form.email)
-            ? 'auth.register.errors.emailInvalid'
-            : undefined,
+        validateEmail(form.email),
       displayName:
         form.displayName.trim().length === 0
           ? 'auth.register.errors.displayNameRequired'

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { login as apiLogin, logout as apiLogout, me } from '@/services/user/api/auth';
 import type { LoginRequest, UserResponse } from '@/services/user/types';
 
@@ -11,7 +11,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function AuthProvider({ children }: { children: ReactNode }) {
+function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<UserResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -24,17 +24,30 @@ function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  async function login(request: LoginRequest) {
+  // useCallback para generar una referencia estable a los métodos y de esa forma
+  // poder añadirlos como dependencia al useMemo de forma segura.
+  // Podrían no añadirse como dependencia al useMemo ya que son funciones estables,
+  // pero rompería la regla de react que dice que las dependencias deben incluir
+  // cualquier valor asignado dentro del componente.
+  const login = useCallback(async (request: LoginRequest) => {
     await apiLogin(request);
     setUser(await me());
-  }
+  }, []);
 
-  async function logout() {
+  const logout = useCallback(async () => {
     await apiLogout();
     setUser(null);
-  }
+  }, []);
 
-  return <AuthContext.Provider value={{ user, isLoading, login, logout }}>{children}</AuthContext.Provider>;
+  // useMemo para crear una referencia estable al objeto que solo cambie si
+  // realmente cambian sus valores. De esta manera evitamos que el objeto cambie
+  // en cada render y cause actualizaciones innecesarias en los consumers.
+  const value = useMemo(
+    () => ({user, isLoading, login, logout}),
+    [user, isLoading, login, logout]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 function useAuth(): AuthContextValue {

@@ -23,7 +23,7 @@ function initials(displayName: string): string {
     .join('');
 }
 
-function UserDropdownMenu({ user }: { user: UserResponse }) {
+function UserDropdownMenu({ user }: Readonly<{ user: UserResponse }>) {
   const { t } = useTranslation();
   const { logout } = useAuth();
   const navigate = useNavigate();
