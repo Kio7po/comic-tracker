@@ -1,4 +1,7 @@
 package com.github.kio7po.comic_tracker.domain.service;
 
-public record TokenPair(String accessToken, String refreshToken) {
+import java.time.Instant;
+
+public record TokenPair(String accessToken, Instant accessTokenExpiresAt, String refreshToken,
+        Instant refreshTokenExpiresAt, boolean rememberMe) {
 }

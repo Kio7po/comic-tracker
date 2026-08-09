@@ -1,7 +1,10 @@
 {
   "nav": {
     "home": "Inicio",
-    "browse": "Buscar"
+    "browse": "Buscar",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "loggedInAs": "Sesión iniciada como"
   },
   "footer": {
     "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
@@ -60,7 +63,8 @@
       "submit": "Crear cuenta",
       "submitting": "Creando cuenta…",
       "success": "Cuenta creada correctamente.",
-      "backHome": "Volver al inicio",
+      "haveAccount": "¿Ya tienes cuenta?",
+      "loginLink": "Inicia sesión",
       "errors": {
         "usernameRequired": "El nombre de usuario es obligatorio.",
         "emailRequired": "El correo electrónico es obligatorio.",
@@ -71,6 +75,25 @@
         "usernameTaken": "Ese nombre de usuario ya está en uso.",
         "emailTaken": "Ese correo electrónico ya está registrado.",
         "generic": "No se ha podido completar el registro. Inténtalo de nuevo."
+      }
+    },
+    "login": {
+      "title": "Iniciar sesión",
+      "description": "Bienvenido de nuevo.",
+      "usernameOrEmail": "Nombre de usuario o correo",
+      "usernameOrEmailPlaceholder": "tunombredeusuario o tu@ejemplo.com",
+      "password": "Contraseña",
+      "rememberMe": "Recordarme",
+      "submit": "Iniciar sesión",
+      "submitting": "Iniciando sesión…",
+      "forgotPassword": "¿Has olvidado tu contraseña?",
+      "noAccount": "¿No tienes cuenta?",
+      "registerLink": "Regístrate",
+      "errors": {
+        "usernameOrEmailRequired": "Obligatorio.",
+        "passwordRequired": "La contraseña es obligatoria.",
+        "invalidCredentials": "Nombre de usuario, correo o contraseña incorrectos.",
+        "generic": "No se ha podido iniciar sesión. Inténtalo de nuevo."
       }
     }
   },

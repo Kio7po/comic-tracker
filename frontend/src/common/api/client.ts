@@ -77,15 +77,25 @@ async function rawFetch(path: string, init: ApiRequestInit, retried: boolean): P
   const res = await fetch(`${baseURL}${path}`, { ...init, headers, body, credentials: 'include' });
 
   // Si falla con un 401 y no es un reintento ni estamos llamando a /refresh
-  // tenemos que obtener un token nuevo y reintentar la llamada con él
+  // tenemos que obtener un token nuevo y reintentar la llamada con él.
+  // Pero solo únicamente si ese 401 viene del propio filtro de seguridad rechazando el JWT,
+  // no por un 401 causado por una regla de negocio. Se distingue porque, a diferencia de un
+  // 401 de negocio (p. ej. credenciales de login incorrectas), no trae cuerpo ProblemDetail.
+  // Reintentar en el caso de un 401 de negocio sustituiría el error real por el
+  // 401 del propio /refresh, perdiendo el motivo original.
   if (res.status === 401 && !retried && !path.startsWith('/auth/refresh')) {
-    try {
-      await refreshAccessToken();
-    } catch (refreshError) {
-      setAccessToken(null);
-      throw refreshError;
+    const problem = await parseProblemDetail(res);
+    if (problem === null) {
+      try {
+        await refreshAccessToken();
+      } catch (refreshError) {
+        setAccessToken(null);
+        throw refreshError;
+      }
+      return rawFetch(path, init, true);
+    } else {
+      throw new ApiError(res.status, problem);
     }
-    return rawFetch(path, init, true);
   }
 
   if (!res.ok) {

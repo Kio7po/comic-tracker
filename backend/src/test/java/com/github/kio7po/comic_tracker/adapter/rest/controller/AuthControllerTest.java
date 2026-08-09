@@ -1,6 +1,11 @@
 package com.github.kio7po.comic_tracker.adapter.rest.controller;
 
+import java.time.Instant;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -18,6 +23,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import com.github.kio7po.comic_tracker.adapter.rest.exception.ProblemType;
 import com.github.kio7po.comic_tracker.adapter.rest.security.JwtDecoderConfig;
@@ -112,30 +118,56 @@ class AuthControllerTest {
     }
 
     @Test
-    void loginReturnsTokenBodyAndSetsRefreshCookie() throws Exception {
-        when(userService.login("testuser", "password123")).thenReturn(new TokenPair("access-token", "refresh-token"));
+    void loginReturnsTokenBodyAndSetsSessionRefreshCookieWhenNotRemembered() throws Exception {
+        Instant now = Instant.now();
+        when(userService.login("testuser", "password123", false))
+                .thenReturn(new TokenPair("access-token", now.plusSeconds(900), "refresh-token",
+                        now.plusSeconds(3600), false));
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"usernameOrEmail":"testuser","password":"password123"}
+                        {"usernameOrEmail":"testuser","password":"password123","rememberMe":false}
                         """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.access_token").value("access-token"))
                 .andExpect(jsonPath("$.token_type").value("Bearer"))
                 .andExpect(cookie().value("refresh_token", "refresh-token"))
                 .andExpect(cookie().httpOnly("refresh_token", true))
-                .andExpect(cookie().path("refresh_token", "/api/auth"));
+                .andExpect(cookie().path("refresh_token", "/api/auth"))
+                // -1 es como Spring representa "sin Max-Age": cookie de sesión, se borra al cerrar el navegador.
+                .andExpect(cookie().maxAge("refresh_token", -1));
+    }
+
+    @Test
+    void loginSetsPersistentRefreshCookieWhenRemembered() throws Exception {
+        Instant now = Instant.now();
+        when(userService.login("testuser", "password123", true))
+                .thenReturn(new TokenPair("access-token", now.plusSeconds(900), "refresh-token",
+                        now.plusSeconds(3600), true));
+
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"usernameOrEmail":"testuser","password":"password123","rememberMe":true}
+                        """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Margen de tolerancia: el controlador calcula el Max-Age con su propio Instant.now(),
+        // ligeramente posterior al que fija este test.
+        int maxAge = result.getResponse().getCookie("refresh_token").getMaxAge();
+        assertThat(maxAge).isCloseTo(3600, within(2));
     }
 
     @Test
     void loginReturnsUnauthorizedOnInvalidCredentials() throws Exception {
-        when(userService.login(any(), any())).thenThrow(new InvalidCredentialsException());
+        when(userService.login(any(), any(), anyBoolean())).thenThrow(new InvalidCredentialsException());
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"usernameOrEmail":"testuser","password":"wrong"}
+                        {"usernameOrEmail":"testuser","password":"wrong","rememberMe":false}
                         """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.type").value(ProblemType.INVALID_CREDENTIALS));

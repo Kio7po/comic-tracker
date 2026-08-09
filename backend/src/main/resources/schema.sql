@@ -43,12 +43,13 @@ CREATE TABLE IF NOT EXISTS app_user (
 -- Token opaco de refresco (no JWT): se guarda solo su hash, nunca el valor en claro.
 -- Rotado en cada uso (revoked_at se rellena en el usado, fila nueva emitida).
 CREATE TABLE IF NOT EXISTS refresh_token (
-    id         BIGINT NOT NULL PRIMARY KEY,
-    user_id    BIGINT NOT NULL REFERENCES app_user (id),
-    token_hash VARCHAR(64) NOT NULL UNIQUE,
-    expires_at TIMESTAMPTZ NOT NULL,
-    revoked_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL
+    id          BIGINT NOT NULL PRIMARY KEY,
+    user_id     BIGINT NOT NULL REFERENCES app_user (id),
+    token_hash  VARCHAR(64) NOT NULL UNIQUE,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    revoked_at  TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL,
+    remember_me BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- ─── Catálogo

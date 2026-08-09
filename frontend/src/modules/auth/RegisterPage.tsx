@@ -5,10 +5,18 @@ import { register } from '@/services/user/api/auth';
 import { ApiError } from '@/common/api/ApiError';
 import { ProblemType } from '@/common/api/ProblemType';
 import { Button } from '@/common/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/common/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/common/components/ui/card';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/common/components/ui/field';
 import { Input } from '@/common/components/ui/input';
 import { Spinner } from '@/common/components/ui/spinner';
+import { Separator } from '@/common/components/ui/separator';
 
 interface RegisterFormState {
   username: string;
@@ -111,7 +119,7 @@ function RegisterPage() {
 
   return (
     <div className="flex justify-center px-6 py-12 sm:py-20">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>{t('auth.register.title')}</CardTitle>
           <CardDescription>{t('auth.register.description')}</CardDescription>
@@ -120,8 +128,8 @@ function RegisterPage() {
           {isSuccess ? (
             <p className="text-sm text-foreground">
               {t('auth.register.success')}{' '}
-              <Link to="/" className="text-primary underline-offset-4 hover:underline">
-                {t('auth.register.backHome')}
+              <Link to="/login" className="text-primary underline-offset-4 hover:underline">
+                {t('auth.register.loginLink')}
               </Link>
             </p>
           ) : (
@@ -225,15 +233,30 @@ function RegisterPage() {
                     onChange={(event) => updateField('confirmPassword', event.target.value)}
                   />
                 </Field>
-                {formError && <FieldError>{formError}</FieldError>}
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Spinner />}
-                  {isSubmitting ? t('auth.register.submitting') : t('auth.register.submit')}
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="min-h-4">
+                    <FieldError className="text-xs">{formError}</FieldError>
+                  </div>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Spinner />}
+                    {isSubmitting ? t('auth.register.submitting') : t('auth.register.submit')}
+                  </Button>
+                </div>
               </FieldGroup>
             </form>
           )}
         </CardContent>
+        {!isSuccess && (
+          <>
+            <Separator/>
+            <CardFooter className="justify-center text-sm text-muted-foreground">
+              {t('auth.register.haveAccount')}{' '}
+              <Link to="/login" className="ml-1 text-primary underline-offset-4 hover:underline">
+                {t('auth.register.loginLink')}
+              </Link>
+            </CardFooter>
+          </>
+        )}
       </Card>
     </div>
   );

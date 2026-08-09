@@ -1,7 +1,9 @@
 package com.github.kio7po.comic_tracker.adapter.rest.controller;
 
 import java.time.Duration;
+import java.time.Instant;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -37,17 +39,11 @@ public class AuthController {
     private static final String REFRESH_TOKEN_COOKIE_PATH = "/api/auth";
 
     private final UserService userService;
-    private final long accessTokenExpirationMinutes;
-    private final long refreshTokenExpirationDays;
     private final boolean refreshTokenSecure;
 
     public AuthController(UserService userService,
-            @Value("${jwt.access-token-expiration-minutes}") long accessTokenExpirationMinutes,
-            @Value("${jwt.refresh-token-expiration-days}") long refreshTokenExpirationDays,
             @Value("${jwt.refresh-token-secure}") boolean refreshTokenSecure) {
         this.userService = userService;
-        this.accessTokenExpirationMinutes = accessTokenExpirationMinutes;
-        this.refreshTokenExpirationDays = refreshTokenExpirationDays;
         this.refreshTokenSecure = refreshTokenSecure;
     }
 
@@ -61,7 +57,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
-        TokenPair tokenPair = userService.login(request.usernameOrEmail(), request.password());
+        TokenPair tokenPair = userService.login(request.usernameOrEmail(), request.password(),
+                request.rememberMe());
         return tokenResponse(tokenPair);
     }
 
@@ -98,21 +95,26 @@ public class AuthController {
     }
 
     private ResponseEntity<TokenResponseDto> tokenResponse(TokenPair tokenPair) {
-        ResponseCookie refreshCookie = refreshTokenCookie(tokenPair.refreshToken(),
-                Duration.ofDays(refreshTokenExpirationDays));
-        TokenResponseDto body = new TokenResponseDto(tokenPair.accessToken(), "Bearer",
-                accessTokenExpirationMinutes * 60);
+        // Sin Max-Age (cookie de sesión, se borra al cerrar el navegador) si no se pidió.
+        Duration maxAge = tokenPair.rememberMe()
+                ? Duration.between(Instant.now(), tokenPair.refreshTokenExpiresAt())
+                : null;
+        ResponseCookie refreshCookie = refreshTokenCookie(tokenPair.refreshToken(), maxAge);
+        long expiresInSeconds = Duration.between(Instant.now(), tokenPair.accessTokenExpiresAt()).getSeconds();
+        TokenResponseDto body = new TokenResponseDto(tokenPair.accessToken(), "Bearer", expiresInSeconds);
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, refreshCookie.toString()).body(body);
     }
 
-    private ResponseCookie refreshTokenCookie(String value, Duration maxAge) {
-        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, value)
+    private ResponseCookie refreshTokenCookie(String value, @Nullable Duration maxAge) {
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(REFRESH_TOKEN_COOKIE, value)
                 .httpOnly(true)
                 .secure(refreshTokenSecure)
                 .sameSite("Lax")
-                .path(REFRESH_TOKEN_COOKIE_PATH)
-                .maxAge(maxAge)
-                .build();
+                .path(REFRESH_TOKEN_COOKIE_PATH);
+        if (maxAge != null) {
+            builder.maxAge(maxAge);
+        }
+        return builder.build();
     }
 
 }

@@ -1,7 +1,10 @@
 {
   "nav": {
     "home": "Home",
-    "browse": "Browse"
+    "browse": "Browse",
+    "login": "Log in",
+    "logout": "Log out",
+    "loggedInAs": "Logged in as"
   },
   "footer": {
     "tagline": "Comic Tracker — a TFG project (UDC)"
@@ -60,7 +63,8 @@
       "submit": "Create account",
       "submitting": "Creating account…",
       "success": "Account created successfully.",
-      "backHome": "Back to home",
+      "haveAccount": "Already have an account?",
+      "loginLink": "Log in",
       "errors": {
         "usernameRequired": "Username is required.",
         "emailRequired": "Email is required.",
@@ -71,6 +75,25 @@
         "usernameTaken": "That username is already taken.",
         "emailTaken": "That email is already registered.",
         "generic": "Couldn't complete registration. Try again."
+      }
+    },
+    "login": {
+      "title": "Log in",
+      "description": "Welcome back.",
+      "usernameOrEmail": "Username or email",
+      "usernameOrEmailPlaceholder": "yourusername or you@example.com",
+      "password": "Password",
+      "rememberMe": "Remember me",
+      "submit": "Log in",
+      "submitting": "Logging in…",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Sign up",
+      "errors": {
+        "usernameOrEmailRequired": "Required.",
+        "passwordRequired": "Password is required.",
+        "invalidCredentials": "Incorrect username, email or password.",
+        "generic": "Couldn't log in. Try again."
       }
     }
   },
