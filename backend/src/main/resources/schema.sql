@@ -18,6 +18,8 @@ CREATE SEQUENCE IF NOT EXISTS tag_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_metadata_source_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_metadata_entry_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS comic_reading_source_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS comic_reading_entry_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS app_user_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS refresh_token_seq START WITH 1 INCREMENT BY 50;
 
@@ -110,6 +112,37 @@ CREATE TABLE IF NOT EXISTS comic_metadata_entry (
     comic_id    BIGINT NOT NULL REFERENCES comic (id),
     source_id   BIGINT NOT NULL REFERENCES comic_metadata_source (id),
     UNIQUE (source_id, external_id)
+);
+
+-- ─── Fuentes de lectura
+
+-- Sitio de lectura en sí (agregador de scans, plataforma oficial...), no vinculado a ningún cómic.
+CREATE TABLE IF NOT EXISTS comic_reading_source (
+    id   BIGINT NOT NULL PRIMARY KEY,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    url  VARCHAR(255) NOT NULL,
+    icon VARCHAR(255)
+);
+
+-- Propuesta de un usuario de que un cómic está disponible en un sitio de lectura concreto.
+-- title/available_chapters quedan NULL hasta que el ComicReadingProvider los hidrata tras
+-- la aprobación (o permanecen NULL si no hay adaptador para la fuente).
+CREATE TABLE IF NOT EXISTS comic_reading_entry (
+    id                BIGINT NOT NULL PRIMARY KEY,
+    url               VARCHAR(255) NOT NULL,
+    title             VARCHAR(255),
+    available_chapters INTEGER,
+    locale            VARCHAR(35) NOT NULL,
+    status            VARCHAR(255) NOT NULL CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+    comic_id          BIGINT NOT NULL REFERENCES comic (id),
+    source_id         BIGINT NOT NULL REFERENCES comic_reading_source (id),
+    contributed_by_id BIGINT NOT NULL REFERENCES app_user (id),
+    created_at        TIMESTAMPTZ NOT NULL,
+    updated_at        TIMESTAMPTZ NOT NULL,
+    reviewed_at       TIMESTAMPTZ,
+    reviewed_by_id    BIGINT REFERENCES app_user (id),
+    UNIQUE (comic_id, source_id, url)
 );
 
 -- ─── Relaciones muchos-a-muchos de Comic

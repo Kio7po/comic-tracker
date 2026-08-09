@@ -34,6 +34,7 @@ public class User {
     private String biography;
     @Column(length = 255)
     private String pictureUrl;
+    // BCP 47
     @Column(length = 35)
     private String locale;
     @Column(nullable = false)
