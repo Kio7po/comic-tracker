@@ -20,6 +20,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 import com.github.kio7po.comic_tracker.domain.entities.User;
 import com.github.kio7po.comic_tracker.domain.enums.UserRole;
+import com.github.kio7po.comic_tracker.domain.port.security.AccessToken;
 
 class NimbusJwtIssuerTest {
 
@@ -54,8 +55,8 @@ class NimbusJwtIssuerTest {
         // comparing against the decoded claim to avoid a spurious sub-second mismatch.
         Instant before = Instant.now().truncatedTo(ChronoUnit.SECONDS);
 
-        String token = jwtIssuer.issue(user());
-        Jwt decoded = jwtDecoder.decode(token);
+        AccessToken accessToken = jwtIssuer.issue(user());
+        Jwt decoded = jwtDecoder.decode(accessToken.value());
 
         assertThat(decoded.getSubject()).isEqualTo("1");
         assertThat(decoded.getClaimAsString("iss")).isEqualTo(ISSUER);
@@ -63,6 +64,7 @@ class NimbusJwtIssuerTest {
         assertThat(decoded.getClaimAsString("role")).isEqualTo("USER");
         assertThat(decoded.getIssuedAt()).isNotNull().isAfterOrEqualTo(before);
         assertThat(decoded.getExpiresAt()).isEqualTo(decoded.getIssuedAt().plusSeconds(EXPIRATION_MINUTES * 60));
+        assertThat(accessToken.expiresAt().truncatedTo(ChronoUnit.SECONDS)).isEqualTo(decoded.getExpiresAt());
     }
 
     @Test
@@ -70,7 +72,7 @@ class NimbusJwtIssuerTest {
         User admin = user();
         admin.setRole(UserRole.ADMIN);
 
-        Jwt decoded = jwtDecoder.decode(jwtIssuer.issue(admin));
+        Jwt decoded = jwtDecoder.decode(jwtIssuer.issue(admin).value());
 
         assertThat(decoded.getClaimAsString("role")).isEqualTo("ADMIN");
     }
