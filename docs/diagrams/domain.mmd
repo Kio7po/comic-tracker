@@ -92,16 +92,23 @@ classDiagram
 
     %% Registro de que un cómic concreto está disponible en un ComicReadingSource
     %% concreto, aportado por un usuario. El campo status (PENDING, APPROVED, REJECTED)
-    %% cubre el ciclo de vida de la propuesta. Los campos hidratables por el adaptador
-    %% (available_chapters, etc.) quedan null hasta después de la aprobación.
+    %% cubre el ciclo de vida de la propuesta. title/available_chapters son hidratables
+    %% por el adaptador y quedan null hasta después de la aprobación (o para siempre si
+    %% no hay adaptador para la fuente). reviewed_at/reviewed_by quedan null mientras
+    %% status == PENDING.
     %% Se decidió una única entidad en lugar de separar Submission y Entry porque
     %% la diferencia es solo de estado y de qué campos están rellenos, no de estructura.
+    %% locale (no "language"): mismo criterio que User.locale — código BCP 47 en vez de
+    %% un enum cerrado, aportado por el usuario al proponer la fuente.
     class ComicReadingEntry {
         + url: string
         + title: string
         + available_chapters: int
-        + language: Enum
+        + locale: string
         + status: Enum
+        + created_at: DateTime
+        + updated_at: DateTime
+        + reviewed_at: DateTime
     }
 
     %% ─── Listas de lectura ───────────────────────────────────────
@@ -202,6 +209,7 @@ classDiagram
 
     ComicReadingEntry "0..*" --> "1" ComicReadingSource
     ComicReadingEntry "0..*" --> "1" User : aportada por
+    ComicReadingEntry "0..*" --> "0..1" User : revisada por
     ComicReadingEntry "1" --> "0..*" ComicReadingEntryReview
     ComicReadingEntry "1" --> "0..*" ComicReadingEntryReport
     ComicReadingEntry "1" --> "0..*" ChapterReadingEntry : tentativo
