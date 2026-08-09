@@ -17,9 +17,6 @@ public class ComicMetadataSource {
     private String name;
     @Column(nullable = false, length = 255)
     private String baseUrl;
-    
-    public ComicMetadataSource() {
-    }
 
     public Long getId() {
         return id;

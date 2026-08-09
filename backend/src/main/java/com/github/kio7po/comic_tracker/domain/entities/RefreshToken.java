@@ -34,9 +34,6 @@ public class RefreshToken {
     @Column(nullable = false)
     private boolean rememberMe;
 
-    public RefreshToken() {
-    }
-
     public static RefreshToken issue(User user, String tokenHash, Instant expiresAt, boolean rememberMe) {
         RefreshToken token = new RefreshToken();
         token.user = user;

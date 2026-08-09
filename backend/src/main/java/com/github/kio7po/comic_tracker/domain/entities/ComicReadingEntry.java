@@ -57,9 +57,6 @@ public class ComicReadingEntry {
     @JoinColumn(name = "reviewed_by_id")
     private User reviewedBy;
 
-    public ComicReadingEntry() {
-    }
-
     public Long getId() {
         return id;
     }

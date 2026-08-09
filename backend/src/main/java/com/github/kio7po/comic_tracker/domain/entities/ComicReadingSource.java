@@ -20,9 +20,6 @@ public class ComicReadingSource {
     @Column(length = 255)
     private String icon;
 
-    public ComicReadingSource() {
-    }
-
     public Long getId() {
         return id;
     }

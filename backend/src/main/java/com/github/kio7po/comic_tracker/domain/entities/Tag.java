@@ -14,9 +14,6 @@ public class Tag {
     @Column(nullable = false, unique = true, length = 255)
     private String name;
 
-    public Tag() {
-    }
-    
     public Long getId() {
         return id;
     }
