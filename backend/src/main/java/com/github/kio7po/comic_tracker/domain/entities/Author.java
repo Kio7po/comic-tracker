@@ -14,9 +14,6 @@ public class Author {
     @Column(nullable = false, unique = true, length = 255)
     private String name;
 
-    public Author() {
-    }
-    
     public Long getId() {
         return id;
     }

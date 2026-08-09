@@ -31,6 +31,8 @@ Aplicación web de indexación colaborativa para búsqueda, seguimiento y locali
 - Por cada cómic, lista de sitios donde se puede leer.
 - Metadatos por fuente: nombre en el sitio, enlace, capítulos disponibles, estado, idioma…
 - Requiere cuenta registrada para aportar.
+- **Decidido — idioma de `ComicReadingEntry` como `locale: string`, no como enum cerrado** (`domain.mmd` reflejaba antes `language: Enum` sin conjunto de valores decidido): mismo criterio y misma razón que `User.locale` (ver "Usuario: modelo de datos, registro e inicio de sesión").
+- **Decidido — unicidad de `ComicReadingEntry` sobre (`comic_id`, `source_id`, `url`):** un mismo cómic puede tener varias entries en el mismo `ComicReadingSource` si el enlace difiere (p. ej. un sitio que reparte una obra en varias URLs), pero no se admite una propuesta duplicada exacta. Se descartó restringir a un único enlace por (`comic_id`, `source_id`) por resultar demasiado estricto para ese caso, y dejar sin restricción por permitir duplicados exactos sin necesidad.
 
 ### Seguimiento personal
 - El usuario registra qué está leyendo o quiere leer, con control de progreso.

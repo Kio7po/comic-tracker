@@ -69,9 +69,6 @@ public class Comic {
     @ManyToMany(fetch = FetchType.LAZY)
     private Set<Tag> tags = new HashSet<>();
 
-    public Comic() {
-    }
-
     public Long getId() {
         return id;
     }

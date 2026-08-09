@@ -22,9 +22,6 @@ public class ComicMetadataEntry {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "source_id")
     private ComicMetadataSource source;
-    
-    public ComicMetadataEntry() {
-    }
 
     public Long getId() {
         return id;

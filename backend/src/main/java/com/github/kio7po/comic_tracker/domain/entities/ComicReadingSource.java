@@ -7,7 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
 @Entity
-public class ComicMetadataSource {
+public class ComicReadingSource {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
@@ -16,7 +16,9 @@ public class ComicMetadataSource {
     @Column(nullable = false, length = 255)
     private String name;
     @Column(nullable = false, length = 255)
-    private String baseUrl;
+    private String url;
+    @Column(length = 255)
+    private String icon;
 
     public Long getId() {
         return id;
@@ -42,12 +44,20 @@ public class ComicMetadataSource {
         this.name = name;
     }
 
-    public String getBaseUrl() {
-        return baseUrl;
+    public String getUrl() {
+        return url;
     }
 
-    public void setBaseUrl(String baseUrl) {
-        this.baseUrl = baseUrl;
+    public void setUrl(String url) {
+        this.url = url;
     }
-    
+
+    public String getIcon() {
+        return icon;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
 }
