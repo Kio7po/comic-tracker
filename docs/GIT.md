@@ -95,10 +95,10 @@ El número de versión de una `release/*` se decide y se fija en el nombre de la
 
 El `<version>` de `backend/pom.xml` sigue el ciclo `-SNAPSHOT` habitual de Maven, en paso con la `release/*`:
 
-- `develop` vive siempre en `X.Y.0-SNAPSHOT`, arrastrado desde la última release.
-- Al crear `release/vX.Y.0`: commit `chore: bump version X.Y.0` en esa rama, quitando el `-SNAPSHOT`, antes de fusionarla en `main`.
-- Al fusionar `release/*` → `main`: tag `vX.Y.0` sobre ese commit.
-- Tras el back-merge de `release/*` en `develop`: commit `chore: bump version X.(Y+1).0-SNAPSHOT` en `develop`, para el siguiente ciclo.
+- `develop` vive siempre en `X.Y.Z-SNAPSHOT`, arrastrado desde la última release.
+- Al crear `release/vX.Y.Z`: commit `chore: bump version X.Y.Z` en esa rama, quitando el `-SNAPSHOT`, antes de fusionarla en `main`.
+- Al fusionar `release/*` → `main`: tag `vX.Y.Z` sobre ese commit.
+- Tras el back-merge de `release/*` en `develop`: commit `chore: bump version X.(Y+1).Z-SNAPSHOT` en `develop`, para el siguiente ciclo.
 - Ninguno de los dos commits lleva clave de Jira, igual que el resto de `release/*`.
 - `frontend/package.json` no sigue esta convención (`0.0.0` fijo, sin uso real todavía).
 
