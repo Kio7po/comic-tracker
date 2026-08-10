@@ -74,7 +74,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build
-      - run: pnpm test -- --coverage
+      - run: pnpm test:coverage
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@v8
         env:

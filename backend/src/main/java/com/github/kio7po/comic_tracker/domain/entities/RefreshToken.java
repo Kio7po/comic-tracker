@@ -29,15 +29,17 @@ public class RefreshToken {
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
+    // Whether the session this token belongs to should survive a browser restart.
+    // Carried forward on each rotation.
+    @Column(nullable = false)
+    private boolean rememberMe;
 
-    public RefreshToken() {
-    }
-
-    public static RefreshToken issue(User user, String tokenHash, Instant expiresAt) {
+    public static RefreshToken issue(User user, String tokenHash, Instant expiresAt, boolean rememberMe) {
         RefreshToken token = new RefreshToken();
         token.user = user;
         token.tokenHash = tokenHash;
         token.expiresAt = expiresAt;
+        token.rememberMe = rememberMe;
         return token;
     }
 
@@ -91,6 +93,14 @@ public class RefreshToken {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public boolean isRememberMe() {
+        return rememberMe;
+    }
+
+    public void setRememberMe(boolean rememberMe) {
+        this.rememberMe = rememberMe;
     }
 
 }

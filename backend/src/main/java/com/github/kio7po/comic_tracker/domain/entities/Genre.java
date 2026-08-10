@@ -14,9 +14,6 @@ public class Genre {
     @Column(nullable = false, unique = true, length = 255)
     private String name;
 
-    public Genre() {
-    }
-    
     public Long getId() {
         return id;
     }

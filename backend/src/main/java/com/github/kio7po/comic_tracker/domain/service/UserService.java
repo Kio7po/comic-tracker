@@ -19,6 +19,7 @@ import com.github.kio7po.comic_tracker.domain.exceptions.UsernameAlreadyExistsEx
 import com.github.kio7po.comic_tracker.domain.exceptions.WeakPasswordException;
 import com.github.kio7po.comic_tracker.domain.port.persistence.RefreshTokenRepository;
 import com.github.kio7po.comic_tracker.domain.port.persistence.UserRepository;
+import com.github.kio7po.comic_tracker.domain.port.security.AccessToken;
 import com.github.kio7po.comic_tracker.domain.port.security.JwtIssuer;
 import com.github.kio7po.comic_tracker.domain.port.security.PasswordHasher;
 
@@ -32,15 +33,18 @@ public class UserService {
     private final PasswordHasher passwordHasher;
     private final JwtIssuer jwtIssuer;
     private final long refreshTokenExpirationDays;
+    private final long refreshTokenSessionExpirationHours;
 
     public UserService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
             PasswordHasher passwordHasher, JwtIssuer jwtIssuer,
-            @Value("${jwt.refresh-token-expiration-days}") long refreshTokenExpirationDays) {
+            @Value("${jwt.refresh-token-expiration-days}") long refreshTokenExpirationDays,
+            @Value("${jwt.refresh-token-session-expiration-hours}") long refreshTokenSessionExpirationHours) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordHasher = passwordHasher;
         this.jwtIssuer = jwtIssuer;
         this.refreshTokenExpirationDays = refreshTokenExpirationDays;
+        this.refreshTokenSessionExpirationHours = refreshTokenSessionExpirationHours;
     }
 
     @Transactional
@@ -70,7 +74,7 @@ public class UserService {
     }
 
     @Transactional
-    public TokenPair login(String usernameOrEmail, String rawPassword) {
+    public TokenPair login(String usernameOrEmail, String rawPassword, boolean rememberMe) {
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
                 .orElseThrow(InvalidCredentialsException::new);
@@ -79,7 +83,7 @@ public class UserService {
             throw new InvalidCredentialsException();
         }
 
-        return issueTokenPair(user);
+        return issueTokenPair(user, rememberMe);
     }
 
     /**
@@ -100,7 +104,7 @@ public class UserService {
         storedToken.setRevokedAt(Instant.now());
         refreshTokenRepository.save(storedToken);
 
-        return issueTokenPair(storedToken.getUser());
+        return issueTokenPair(storedToken.getUser(), storedToken.isRememberMe());
     }
 
     /**
@@ -120,15 +124,20 @@ public class UserService {
                 });
     }
 
-    private TokenPair issueTokenPair(User user) {
-        String accessToken = jwtIssuer.issue(user);
+    private TokenPair issueTokenPair(User user, boolean rememberMe) {
+        AccessToken accessToken = jwtIssuer.issue(user);
         String rawRefreshToken = OpaqueTokens.generate();
-        Instant expiresAt = Instant.now().plus(refreshTokenExpirationDays, ChronoUnit.DAYS);
+        // Ventana de tiempo más corta sin "recordarme", no solo confiar en el navegador.
+        Instant refreshTokenExpiresAt = rememberMe
+                ? Instant.now().plus(refreshTokenExpirationDays, ChronoUnit.DAYS)
+                : Instant.now().plus(refreshTokenSessionExpirationHours, ChronoUnit.HOURS);
 
-        RefreshToken refreshToken = RefreshToken.issue(user, OpaqueTokens.hash(rawRefreshToken), expiresAt);
+        RefreshToken refreshToken = RefreshToken.issue(user, OpaqueTokens.hash(rawRefreshToken),
+                refreshTokenExpiresAt, rememberMe);
         refreshTokenRepository.save(refreshToken);
 
-        return new TokenPair(accessToken, rawRefreshToken);
+        return new TokenPair(accessToken.value(), accessToken.expiresAt(), rawRefreshToken, refreshTokenExpiresAt,
+                rememberMe);
     }
 
 }

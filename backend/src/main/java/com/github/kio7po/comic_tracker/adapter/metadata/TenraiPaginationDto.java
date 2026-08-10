@@ -7,5 +7,5 @@ import tools.jackson.databind.annotation.JsonNaming;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-record TenraiPaginationDto(boolean hasNextPage) {
+record TenraiPaginationDto(boolean hasNextPage, TenraiPaginationItemsDto items) {
 }

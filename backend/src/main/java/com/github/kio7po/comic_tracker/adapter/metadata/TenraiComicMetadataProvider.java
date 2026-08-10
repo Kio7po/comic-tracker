@@ -21,6 +21,11 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
 
     private static final String SLUG = "myanimelist";
 
+    // Tenrai hard-caps pagination at page 1000, requesting further pages returns an error
+    // even when the response's own pagination metadata still claims more items exist.
+    // existMoreItems/totalItems are clamped around this ceiling.
+    private static final int MAX_PAGE = 1000;
+
     private final RestClient restClient;
 
     public TenraiComicMetadataProvider(RestClient.Builder restClientBuilder,
@@ -48,14 +53,19 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
                 .body(TenraiMangaSearchResponseDto.class);
 
         if (response == null || response.data() == null) {
-            return new Page<>(List.of(), false);
+            return new Page<>(List.of(), false, null);
         }
 
         List<ComicMetadataResult> items = response.data().stream()
-                .map(TenraiComicMapper::toResult)
+                .map(dto -> TenraiComicMapper.toResult(dto, SLUG))
                 .toList();
-        boolean existMoreItems = response.pagination() != null && response.pagination().hasNextPage();
-        return new Page<>(items, existMoreItems);
+        boolean existMoreItems = page < MAX_PAGE
+                && response.pagination() != null
+                && response.pagination().hasNextPage();
+        Integer totalItems = response.pagination() != null && response.pagination().items() != null
+                ? Math.min(response.pagination().items().total(), MAX_PAGE * limit)
+                : null;
+        return new Page<>(items, existMoreItems, totalItems);
     }
 
     private static void applyNsfwFilter(UriBuilder uriBuilder, NsfwRating nsfw) {
@@ -80,7 +90,7 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
                     .body(TenraiMangaResponseDto.class);
             return Optional.ofNullable(response)
                     .map(TenraiMangaResponseDto::data)
-                    .map(TenraiComicMapper::toResult);
+                    .map(dto -> TenraiComicMapper.toResult(dto, SLUG));
         } catch (HttpClientErrorException.NotFound e) {
             return Optional.empty();
         }

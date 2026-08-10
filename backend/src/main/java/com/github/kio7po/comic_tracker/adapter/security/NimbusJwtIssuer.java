@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Component;
 
 import com.github.kio7po.comic_tracker.domain.entities.User;
+import com.github.kio7po.comic_tracker.domain.port.security.AccessToken;
 import com.github.kio7po.comic_tracker.domain.port.security.JwtIssuer;
 
 @Component
@@ -35,17 +36,19 @@ public class NimbusJwtIssuer implements JwtIssuer {
     }
 
     @Override
-    public String issue(User user) {
+    public AccessToken issue(User user) {
         Instant now = Instant.now();
+        Instant expiresAt = now.plus(accessTokenExpirationMinutes, ChronoUnit.MINUTES);
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .audience(List.of(audience))
                 .subject(String.valueOf(user.getId()))
                 .issuedAt(now)
-                .expiresAt(now.plus(accessTokenExpirationMinutes, ChronoUnit.MINUTES))
+                .expiresAt(expiresAt)
                 .claim("role", user.getRole().name())
                 .build();
-        return jwtEncoder.encode(JwtEncoderParameters.from(JWS_HEADER, claims)).getTokenValue();
+        String token = jwtEncoder.encode(JwtEncoderParameters.from(JWS_HEADER, claims)).getTokenValue();
+        return new AccessToken(token, expiresAt);
     }
 
 }

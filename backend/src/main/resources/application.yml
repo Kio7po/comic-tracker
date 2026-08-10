@@ -24,4 +24,11 @@ jwt:
   audience: comic-tracker
   access-token-expiration-minutes: 15
   refresh-token-expiration-days: 30
+  # Ventana de validez del token cuando el login no pidió "recordarme"
+  refresh-token-session-expiration-hours: 24
   refresh-token-secure: true
+
+scalar:
+  # default values, not needed, but nice to remember
+  enabled: true
+  path: /scalar

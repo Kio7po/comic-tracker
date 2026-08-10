@@ -38,3 +38,4 @@ pnpm dev
 - [`CLAUDE.md`](CLAUDE.md) — guía y resumen sobre arquitectura y convenciones del proyecto
 - [`docs/TFG.md`](docs/TFG.md) — memoria del TFG con las decisiones de diseño
 - [`docs/GIT.md`](docs/GIT.md) — flujo de trabajo con Git
+

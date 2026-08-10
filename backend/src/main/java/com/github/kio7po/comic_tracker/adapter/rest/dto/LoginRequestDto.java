@@ -5,5 +5,6 @@ import jakarta.validation.constraints.Size;
 
 public record LoginRequestDto(
         @NotBlank @Size(max = 255) String usernameOrEmail,
-        @NotBlank @Size(max = 255) String password) {
+        @NotBlank @Size(max = 255) String password,
+        boolean rememberMe) {
 }
