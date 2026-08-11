@@ -1,0 +1,162 @@
+package com.github.kio7po.comic_tracker.domain.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.github.kio7po.comic_tracker.domain.entities.Comic;
+import com.github.kio7po.comic_tracker.domain.entities.ComicReadingEntry;
+import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
+import com.github.kio7po.comic_tracker.domain.entities.User;
+import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryAlreadyReviewedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
+import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntryRepository;
+import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingSourceRepository;
+import com.github.kio7po.comic_tracker.domain.port.persistence.ComicRepository;
+
+@ExtendWith(MockitoExtension.class)
+class ComicReadingEntryServiceTest {
+
+    private static final Long COMIC_ID = 1L;
+    private static final Long SOURCE_ID = 2L;
+    private static final Long ENTRY_ID = 3L;
+    private static final String URL = "https://example.com/berserk";
+    private static final String LOCALE = "es-ES";
+
+    @Mock
+    private ComicReadingEntryRepository comicReadingEntryRepository;
+    @Mock
+    private ComicReadingSourceRepository comicReadingSourceRepository;
+    @Mock
+    private ComicRepository comicRepository;
+
+    private ComicReadingEntryService comicReadingEntryService;
+
+    @BeforeEach
+    void setUp() {
+        comicReadingEntryService = new ComicReadingEntryService(comicReadingEntryRepository,
+                comicReadingSourceRepository, comicRepository);
+    }
+
+    @Test
+    void submitThrowsWhenComicDoesNotExist() {
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, new User()))
+                .isInstanceOf(ComicNotFoundException.class);
+
+        verify(comicReadingSourceRepository, never()).findById(any());
+    }
+
+    @Test
+    void submitThrowsWhenSourceDoesNotExist() {
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, new User()))
+                .isInstanceOf(ComicReadingSourceNotFoundException.class);
+
+        verify(comicReadingEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void submitThrowsWhenEntryAlreadyExists() {
+        Comic comic = new Comic();
+        ComicReadingSource source = new ComicReadingSource();
+
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(comicReadingEntryRepository.findByComicAndSourceAndUrl(comic, source, URL))
+                .thenReturn(Optional.of(new ComicReadingEntry()));
+
+        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, new User()))
+                .isInstanceOf(DuplicateComicReadingEntryException.class);
+
+        verify(comicReadingEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void submitPersistsPendingEntryWithContributor() {
+        Comic comic = new Comic();
+        ComicReadingSource source = new ComicReadingSource();
+        User contributor = new User();
+
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(comicReadingEntryRepository.findByComicAndSourceAndUrl(comic, source, URL)).thenReturn(Optional.empty());
+        when(comicReadingEntryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ComicReadingEntry result = comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, contributor);
+
+        assertThat(result.getComic()).isSameAs(comic);
+        assertThat(result.getSource()).isSameAs(source);
+        assertThat(result.getUrl()).isEqualTo(URL);
+        assertThat(result.getLocale()).isEqualTo(LOCALE);
+        assertThat(result.getContributedBy()).isSameAs(contributor);
+        assertThat(result.getStatus()).isEqualTo(ComicReadingEntryStatus.PENDING);
+    }
+
+    @Test
+    void approveThrowsWhenEntryDoesNotExist() {
+        when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> comicReadingEntryService.approve(ENTRY_ID, new User()))
+                .isInstanceOf(ComicReadingEntryNotFoundException.class);
+    }
+
+    @Test
+    void approveThrowsWhenEntryWasAlreadyReviewed() {
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setStatus(ComicReadingEntryStatus.APPROVED);
+        when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));
+
+        assertThatThrownBy(() -> comicReadingEntryService.approve(ENTRY_ID, new User()))
+                .isInstanceOf(ComicReadingEntryAlreadyReviewedException.class);
+
+        verify(comicReadingEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void approveSetsStatusAndReviewer() {
+        ComicReadingEntry entry = new ComicReadingEntry();
+        User reviewer = new User();
+        when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));
+        when(comicReadingEntryRepository.save(entry)).thenReturn(entry);
+
+        ComicReadingEntry result = comicReadingEntryService.approve(ENTRY_ID, reviewer);
+
+        assertThat(result.getStatus()).isEqualTo(ComicReadingEntryStatus.APPROVED);
+        assertThat(result.getReviewedBy()).isSameAs(reviewer);
+        assertThat(result.getReviewedAt()).isNotNull();
+    }
+
+    @Test
+    void rejectSetsStatusAndReviewer() {
+        ComicReadingEntry entry = new ComicReadingEntry();
+        User reviewer = new User();
+        when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));
+        when(comicReadingEntryRepository.save(entry)).thenReturn(entry);
+
+        ComicReadingEntry result = comicReadingEntryService.reject(ENTRY_ID, reviewer);
+
+        assertThat(result.getStatus()).isEqualTo(ComicReadingEntryStatus.REJECTED);
+        assertThat(result.getReviewedBy()).isSameAs(reviewer);
+        assertThat(result.getReviewedAt()).isNotNull();
+    }
+
+}
