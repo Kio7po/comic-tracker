@@ -42,6 +42,7 @@ class ComicReadingEntryServiceTest {
     private static final Long COMIC_ID = 1L;
     private static final Long SOURCE_ID = 2L;
     private static final Long ENTRY_ID = 3L;
+    private static final Long USER_ID = 4L;
     private static final String URL = "https://example.com/berserk";
     private static final String LOCALE = "es-ES";
 
@@ -53,20 +54,22 @@ class ComicReadingEntryServiceTest {
     private ComicRepository comicRepository;
     @Mock
     private ComicReadingSourceIconResolverRegistry iconResolverRegistry;
+    @Mock
+    private UserService userService;
 
     private ComicReadingEntryService comicReadingEntryService;
 
     @BeforeEach
     void setUp() {
         comicReadingEntryService = new ComicReadingEntryService(comicReadingEntryRepository,
-                comicReadingSourceRepository, comicRepository, iconResolverRegistry);
+                comicReadingSourceRepository, comicRepository, iconResolverRegistry, userService);
     }
 
     @Test
     void submitThrowsWhenComicDoesNotExist() {
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, new User()))
+        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, USER_ID))
                 .isInstanceOf(ComicNotFoundException.class);
 
         verify(comicReadingSourceRepository, never()).findById(any());
@@ -77,7 +80,7 @@ class ComicReadingEntryServiceTest {
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
         when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, new User()))
+        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, USER_ID))
                 .isInstanceOf(ComicReadingSourceNotFoundException.class);
 
         verify(comicReadingEntryRepository, never()).save(any());
@@ -93,7 +96,7 @@ class ComicReadingEntryServiceTest {
         when(comicReadingEntryRepository.findByComicAndSourceAndUrl(comic, source, URL))
                 .thenReturn(Optional.of(new ComicReadingEntry()));
 
-        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, new User()))
+        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, USER_ID))
                 .isInstanceOf(DuplicateComicReadingEntryException.class);
 
         verify(comicReadingEntryRepository, never()).save(any());
@@ -108,9 +111,10 @@ class ComicReadingEntryServiceTest {
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
         when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
         when(comicReadingEntryRepository.findByComicAndSourceAndUrl(comic, source, URL)).thenReturn(Optional.empty());
+        when(userService.findById(USER_ID)).thenReturn(contributor);
         when(comicReadingEntryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ComicReadingEntry result = comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, contributor);
+        ComicReadingEntry result = comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, USER_ID);
 
         assertThat(result.getComic()).isSameAs(comic);
         assertThat(result.getSource()).isSameAs(source);
@@ -125,7 +129,7 @@ class ComicReadingEntryServiceTest {
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> comicReadingEntryService.submitWithNewSource(COMIC_ID, "MangaDex",
-                "https://mangadex.org", URL, LOCALE, new User())).isInstanceOf(ComicNotFoundException.class);
+                "https://mangadex.org", URL, LOCALE, USER_ID)).isInstanceOf(ComicNotFoundException.class);
     }
 
     @Test
@@ -139,20 +143,21 @@ class ComicReadingEntryServiceTest {
                 .thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> comicReadingEntryService.submitWithNewSource(COMIC_ID, "MangaDex", sourceUrl, URL,
-                LOCALE, new User())).isInstanceOf(DuplicateComicReadingSourceException.class);
+                LOCALE, USER_ID)).isInstanceOf(DuplicateComicReadingSourceException.class);
 
         verify(comicReadingSourceRepository, never()).save(any());
         verify(comicReadingEntryRepository, never()).save(any());
     }
 
     @Test
-    void submitWithNewSourceCreatesSourceCollapsedToOriginAndEntry() {
+    void submitWithNewSourceCreatesSourceWithURLCollapsedToOriginAndEntry() {
         String sourceUrl = "https://mangadex.org/title/123/chapter-5";
         String iconUrl = "https://mangadex.org/icon.png";
         Comic comic = new Comic();
         User contributor = new User();
 
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(userService.findById(USER_ID)).thenReturn(contributor);
         when(comicReadingSourceRepository.findByUrl(UrlNormalizer.normalizeOrigin(sourceUrl)))
                 .thenReturn(Optional.empty());
         when(comicReadingSourceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -162,7 +167,7 @@ class ComicReadingEntryServiceTest {
         when(comicReadingEntryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         ComicReadingEntry result = comicReadingEntryService.submitWithNewSource(COMIC_ID, "MangaDex", sourceUrl, URL,
-                LOCALE, contributor);
+                LOCALE, USER_ID);
 
         ComicReadingSource source = result.getSource();
         assertThat(source.getUrl()).isEqualTo(UrlNormalizer.normalizeOrigin(sourceUrl));
@@ -212,7 +217,7 @@ class ComicReadingEntryServiceTest {
     void approveThrowsWhenEntryDoesNotExist() {
         when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> comicReadingEntryService.approve(ENTRY_ID, new User()))
+        assertThatThrownBy(() -> comicReadingEntryService.approve(ENTRY_ID, USER_ID))
                 .isInstanceOf(ComicReadingEntryNotFoundException.class);
     }
 
@@ -222,7 +227,7 @@ class ComicReadingEntryServiceTest {
         entry.setStatus(ComicReadingEntryStatus.APPROVED);
         when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));
 
-        assertThatThrownBy(() -> comicReadingEntryService.approve(ENTRY_ID, new User()))
+        assertThatThrownBy(() -> comicReadingEntryService.approve(ENTRY_ID, USER_ID))
                 .isInstanceOf(ComicReadingEntryAlreadyReviewedException.class);
 
         verify(comicReadingEntryRepository, never()).save(any());
@@ -237,7 +242,7 @@ class ComicReadingEntryServiceTest {
         entry.setSource(source);
         when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));
 
-        assertThatThrownBy(() -> comicReadingEntryService.approve(ENTRY_ID, new User()))
+        assertThatThrownBy(() -> comicReadingEntryService.approve(ENTRY_ID, USER_ID))
                 .isInstanceOf(ComicReadingSourceNotApprovedException.class);
 
         verify(comicReadingEntryRepository, never()).save(any());
@@ -251,9 +256,10 @@ class ComicReadingEntryServiceTest {
         entry.setSource(source);
         User reviewer = new User();
         when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));
+        when(userService.findById(USER_ID)).thenReturn(reviewer);
         when(comicReadingEntryRepository.save(entry)).thenReturn(entry);
 
-        ComicReadingEntry result = comicReadingEntryService.approve(ENTRY_ID, reviewer);
+        ComicReadingEntry result = comicReadingEntryService.approve(ENTRY_ID, USER_ID);
 
         assertThat(result.getStatus()).isEqualTo(ComicReadingEntryStatus.APPROVED);
         assertThat(result.getReviewedBy()).isSameAs(reviewer);
@@ -261,13 +267,51 @@ class ComicReadingEntryServiceTest {
     }
 
     @Test
+    void rejectThrowsWhenEntryDoesNotExist() {
+        when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> comicReadingEntryService.reject(ENTRY_ID, USER_ID))
+                .isInstanceOf(ComicReadingEntryNotFoundException.class);
+    }
+
+    @Test
+    void rejectThrowsWhenEntryWasAlreadyReviewed() {
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setStatus(ComicReadingEntryStatus.APPROVED);
+        when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));
+
+        assertThatThrownBy(() -> comicReadingEntryService.reject(ENTRY_ID, USER_ID))
+                .isInstanceOf(ComicReadingEntryAlreadyReviewedException.class);
+
+        verify(comicReadingEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void rejectDoesNotThrowWhenSourceIsNotApproved() {
+        ComicReadingSource source = new ComicReadingSource();
+        source.setId(SOURCE_ID);
+        source.setStatus(ComicReadingSourceStatus.PENDING);
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setSource(source);
+        User reviewer = new User();
+        when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));
+        when(userService.findById(USER_ID)).thenReturn(reviewer);
+        when(comicReadingEntryRepository.save(entry)).thenReturn(entry);
+
+        ComicReadingEntry result = comicReadingEntryService.reject(ENTRY_ID, USER_ID);
+
+        assertThat(result.getStatus()).isEqualTo(ComicReadingEntryStatus.REJECTED);
+    }
+
+    @Test
     void rejectSetsStatusAndReviewer() {
         ComicReadingEntry entry = new ComicReadingEntry();
         User reviewer = new User();
         when(comicReadingEntryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));
+        when(userService.findById(USER_ID)).thenReturn(reviewer);
         when(comicReadingEntryRepository.save(entry)).thenReturn(entry);
 
-        ComicReadingEntry result = comicReadingEntryService.reject(ENTRY_ID, reviewer);
+        ComicReadingEntry result = comicReadingEntryService.reject(ENTRY_ID, USER_ID);
 
         assertThat(result.getStatus()).isEqualTo(ComicReadingEntryStatus.REJECTED);
         assertThat(result.getReviewedBy()).isSameAs(reviewer);

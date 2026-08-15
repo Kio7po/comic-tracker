@@ -33,14 +33,16 @@ public class ComicReadingEntryService {
     private final ComicReadingSourceRepository comicReadingSourceRepository;
     private final ComicRepository comicRepository;
     private final ComicReadingSourceIconResolverRegistry iconResolverRegistry;
+    private final UserService userService;
 
     public ComicReadingEntryService(ComicReadingEntryRepository comicReadingEntryRepository,
             ComicReadingSourceRepository comicReadingSourceRepository, ComicRepository comicRepository,
-            ComicReadingSourceIconResolverRegistry iconResolverRegistry) {
+            ComicReadingSourceIconResolverRegistry iconResolverRegistry, UserService userService) {
         this.comicReadingEntryRepository = comicReadingEntryRepository;
         this.comicReadingSourceRepository = comicReadingSourceRepository;
         this.comicRepository = comicRepository;
         this.iconResolverRegistry = iconResolverRegistry;
+        this.userService = userService;
     }
 
     /**
@@ -48,10 +50,11 @@ public class ComicReadingEntryService {
      * @param locale must already be a well-formed BCP 47 tag.
      */
     @Transactional
-    public ComicReadingEntry submit(Long comicId, Long sourceId, String url, String locale, User contributor) {
+    public ComicReadingEntry submit(Long comicId, Long sourceId, String url, String locale, Long contributorId) {
         Comic comic = comicRepository.findById(comicId).orElseThrow(() -> new ComicNotFoundException(comicId));
         ComicReadingSource source = comicReadingSourceRepository.findById(sourceId)
                 .orElseThrow(() -> new ComicReadingSourceNotFoundException(sourceId));
+        User contributor = userService.findById(contributorId);
 
         return createEntry(comic, source, UrlNormalizer.normalize(url), locale, contributor);
     }
@@ -66,8 +69,9 @@ public class ComicReadingEntryService {
      */
     @Transactional
     public ComicReadingEntry submitWithNewSource(Long comicId, String sourceName, String sourceUrl, String url,
-            String locale, User contributor) {
+            String locale, Long contributorId) {
         Comic comic = comicRepository.findById(comicId).orElseThrow(() -> new ComicNotFoundException(comicId));
+        User contributor = userService.findById(contributorId);
         ComicReadingSource source = createSource(sourceName, UrlNormalizer.normalizeOrigin(sourceUrl), contributor);
 
         return createEntry(comic, source, UrlNormalizer.normalize(url), locale, contributor);
@@ -115,7 +119,7 @@ public class ComicReadingEntryService {
     }
 
     @Transactional
-    public ComicReadingEntry approve(Long entryId, User reviewer) {
+    public ComicReadingEntry approve(Long entryId, Long reviewerId) {
         ComicReadingEntry entry = findPendingEntry(entryId);
 
         ComicReadingSource source = entry.getSource();
@@ -123,12 +127,12 @@ public class ComicReadingEntryService {
             throw new ComicReadingSourceNotApprovedException(source.getId(), source.getStatus());
         }
 
-        return resolve(entry, reviewer, ComicReadingEntryStatus.APPROVED);
+        return resolve(entry, userService.findById(reviewerId), ComicReadingEntryStatus.APPROVED);
     }
 
     @Transactional
-    public ComicReadingEntry reject(Long entryId, User reviewer) {
-        return resolve(findPendingEntry(entryId), reviewer, ComicReadingEntryStatus.REJECTED);
+    public ComicReadingEntry reject(Long entryId, Long reviewerId) {
+        return resolve(findPendingEntry(entryId), userService.findById(reviewerId), ComicReadingEntryStatus.REJECTED);
     }
 
     private ComicReadingEntry findPendingEntry(Long entryId) {
