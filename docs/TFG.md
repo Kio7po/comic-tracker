@@ -39,6 +39,8 @@ Aplicación web de indexación colaborativa para búsqueda, seguimiento y locali
 - **Decidido — identidad de una fuente nueva se comprueba por URL, no por el nombre que escribe el usuario:** dos usuarios pueden nombrar el mismo sitio de forma distinta, así que el nombre no sirve para deduplicar. La URL de la fuente se colapsa además a su origin (`scheme://host`, sin path/query/fragment) antes de comparar o guardar — así da igual qué página concreta haya pegado el usuario al proponer el sitio, ya que `ComicReadingSource.url` identifica el sitio entero, no una página. `ComicReadingEntry.url` sí conserva el path/query (identifica una página concreta), normalizado solo en case y barra final sobrante. *Pendiente anotado, no implementado:* si la normalización se vuelve más agresiva en el futuro (p. ej. quitar parámetros de tracking), perder la URL cruda tal y como la pegó el usuario sería una pérdida real de información — hoy no se guarda, solo la normalizada, porque el normalizado actual es lo bastante conservador para no tirar nada que importe.
 - **Decidido — el icono de una fuente no lo aporta el usuario, se resuelve automáticamente:** mismo criterio que `title`/`available_chapters` en `ComicReadingEntry` (dato hidratable, no exigido en el formulario). Por defecto se asume la convención `/favicon.ico` del sitio; el mecanismo es un puerto (`ComicReadingSourceIconResolver`, detectado por dominio, mismo espíritu que `ComicReadingProvider`) para poder añadir resolutores específicos por sitio más adelante sin tocar el resto del flujo.
 - **Decidido — listar las `ComicReadingEntry` de un cómic no oculta las `PENDING` por defecto:** si un usuario aporta una fuente y no la ve aparecer en ningún sitio, parece que la aportación no sirvió de nada. El filtrado por estado queda como opción del llamador, no como comportamiento forzado.
+- **Decidido — un único endpoint para proponer una `ComicReadingEntry`, no uno por caso (fuente existente / fuente nueva):** el cliente manda `sourceId`, o `sourceName`+`sourceUrl`, mutuamente excluyentes. *Razón:* para el usuario es una sola acción ("leí esto en tal sitio") — partirla en dos endpoints solo trasladaría al cliente la decisión de cuál llamar, sin aportar nada.
+- **Decidido — validación real de `locale`: idioma ISO 639-1 obligatorio, región ISO 3166-1 alpha-2 opcional** (`es`, `es-ES`). No existe una anotación estándar de Bean Validation para BCP 47, así que se implementó un validador propio. Cierra el punto que había quedado pospuesto hasta tener capa de DTOs.
 
 ### Seguimiento personal
 - El usuario registra qué está leyendo o quiere leer, con control de progreso.
@@ -61,6 +63,7 @@ Aplicación web de indexación colaborativa para búsqueda, seguimiento y locali
 
 ### Administración *(por concretar)*
 - Acceso total a todas las entidades del sistema, incluyendo cuentas de usuario. Alcance exacto de las operaciones por concretar.
+- **Decidido — revisar (`approve`/`reject`) una `ComicReadingEntry` exige rol `ADMIN`:** primera regla de autorización por rol del proyecto (`hasRole(...)` en `SecurityConfig`), apoyada en el claim `role` que el JWT ya incluye desde su emisión. El resto del alcance de administración sigue sin concretar.
 
 ## Arquitectura de adaptadores
 
