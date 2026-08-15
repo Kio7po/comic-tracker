@@ -52,7 +52,8 @@ Content-Type: {{contentType}}
 
 {
   "usernameOrEmail": "testuser",
-  "password": "password123"
+  "password": "password123",
+  "rememberMe": false
 }
 
 ### Login - wrong password -> 401
@@ -61,7 +62,8 @@ Content-Type: {{contentType}}
 
 {
   "usernameOrEmail": "testuser",
-  "password": "wrong-password"
+  "password": "wrong-password",
+  "rememberMe": false
 }
 
 ### Me - returns the authenticated user, chained from the login request above -> 200
@@ -77,5 +79,6 @@ POST {{host}}/api/auth/refresh
 ### Logout - revokes the refresh_token cookie
 POST {{host}}/api/auth/logout
 
-### Any endpoint outside /api/auth/** -> 403 (denyAll)
+### Any endpoint outside /api/auth/** -> 403 (denyAll, even authenticated - anonymous gets 401 instead)
 GET {{host}}/api/whatever
+Authorization: Bearer {{login.response.body.$.access_token}}
