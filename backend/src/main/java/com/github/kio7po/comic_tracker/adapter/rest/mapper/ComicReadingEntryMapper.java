@@ -27,4 +27,8 @@ public final class ComicReadingEntryMapper {
                 source.getUrl(), source.getIconUrl(), source.getStatus());
     }
 
+    public static List<ComicReadingSourceResponseDto> toSourceResponseDtoList(List<ComicReadingSource> sources) {
+        return sources.stream().map(ComicReadingEntryMapper::toSourceResponseDto).toList();
+    }
+
 }

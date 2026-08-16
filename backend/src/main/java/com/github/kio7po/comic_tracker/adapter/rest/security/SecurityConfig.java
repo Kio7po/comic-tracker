@@ -31,6 +31,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/catalog/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/comics/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/reading-sources").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/comics/*/reading-entries").authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/reading-entries/*/approve",
                             "/api/reading-entries/*/reject").hasRole("ADMIN")

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { register } from '@/services/user/api/auth';
 import { ApiError } from '@/common/api/ApiError';
 import { ProblemType } from '@/common/api/ProblemType';
@@ -49,6 +49,8 @@ function validateEmail(email: string) {
 
 function RegisterPage() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
 
   const [form, setForm] = useState<RegisterFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
@@ -133,7 +135,7 @@ function RegisterPage() {
           {isSuccess ? (
             <p className="text-sm text-foreground">
               {t('auth.register.success')}{' '}
-              <Link to="/login" className="text-primary underline-offset-4 hover:underline">
+              <Link to="/login" state={{ from }} className="text-primary underline-offset-4 hover:underline">
                 {t('auth.register.loginLink')}
               </Link>
             </p>
@@ -256,7 +258,7 @@ function RegisterPage() {
             <Separator/>
             <CardFooter className="justify-center text-sm text-muted-foreground">
               {t('auth.register.haveAccount')}{' '}
-              <Link to="/login" className="ml-1 text-primary underline-offset-4 hover:underline">
+              <Link to="/login" state={{ from }} className="ml-1 text-primary underline-offset-4 hover:underline">
                 {t('auth.register.loginLink')}
               </Link>
             </CardFooter>

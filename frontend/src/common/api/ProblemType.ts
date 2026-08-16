@@ -7,4 +7,6 @@ export const ProblemType = {
   WEAK_PASSWORD: 'urn:problem-type:weak-password',
   INVALID_CREDENTIALS: 'urn:problem-type:invalid-credentials',
   INVALID_REFRESH_TOKEN: 'urn:problem-type:invalid-refresh-token',
+  DUPLICATE_READING_SOURCE: 'urn:problem-type:duplicate-reading-source',
+  DUPLICATE_READING_ENTRY: 'urn:problem-type:duplicate-reading-entry',
 } as const;

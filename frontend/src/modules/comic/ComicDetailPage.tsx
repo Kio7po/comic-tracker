@@ -24,7 +24,7 @@ function ComicDetailPage() {
           <div className="flex flex-col gap-6 lg:flex-row">
             <div className="flex flex-1 flex-col gap-6">
               <ComicSynopsis synopsis={comic.synopsis} />
-              <ComicReadingSources />
+              <ComicReadingSources comicSlug={comic.slug} />
             </div>
             <ComicSidebarInfo comic={comic} />
           </div>
