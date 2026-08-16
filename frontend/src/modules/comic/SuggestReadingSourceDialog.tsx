@@ -138,6 +138,15 @@ function SuggestReadingSourceDialog({ comicSlug, onEntrySubmitted }: Readonly<Su
     setFormErrors((errors) => ({ ...errors, [field]: undefined }));
   }
 
+  function handleSourceUrlChange(value: string) {
+    try {
+      updateField('sourceUrl', new URL(value).origin);
+    } catch {
+      // Not a parseable URL yet, store as typed, submit-time validation will flag it if it stays that way.
+      updateField('sourceUrl', value);
+    }
+  }
+
   function switchMode(nextMode: Mode) {
     setMode(nextMode);
     setFormErrors({});
@@ -296,7 +305,7 @@ function SuggestReadingSourceDialog({ comicSlug, onEntrySubmitted }: Readonly<Su
                       id="suggest-source-url"
                       placeholder={t('detail.suggestSource.sourceUrlPlaceholder')}
                       value={form.sourceUrl}
-                      onChange={(event) => updateField('sourceUrl', event.target.value)}
+                      onChange={(event) => handleSourceUrlChange(event.target.value)}
                     />
                     <FieldDescription>
                       {t('detail.suggestSource.alreadyExists')}{' '}

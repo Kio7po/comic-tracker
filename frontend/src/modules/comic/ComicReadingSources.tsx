@@ -5,6 +5,7 @@ import { ExternalLink, TriangleAlert } from 'lucide-react';
 import { findByComic } from '@/services/source/api/readingEntry';
 import type { ComicReadingEntry } from '@/services/source/types';
 import { useAuth } from '@/common/components/AuthProvider';
+import { useLocalStorage } from '@/common/hooks/useLocalStorage';
 import { Badge } from '@/common/components/ui/badge';
 import { Card, CardContent } from '@/common/components/ui/card';
 import { Checkbox } from '@/common/components/ui/checkbox';
@@ -25,7 +26,7 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
   const [entries, setEntries] = useState<ComicReadingEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [showPending, setShowPending] = useState(false);
+  const [showPending, setShowPending] = useLocalStorage('showPendingReadingSources', false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -107,7 +108,7 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
                 >
                   <span className="flex items-center gap-2 font-medium text-foreground">
                     {entry.source.iconUrl && (
-                      <img src={entry.source.iconUrl} alt="" className="size-6 rounded-xs" />
+                      <img src={entry.source.iconUrl} alt="" className="size-6 rounded-md" />
                     )}
                     {entry.source.name}
                     {entry.status === 'PENDING' && (
