@@ -21,6 +21,7 @@ public final class ProblemType {
     public static final String DUPLICATE_READING_ENTRY = "urn:problem-type:duplicate-reading-entry";
     public static final String READING_ENTRY_ALREADY_REVIEWED = "urn:problem-type:reading-entry-already-reviewed";
     public static final String READING_SOURCE_NOT_APPROVED = "urn:problem-type:reading-source-not-approved";
+    public static final String READING_SOURCE_ALREADY_REVIEWED = "urn:problem-type:reading-source-already-reviewed";
 
     private ProblemType() {
     }

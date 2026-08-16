@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TriangleAlert } from 'lucide-react';
 import { submit } from '@/services/source/api/readingEntry';
-import { findSelectable } from '@/services/source/api/readingSource';
+import { findByStatusIn } from '@/services/source/api/readingSource';
 import type { ComicReadingEntry } from '@/services/source/types';
 import { ApiError } from '@/common/api/ApiError';
 import { ProblemType } from '@/common/api/ProblemType';
@@ -98,7 +98,7 @@ function SuggestReadingSourceDialog({ comicSlug, onEntrySubmitted }: Readonly<Su
 
   useEffect(() => {
     const controller = new AbortController();
-    findSelectable({ signal: controller.signal })
+    findByStatusIn({ statuses: ['APPROVED', 'PENDING'] }, { signal: controller.signal })
       .then((sources) => {
         setSourceOptions(
           sources.map((source) => ({

@@ -1,10 +1,12 @@
 import { createBrowserRouter } from 'react-router';
 import Layout from '@/common/components/Layout';
+import RouteErrorPage from '@/common/components/RouteErrorPage';
 import SearchPage from '@/modules/catalog/SearchPage';
 import ComicDetailPage, { comicDetailLoader } from '@/modules/comic/ComicDetailPage';
-import ComicDetailError from '@/modules/comic/ComicDetailError';
 import RegisterPage from '@/modules/auth/RegisterPage';
 import LoginPage from '@/modules/auth/LoginPage';
+import ModerationPage from '@/modules/moderation/ModerationPage';
+import { requireRole } from './routeGuards';
 import Home from './Home';
 
 export const router = createBrowserRouter([
@@ -20,7 +22,13 @@ export const router = createBrowserRouter([
         path: 'comics/:slug',
         element: <ComicDetailPage />,
         loader: comicDetailLoader,
-        errorElement: <ComicDetailError />,
+        errorElement: <RouteErrorPage />,
+      },
+      {
+        path: 'moderation',
+        element: <ModerationPage />,
+        loader: ({ request }) => requireRole('ADMIN', request),
+        errorElement: <RouteErrorPage />,
       },
     ],
   },

@@ -4,7 +4,8 @@
     "browse": "Buscar",
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
-    "loggedInAs": "Sesión iniciada como"
+    "loggedInAs": "Sesión iniciada como",
+    "moderation": "Moderación"
   },
   "footer": {
     "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
@@ -149,7 +150,35 @@
     "authors": "Autores",
     "startDate": "Fecha de inicio",
     "tags": "Etiquetas",
-    "unknown": "Desconocido",
-    "loadError": "Ha ocurrido un error al cargar este cómic."
+    "unknown": "Desconocido"
+  },
+  "errors": {
+    "oops": "¡Vaya!",
+    "somethingWentWrong": "Algo ha ido mal.",
+    "notFound": "No hemos encontrado lo que buscabas.",
+    "notAuthorized": "No tienes permiso para ver esta página.",
+    "generic": "Ha ocurrido un error al cargar la página."
+  },
+  "moderation": {
+    "title": "Moderación",
+    "pendingSources": "Fuentes pendientes de revisión",
+    "pendingEntries": "Enlaces pendientes de revisión",
+    "loadError": "No se han podido cargar las fuentes pendientes.",
+    "empty": "No hay elementos pendientes de revisar.",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "actionError": "No se ha podido completar la acción. Inténtalo de nuevo.",
+    "sourceNotApprovedError": "No se puede aprobar: la fuente de este enlace todavía no está aprobada.",
+    "fields": {
+      "id": "ID",
+      "slug": "Slug",
+      "url": "URL",
+      "status": "Estado",
+      "submittedAt": "Aportada el",
+      "comic": "Cómic",
+      "source": "Fuente",
+      "locale": "Idioma",
+      "availableChapters": "Capítulos disponibles"
+    }
   }
 }

@@ -1,6 +1,6 @@
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { LogOut } from 'lucide-react';
+import { LogOut, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/common/components/AuthProvider';
 import { Avatar, AvatarFallback } from '@/common/components/ui/avatar';
 import {
@@ -46,6 +46,12 @@ function UserDropdownMenu({ user }: Readonly<{ user: UserResponse }>) {
             {t('nav.loggedInAs')} <span className="font-semibold text-foreground">{user.displayName}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {user.role === 'ADMIN' && (
+            <DropdownMenuItem render={<Link to="/moderation" />}>
+              <ShieldCheck />
+              {t('nav.moderation')}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem variant="destructive" onClick={handleLogout}>
             <LogOut />
             {t('nav.logout')}

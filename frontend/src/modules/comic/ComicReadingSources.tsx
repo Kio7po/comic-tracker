@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router';
-import { ExternalLink, TriangleAlert } from 'lucide-react';
+import { ExternalLink as ExternalLinkIcon, TriangleAlert } from 'lucide-react';
 import { findByComic } from '@/services/source/api/readingEntry';
 import type { ComicReadingEntry } from '@/services/source/types';
 import { useAuth } from '@/common/components/AuthProvider';
+import ExternalLink from '@/common/components/ExternalLink';
+import { appendFromParam } from '@/common/lib/authRedirect';
 import { useLocalStorage } from '@/common/hooks/useLocalStorage';
 import { Badge } from '@/common/components/ui/badge';
 import { Card, CardContent } from '@/common/components/ui/card';
@@ -70,8 +72,7 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
               />
             ) : (
               <Link
-                to="/login"
-                state={{ from: location.pathname + location.search }}
+                to={appendFromParam('/login', location.pathname + location.search)}
                 className="text-sm text-primary underline-offset-4 hover:underline"
               >
                 {t('detail.suggestSource.loginPrompt')}
@@ -100,10 +101,8 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
           <ul className="mt-2 flex flex-col gap-2">
             {visibleEntries.map((entry) => (
               <li key={entry.id}>
-                <a
+                <ExternalLink
                   href={entry.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted"
                 >
                   <span className="flex items-center gap-2 font-medium text-foreground">
@@ -127,9 +126,9 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
                         {t('detail.chapters')} {entry.availableChapters}
                       </span>
                     )}
-                    <ExternalLink className="size-4" />
+                    <ExternalLinkIcon className="size-4" />
                   </span>
-                </a>
+                </ExternalLink>
               </li>
             ))}
           </ul>

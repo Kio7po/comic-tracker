@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/common/components/AuthProvider';
+import { appendFromParam } from '@/common/lib/authRedirect';
 import { buttonVariants } from '@/common/components/ui/button';
 import UserDropdownMenu from './UserDropdownMenu';
 
@@ -30,8 +31,7 @@ function Header() {
           <UserDropdownMenu user={user} />
         ) : (
           <Link
-            to="/login"
-            state={{ from: location.pathname + location.search }}
+            to={appendFromParam('/login', location.pathname + location.search)}
             className={buttonVariants({ size: 'sm', className: 'ml-auto' })}
           >
             {t('nav.login')}

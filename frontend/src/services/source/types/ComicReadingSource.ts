@@ -7,4 +7,5 @@ export interface ComicReadingSource {
   url: string;
   iconUrl: string | null;
   status: ComicReadingSourceStatus;
+  createdAt: string;
 }

@@ -9,4 +9,5 @@ export const ProblemType = {
   INVALID_REFRESH_TOKEN: 'urn:problem-type:invalid-refresh-token',
   DUPLICATE_READING_SOURCE: 'urn:problem-type:duplicate-reading-source',
   DUPLICATE_READING_ENTRY: 'urn:problem-type:duplicate-reading-entry',
+  READING_SOURCE_NOT_APPROVED: 'urn:problem-type:reading-source-not-approved',
 } as const;

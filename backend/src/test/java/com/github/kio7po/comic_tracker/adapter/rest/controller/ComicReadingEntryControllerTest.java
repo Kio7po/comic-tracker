@@ -23,9 +23,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.github.kio7po.comic_tracker.adapter.rest.exception.ProblemType;
 import com.github.kio7po.comic_tracker.adapter.rest.security.JwtDecoderConfig;
 import com.github.kio7po.comic_tracker.adapter.rest.security.SecurityConfig;
+import com.github.kio7po.comic_tracker.domain.common.Page;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingEntry;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
+import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntrySortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
@@ -61,6 +64,7 @@ class ComicReadingEntryControllerTest {
         Comic comic = new Comic();
         comic.setId(COMIC_ID);
         comic.setSlug(SLUG);
+        comic.setTitle("Berserk");
         return comic;
     }
 
@@ -81,6 +85,7 @@ class ComicReadingEntryControllerTest {
         entry.setLocale("es-ES");
         entry.setStatus(ComicReadingEntryStatus.PENDING);
         entry.setSource(source());
+        entry.setComic(comic());
         return entry;
     }
 
@@ -305,6 +310,54 @@ class ComicReadingEntryControllerTest {
                         .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type").value(ProblemType.READING_ENTRY_ALREADY_REVIEWED));
+    }
+
+    @Test
+    void findByStatusInRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/reading-entries").param("statuses", "PENDING"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void findByStatusInReturnsForbiddenForNonAdminUser() throws Exception {
+        mockMvc.perform(get("/api/reading-entries")
+                .param("statuses", "PENDING")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void findByStatusInReturnsEntriesWithComicForAdminUser() throws Exception {
+        when(comicReadingEntryService.findByStatusIn(List.of(ComicReadingEntryStatus.PENDING),
+                ComicReadingEntrySortField.CREATED_AT, SortDirection.ASC, 20, 0))
+                .thenReturn(new Page<>(List.of(entry()), false, 1));
+
+        mockMvc.perform(get("/api/reading-entries")
+                .param("statuses", "PENDING")
+                .with(jwt().jwt(builder -> builder.subject("1"))
+                        .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].entry.id").value(ENTRY_ID))
+                .andExpect(jsonPath("$.items[0].comic.slug").value(SLUG))
+                .andExpect(jsonPath("$.items[0].comic.title").value("Berserk"))
+                .andExpect(jsonPath("$.totalItems").value(1));
+    }
+
+    @Test
+    void findByStatusInPassesSortAndPaginationParamsThrough() throws Exception {
+        when(comicReadingEntryService.findByStatusIn(List.of(ComicReadingEntryStatus.PENDING),
+                ComicReadingEntrySortField.CREATED_AT, SortDirection.DESC, 10, 5))
+                .thenReturn(new Page<>(List.of(), false, 0));
+
+        mockMvc.perform(get("/api/reading-entries")
+                .param("statuses", "PENDING")
+                .param("direction", "DESC")
+                .param("limit", "10")
+                .param("offset", "5")
+                .with(jwt().jwt(builder -> builder.subject("1"))
+                        .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty());
     }
 
     @Test

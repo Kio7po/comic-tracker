@@ -4,7 +4,8 @@
     "browse": "Browse",
     "login": "Log in",
     "logout": "Log out",
-    "loggedInAs": "Logged in as"
+    "loggedInAs": "Logged in as",
+    "moderation": "Moderation"
   },
   "footer": {
     "tagline": "Comic Tracker — a TFG project (UDC)"
@@ -149,7 +150,35 @@
     "authors": "Authors",
     "startDate": "Start date",
     "tags": "Tags",
-    "unknown": "Unknown",
-    "loadError": "Something went wrong loading this comic."
+    "unknown": "Unknown"
+  },
+  "errors": {
+    "oops": "Oops!",
+    "somethingWentWrong": "Something went wrong.",
+    "notFound": "We couldn't find what you were looking for.",
+    "notAuthorized": "You don't have permission to view this page.",
+    "generic": "Something went wrong loading this page."
+  },
+  "moderation": {
+    "title": "Moderation",
+    "pendingSources": "Sources pending review",
+    "pendingEntries": "Reading links pending review",
+    "loadError": "Couldn't load pending sources.",
+    "empty": "No items pending review.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "actionError": "Couldn't complete the action. Please try again.",
+    "sourceNotApprovedError": "Can't approve: this link's source isn't approved yet.",
+    "fields": {
+      "id": "ID",
+      "slug": "Slug",
+      "url": "URL",
+      "status": "Status",
+      "submittedAt": "Submitted",
+      "comic": "Comic",
+      "source": "Source",
+      "locale": "Language",
+      "availableChapters": "Available chapters"
+    }
   }
 }
