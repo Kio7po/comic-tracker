@@ -140,6 +140,57 @@ function PendingEntriesSection() {
 
   const totalPages = totalItems !== null ? Math.max(1, Math.ceil(totalItems / PAGE_SIZE)) : null;
 
+  function renderList() {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-4">
+          <Spinner />
+        </div>
+      );
+    }
+    if (hasError) {
+      return <p className="text-sm text-muted-foreground">{t('moderation.entriesLoadError')}</p>;
+    }
+    if (items.length === 0) {
+      return <p className="text-sm text-muted-foreground">{t('moderation.empty')}</p>;
+    }
+    return (
+      <>
+        <ul className="mt-2 flex flex-col gap-2">
+          {items.map((item) => (
+            <li key={item.entry.id}>
+              <button
+                type="button"
+                onClick={() => setSelectedEntry(item)}
+                className="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+              >
+                {item.comic.coverUrl && (
+                  <img src={item.comic.coverUrl} alt="" className="h-10 w-8 shrink-0 rounded-xs object-cover" />
+                )}
+                <span className="flex min-w-0 flex-col">
+                  <span className="font-medium text-foreground">{item.comic.title}</span>
+                  <span className="truncate text-muted-foreground">
+                    {item.entry.source.name} · {item.entry.url}
+                  </span>
+                </span>
+                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                  {formatDate(item.entry.createdAt, i18n.language)}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <SearchPagination
+          page={page}
+          onPageChange={setPage}
+          totalPages={totalPages}
+          existMoreItems={existMoreItems}
+          className="justify-center"
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <Card>
@@ -147,49 +198,7 @@ function PendingEntriesSection() {
           <h2 className="mb-4 text-sm font-semibold text-muted-foreground uppercase">
             {t('moderation.pendingEntries')}
           </h2>
-          {isLoading ? (
-            <div className="flex justify-center py-4">
-              <Spinner />
-            </div>
-          ) : hasError ? (
-            <p className="text-sm text-muted-foreground">{t('moderation.loadError')}</p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('moderation.empty')}</p>
-          ) : (
-            <>
-              <ul className="mt-2 flex flex-col gap-2">
-                {items.map((item) => (
-                  <li key={item.entry.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedEntry(item)}
-                      className="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-                    >
-                      {item.comic.coverUrl && (
-                        <img src={item.comic.coverUrl} alt="" className="h-10 w-8 shrink-0 rounded-xs object-cover" />
-                      )}
-                      <span className="flex min-w-0 flex-col">
-                        <span className="font-medium text-foreground">{item.comic.title}</span>
-                        <span className="truncate text-muted-foreground">
-                          {item.entry.source.name} · {item.entry.url}
-                        </span>
-                      </span>
-                      <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                        {formatDate(item.entry.createdAt, i18n.language)}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <SearchPagination
-                page={page}
-                onPageChange={setPage}
-                totalPages={totalPages}
-                existMoreItems={existMoreItems}
-                className="justify-center"
-              />
-            </>
-          )}
+          {renderList()}
         </CardContent>
       </Card>
 

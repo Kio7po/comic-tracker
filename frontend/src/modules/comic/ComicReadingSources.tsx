@@ -59,6 +59,58 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
     (entry) => entry.status === 'APPROVED' || (showPending && entry.status === 'PENDING'),
   );
 
+  function renderList() {
+    if (isLoading) {
+      return (
+        <div className="mt-4 flex justify-center">
+          <Spinner />
+        </div>
+      );
+    }
+    if (hasError) {
+      return <p className="mt-2 text-sm text-muted-foreground">{t('detail.readingSourcesError')}</p>;
+    }
+    if (visibleEntries.length === 0) {
+      return <p className="mt-2 text-sm text-muted-foreground">{t('detail.readingSourcesEmpty')}</p>;
+    }
+    return (
+      <ul className="mt-2 flex flex-col gap-2">
+        {visibleEntries.map((entry) => (
+          <li key={entry.id}>
+            <ExternalLink
+              href={entry.url}
+              className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted"
+            >
+              <span className="flex items-center gap-2 font-medium text-foreground">
+                {entry.source.iconUrl && (
+                  <img src={entry.source.iconUrl} alt="" className="size-6 rounded-md" />
+                )}
+                {entry.source.name}
+                {entry.status === 'PENDING' && (
+                  <Tooltip>
+                    <TooltipTrigger render={<span tabIndex={0} className="inline-flex text-amber-500" />}>
+                      <TriangleAlert className="size-4" />
+                    </TooltipTrigger>
+                    <TooltipContent>{t('detail.pendingTooltip')}</TooltipContent>
+                  </Tooltip>
+                )}
+              </span>
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Badge variant="outline">{languageLabel(entry.locale)}</Badge>
+                {entry.availableChapters !== null && (
+                  <span>
+                    {t('detail.chapters')} {entry.availableChapters}
+                  </span>
+                )}
+                <ExternalLinkIcon className="size-4" />
+              </span>
+            </ExternalLink>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <Card>
       <CardContent>
@@ -89,50 +141,7 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
             {t('detail.showPendingSources')}
           </Label>
         </div>
-        {isLoading ? (
-          <div className="mt-4 flex justify-center">
-            <Spinner />
-          </div>
-        ) : hasError ? (
-          <p className="mt-2 text-sm text-muted-foreground">{t('detail.readingSourcesError')}</p>
-        ) : visibleEntries.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">{t('detail.readingSourcesEmpty')}</p>
-        ) : (
-          <ul className="mt-2 flex flex-col gap-2">
-            {visibleEntries.map((entry) => (
-              <li key={entry.id}>
-                <ExternalLink
-                  href={entry.url}
-                  className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted"
-                >
-                  <span className="flex items-center gap-2 font-medium text-foreground">
-                    {entry.source.iconUrl && (
-                      <img src={entry.source.iconUrl} alt="" className="size-6 rounded-md" />
-                    )}
-                    {entry.source.name}
-                    {entry.status === 'PENDING' && (
-                      <Tooltip>
-                        <TooltipTrigger render={<span tabIndex={0} className="inline-flex text-amber-500" />}>
-                          <TriangleAlert className="size-4" />
-                        </TooltipTrigger>
-                        <TooltipContent>{t('detail.pendingTooltip')}</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </span>
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Badge variant="outline">{languageLabel(entry.locale)}</Badge>
-                    {entry.availableChapters !== null && (
-                      <span>
-                        {t('detail.chapters')} {entry.availableChapters}
-                      </span>
-                    )}
-                    <ExternalLinkIcon className="size-4" />
-                  </span>
-                </ExternalLink>
-              </li>
-            ))}
-          </ul>
-        )}
+        {renderList()}
       </CardContent>
     </Card>
   );

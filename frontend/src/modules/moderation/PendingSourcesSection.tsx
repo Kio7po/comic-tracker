@@ -109,6 +109,46 @@ function PendingSourcesSection() {
     }
   }
 
+  function renderList() {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-4">
+          <Spinner />
+        </div>
+      );
+    }
+    if (hasError) {
+      return <p className="text-sm text-muted-foreground">{t('moderation.loadError')}</p>;
+    }
+    if (sources.length === 0) {
+      return <p className="text-sm text-muted-foreground">{t('moderation.empty')}</p>;
+    }
+    return (
+      <ul className="mt-2 flex flex-col gap-2">
+        {sources.map((item) => (
+          <li key={item.source.id}>
+            <button
+              type="button"
+              onClick={() => setSelectedSource(item)}
+              className="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+            >
+              {item.source.iconUrl && (
+                <img src={item.source.iconUrl} alt="" className="size-8 shrink-0 rounded-xs" />
+              )}
+              <span className="flex min-w-0 flex-col">
+                <span className="font-medium text-foreground">{item.source.name}</span>
+                <span className="truncate text-muted-foreground">{item.source.url}</span>
+              </span>
+              <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                {formatDate(item.source.createdAt, i18n.language)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <>
       <Card>
@@ -116,38 +156,7 @@ function PendingSourcesSection() {
           <h2 className="mb-4 text-sm font-semibold text-muted-foreground uppercase">
             {t('moderation.pendingSources')}
           </h2>
-          {isLoading ? (
-            <div className="flex justify-center py-4">
-              <Spinner />
-            </div>
-          ) : hasError ? (
-            <p className="text-sm text-muted-foreground">{t('moderation.loadError')}</p>
-          ) : sources.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('moderation.empty')}</p>
-          ) : (
-            <ul className="mt-2 flex flex-col gap-2">
-              {sources.map((item) => (
-                <li key={item.source.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSource(item)}
-                    className="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-                  >
-                    {item.source.iconUrl && (
-                      <img src={item.source.iconUrl} alt="" className="size-8 shrink-0 rounded-xs" />
-                    )}
-                    <span className="flex min-w-0 flex-col">
-                      <span className="font-medium text-foreground">{item.source.name}</span>
-                      <span className="truncate text-muted-foreground">{item.source.url}</span>
-                    </span>
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                      {formatDate(item.source.createdAt, i18n.language)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {renderList()}
         </CardContent>
       </Card>
 
