@@ -12,17 +12,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntryModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntryRequestDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntryResponseDto;
+import com.github.kio7po.comic_tracker.adapter.rest.dto.PageResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.mapper.ComicReadingEntryMapper;
 import com.github.kio7po.comic_tracker.adapter.rest.security.CurrentUser;
+import com.github.kio7po.comic_tracker.domain.common.Page;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingEntry;
+import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntrySortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingEntryService;
 import com.github.kio7po.comic_tracker.domain.service.ComicService;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api")
@@ -53,6 +60,19 @@ public class ComicReadingEntryController {
                 .map(comic -> submit(comic, request, contributorId))
                 .map(entry -> ResponseEntity.status(HttpStatus.CREATED).body(ComicReadingEntryMapper.toResponseDto(entry)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/moderation/reading-entries")
+    public PageResponseDto<ComicReadingEntryModerationResponseDto> findByStatusIn(
+            @RequestParam List<ComicReadingEntryStatus> statuses,
+            @RequestParam(defaultValue = "CREATED_AT") ComicReadingEntrySortField sortBy,
+            @RequestParam(defaultValue = "ASC") SortDirection direction,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit,
+            @RequestParam(defaultValue = "0") @Min(0) int offset) {
+        Page<ComicReadingEntry> page = comicReadingEntryService.findByStatusIn(statuses, sortBy, direction, limit,
+                offset);
+        return new PageResponseDto<>(ComicReadingEntryMapper.toModerationResponseDtoList(page.getItems()),
+                page.isExistMoreItems(), page.getTotalItems());
     }
 
     @PostMapping("/reading-entries/{id}/approve")

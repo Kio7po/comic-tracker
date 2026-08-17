@@ -4,7 +4,8 @@
     "browse": "Buscar",
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
-    "loggedInAs": "Sesión iniciada como"
+    "loggedInAs": "Sesión iniciada como",
+    "moderation": "Moderación"
   },
   "footer": {
     "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
@@ -105,11 +106,83 @@
     "expandSynopsis": "Expandir sinopsis",
     "collapseSynopsis": "Contraer sinopsis",
     "readingSources": "Fuentes de Lectura",
+    "readingSourcesEmpty": "Todavía no hay fuentes de lectura para este cómic.",
+    "readingSourcesError": "No se han podido cargar las fuentes de lectura.",
+    "showPendingSources": "Mostrar fuentes pendientes de aprobar",
+    "pendingTooltip": "Esta fuente aún no ha sido revisada y puede no ser fiable.",
+    "suggestSource": {
+      "trigger": "Proponer una fuente",
+      "loginPrompt": "Inicia sesión para proponer una fuente",
+      "title": "Proponer una fuente de lectura",
+      "description": "Enlaza este cómic con una fuente de lectura ya existente o propón una nueva.",
+      "source": "Fuente",
+      "sourcePlaceholder": "Buscar una fuente…",
+      "noSourcesFound": "No se han encontrado fuentes.",
+      "loadingSources": "Cargando fuentes…",
+      "sourcesLoadError": "No se han podido cargar las fuentes.",
+      "notListed": "¿No aparece tu fuente?",
+      "proposeNew": "Propón una nueva",
+      "alreadyExists": "¿Ya existe la fuente?",
+      "pickExisting": "Selecciónala de la lista",
+      "sourceName": "Nombre de la fuente",
+      "sourceNamePlaceholder": "Ejemplo Scans",
+      "sourceUrl": "URL de la fuente",
+      "sourceUrlPlaceholder": "https://ejemplo.com",
+      "entryUrl": "Enlace de lectura",
+      "entryUrlPlaceholder": "https://ejemplo.com/manga/nombre/capitulo/1",
+      "locale": "Idioma",
+      "localePlaceholder": "Buscar un idioma…",
+      "noLanguagesFound": "No se han encontrado idiomas.",
+      "submit": "Enviar",
+      "submitting": "Enviando…",
+      "success": "¡Gracias! Tu propuesta se ha enviado y quedará pendiente de revisión.",
+      "errors": {
+        "sourceRequired": "Selecciona una fuente.",
+        "sourceNameRequired": "El nombre de la fuente es obligatorio.",
+        "urlInvalid": "Introduce una URL válida.",
+        "localeRequired": "Selecciona un idioma.",
+        "duplicateEntry": "Este enlace ya ha sido propuesto.",
+        "duplicateSource": "Ya existe una fuente registrada con esta URL.",
+        "generic": "No se ha podido enviar la propuesta. Inténtalo de nuevo."
+      }
+    },
     "additionalInfo": "Información Adicional",
     "authors": "Autores",
     "startDate": "Fecha de inicio",
     "tags": "Etiquetas",
-    "unknown": "Desconocido",
-    "loadError": "Ha ocurrido un error al cargar este cómic."
+    "unknown": "Desconocido"
+  },
+  "errors": {
+    "oops": "¡Vaya!",
+    "somethingWentWrong": "Algo ha ido mal.",
+    "notFound": "No hemos encontrado lo que buscabas.",
+    "notAuthorized": "No tienes permiso para ver esta página.",
+    "generic": "Ha ocurrido un error al cargar la página."
+  },
+  "moderation": {
+    "title": "Moderación",
+    "pendingSources": "Fuentes pendientes de revisión",
+    "pendingEntries": "Enlaces pendientes de revisión",
+    "loadError": "No se han podido cargar las fuentes pendientes.",
+    "entriesLoadError": "No se han podido cargar los enlaces pendientes.",
+    "empty": "No hay elementos pendientes de revisar.",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "actionError": "No se ha podido completar la acción. Inténtalo de nuevo.",
+    "sourceNotApprovedError": "No se puede aprobar: la fuente de este enlace todavía no está aprobada.",
+    "alreadyReviewedError": "Ya ha sido revisado por otra persona.",
+    "notFoundError": "Ya no existe. Puede que se haya eliminado.",
+    "fields": {
+      "id": "ID",
+      "slug": "Slug",
+      "url": "URL",
+      "status": "Estado",
+      "submittedAt": "Aportada el",
+      "comic": "Cómic",
+      "source": "Fuente",
+      "locale": "Idioma",
+      "availableChapters": "Capítulos disponibles",
+      "contributedBy": "Sugerido por"
+    }
   }
 }

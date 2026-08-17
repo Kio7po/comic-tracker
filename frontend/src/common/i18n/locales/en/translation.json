@@ -4,7 +4,8 @@
     "browse": "Browse",
     "login": "Log in",
     "logout": "Log out",
-    "loggedInAs": "Logged in as"
+    "loggedInAs": "Logged in as",
+    "moderation": "Moderation"
   },
   "footer": {
     "tagline": "Comic Tracker — a TFG project (UDC)"
@@ -105,11 +106,83 @@
     "expandSynopsis": "Expand synopsis",
     "collapseSynopsis": "Collapse synopsis",
     "readingSources": "Reading Sources",
+    "readingSourcesEmpty": "No reading sources yet for this comic.",
+    "readingSourcesError": "Couldn't load reading sources.",
+    "showPendingSources": "Show sources pending approval",
+    "pendingTooltip": "This source hasn't been reviewed yet and may not be reliable.",
+    "suggestSource": {
+      "trigger": "Suggest a source",
+      "loginPrompt": "Log in to suggest a source",
+      "title": "Suggest a reading source",
+      "description": "Link this comic to an existing reading source or propose a new one.",
+      "source": "Source",
+      "sourcePlaceholder": "Search for a source…",
+      "noSourcesFound": "No sources found.",
+      "loadingSources": "Loading sources…",
+      "sourcesLoadError": "Couldn't load sources.",
+      "notListed": "Don't see your source?",
+      "proposeNew": "Propose a new one",
+      "alreadyExists": "Already exists?",
+      "pickExisting": "Pick it from the list",
+      "sourceName": "Source name",
+      "sourceNamePlaceholder": "Example Scans",
+      "sourceUrl": "Source URL",
+      "sourceUrlPlaceholder": "https://example.com",
+      "entryUrl": "Reading link",
+      "entryUrlPlaceholder": "https://example.com/manga/name/chapter/1",
+      "locale": "Language",
+      "localePlaceholder": "Search for a language…",
+      "noLanguagesFound": "No languages found.",
+      "submit": "Submit",
+      "submitting": "Submitting…",
+      "success": "Thanks! Your suggestion has been submitted and is pending review.",
+      "errors": {
+        "sourceRequired": "Select a source.",
+        "sourceNameRequired": "The source name is required.",
+        "urlInvalid": "Enter a valid URL.",
+        "localeRequired": "Select a language.",
+        "duplicateEntry": "This link was already suggested.",
+        "duplicateSource": "A source with this URL is already registered.",
+        "generic": "Couldn't submit your suggestion. Please try again."
+      }
+    },
     "additionalInfo": "Additional Info",
     "authors": "Authors",
     "startDate": "Start date",
     "tags": "Tags",
-    "unknown": "Unknown",
-    "loadError": "Something went wrong loading this comic."
+    "unknown": "Unknown"
+  },
+  "errors": {
+    "oops": "Oops!",
+    "somethingWentWrong": "Something went wrong.",
+    "notFound": "We couldn't find what you were looking for.",
+    "notAuthorized": "You don't have permission to view this page.",
+    "generic": "Something went wrong loading this page."
+  },
+  "moderation": {
+    "title": "Moderation",
+    "pendingSources": "Sources pending review",
+    "pendingEntries": "Reading links pending review",
+    "loadError": "Couldn't load pending sources.",
+    "entriesLoadError": "Couldn't load pending reading links.",
+    "empty": "No items pending review.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "actionError": "Couldn't complete the action. Please try again.",
+    "sourceNotApprovedError": "Can't approve: this link's source isn't approved yet.",
+    "alreadyReviewedError": "Already reviewed by someone else.",
+    "notFoundError": "No longer exists. It may have been deleted.",
+    "fields": {
+      "id": "ID",
+      "slug": "Slug",
+      "url": "URL",
+      "status": "Status",
+      "submittedAt": "Submitted",
+      "comic": "Comic",
+      "source": "Source",
+      "locale": "Language",
+      "availableChapters": "Available chapters",
+      "contributedBy": "Suggested by"
+    }
   }
 }

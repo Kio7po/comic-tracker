@@ -7,12 +7,15 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.github.kio7po.comic_tracker.domain.common.Page;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.common.Slugifier;
 import com.github.kio7po.comic_tracker.domain.common.UrlNormalizer;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingEntry;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
 import com.github.kio7po.comic_tracker.domain.entities.User;
+import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntrySortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
@@ -116,6 +119,11 @@ public class ComicReadingEntryService {
 
         return status == null ? comicReadingEntryRepository.findByComic(comic)
                 : comicReadingEntryRepository.findByComicAndStatus(comic, status);
+    }
+
+    public Page<ComicReadingEntry> findByStatusIn(List<ComicReadingEntryStatus> statuses,
+            ComicReadingEntrySortField sortBy, SortDirection direction, int limit, int offset) {
+        return comicReadingEntryRepository.findByStatusIn(statuses, sortBy, direction, limit, offset);
     }
 
     @Transactional

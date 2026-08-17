@@ -1,6 +1,7 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/common/components/AuthProvider';
+import { appendFromParam } from '@/common/lib/authRedirect';
 import { buttonVariants } from '@/common/components/ui/button';
 import UserDropdownMenu from './UserDropdownMenu';
 
@@ -10,6 +11,7 @@ const navLinkClass =
 function Header() {
   const { t } = useTranslation();
   const { user, isLoading } = useAuth();
+  const location = useLocation();
 
   return (
     <header className="sticky top-0 z-50 flex items-center gap-6 border-b border-border bg-background px-6 py-4">
@@ -28,7 +30,10 @@ function Header() {
         (user ? (
           <UserDropdownMenu user={user} />
         ) : (
-          <Link to="/login" className={buttonVariants({ size: 'sm', className: 'ml-auto' })}>
+          <Link
+            to={appendFromParam('/login', location.pathname + location.search)}
+            className={buttonVariants({ size: 'sm', className: 'ml-auto' })}
+          >
             {t('nav.login')}
           </Link>
         ))}

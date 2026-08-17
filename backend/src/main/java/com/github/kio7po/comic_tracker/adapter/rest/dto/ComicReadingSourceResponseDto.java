@@ -1,5 +1,7 @@
 package com.github.kio7po.comic_tracker.adapter.rest.dto;
 
+import java.time.Instant;
+
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 
 public record ComicReadingSourceResponseDto(
@@ -8,5 +10,6 @@ public record ComicReadingSourceResponseDto(
         String name,
         String url,
         String iconUrl,
-        ComicReadingSourceStatus status) {
+        ComicReadingSourceStatus status,
+        Instant createdAt) {
 }

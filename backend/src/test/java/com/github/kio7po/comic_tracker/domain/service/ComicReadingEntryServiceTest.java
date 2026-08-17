@@ -17,12 +17,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.github.kio7po.comic_tracker.domain.common.Page;
 import com.github.kio7po.comic_tracker.domain.common.Slugifier;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.common.UrlNormalizer;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingEntry;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
 import com.github.kio7po.comic_tracker.domain.entities.User;
+import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntrySortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
@@ -316,6 +319,21 @@ class ComicReadingEntryServiceTest {
         assertThat(result.getStatus()).isEqualTo(ComicReadingEntryStatus.REJECTED);
         assertThat(result.getReviewedBy()).isSameAs(reviewer);
         assertThat(result.getReviewedAt()).isNotNull();
+    }
+
+    @Test
+    void findByStatusInDelegatesToRepository() {
+        List<ComicReadingEntryStatus> statuses = List.of(ComicReadingEntryStatus.PENDING);
+        Page<ComicReadingEntry> page = new Page<>(List.of(new ComicReadingEntry()), false, 1);
+        when(comicReadingEntryRepository.findByStatusIn(statuses, ComicReadingEntrySortField.CREATED_AT,
+                SortDirection.ASC, 20, 0)).thenReturn(page);
+
+        Page<ComicReadingEntry> result = comicReadingEntryService.findByStatusIn(statuses,
+                ComicReadingEntrySortField.CREATED_AT, SortDirection.ASC, 20, 0);
+
+        assertThat(result).isSameAs(page);
+        verify(comicReadingEntryRepository).findByStatusIn(statuses, ComicReadingEntrySortField.CREATED_AT,
+                SortDirection.ASC, 20, 0);
     }
 
 }

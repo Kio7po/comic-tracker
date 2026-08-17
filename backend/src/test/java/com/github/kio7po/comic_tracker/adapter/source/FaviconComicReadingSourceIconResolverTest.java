@@ -19,11 +19,12 @@ class FaviconComicReadingSourceIconResolverTest {
     }
 
     @Test
-    void resolvesToFaviconIcoUnderTheSourceUrl() {
+    void resolvesToGoogleFaviconProxyForTheSourcesDomain() {
         ComicReadingSource source = new ComicReadingSource();
         source.setUrl("https://mangadex.org");
 
-        assertThat(resolver.resolveIconUrl(source)).contains("https://mangadex.org/favicon.ico");
+        assertThat(resolver.resolveIconUrl(source))
+                .contains("https://www.google.com/s2/favicons?domain=mangadex.org&sz=32");
     }
 
 }

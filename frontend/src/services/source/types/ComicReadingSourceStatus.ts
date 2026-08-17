@@ -1,0 +1,1 @@
+export type ComicReadingSourceStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
