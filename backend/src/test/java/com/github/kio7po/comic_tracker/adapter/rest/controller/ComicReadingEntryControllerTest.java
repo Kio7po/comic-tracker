@@ -28,6 +28,7 @@ import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingEntry;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
+import com.github.kio7po.comic_tracker.domain.entities.User;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntrySortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
@@ -86,7 +87,14 @@ class ComicReadingEntryControllerTest {
         entry.setStatus(ComicReadingEntryStatus.PENDING);
         entry.setSource(source());
         entry.setComic(comic());
+        entry.setContributedBy(contributor());
         return entry;
+    }
+
+    private static User contributor() {
+        User user = new User();
+        user.setUsername("contributoruser");
+        return user;
     }
 
     @Test
@@ -314,13 +322,13 @@ class ComicReadingEntryControllerTest {
 
     @Test
     void findByStatusInRequiresAuthentication() throws Exception {
-        mockMvc.perform(get("/api/reading-entries").param("statuses", "PENDING"))
+        mockMvc.perform(get("/api/moderation/reading-entries").param("statuses", "PENDING"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void findByStatusInReturnsForbiddenForNonAdminUser() throws Exception {
-        mockMvc.perform(get("/api/reading-entries")
+        mockMvc.perform(get("/api/moderation/reading-entries")
                 .param("statuses", "PENDING")
                 .with(jwt().jwt(builder -> builder.subject("1"))))
                 .andExpect(status().isForbidden());
@@ -332,7 +340,7 @@ class ComicReadingEntryControllerTest {
                 ComicReadingEntrySortField.CREATED_AT, SortDirection.ASC, 20, 0))
                 .thenReturn(new Page<>(List.of(entry()), false, 1));
 
-        mockMvc.perform(get("/api/reading-entries")
+        mockMvc.perform(get("/api/moderation/reading-entries")
                 .param("statuses", "PENDING")
                 .with(jwt().jwt(builder -> builder.subject("1"))
                         .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
@@ -340,6 +348,7 @@ class ComicReadingEntryControllerTest {
                 .andExpect(jsonPath("$.items[0].entry.id").value(ENTRY_ID))
                 .andExpect(jsonPath("$.items[0].comic.slug").value(SLUG))
                 .andExpect(jsonPath("$.items[0].comic.title").value("Berserk"))
+                .andExpect(jsonPath("$.items[0].contributedBy.username").value("contributoruser"))
                 .andExpect(jsonPath("$.totalItems").value(1));
     }
 
@@ -349,7 +358,7 @@ class ComicReadingEntryControllerTest {
                 ComicReadingEntrySortField.CREATED_AT, SortDirection.DESC, 10, 5))
                 .thenReturn(new Page<>(List.of(), false, 0));
 
-        mockMvc.perform(get("/api/reading-entries")
+        mockMvc.perform(get("/api/moderation/reading-entries")
                 .param("statuses", "PENDING")
                 .param("direction", "DESC")
                 .param("limit", "10")

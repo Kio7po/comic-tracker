@@ -6,3 +6,4 @@ export type * from './ComicReadingEntrySortField';
 export type * from './ComicReadingEntry';
 export type * from './ComicReadingEntryRequest';
 export type * from './ComicReadingEntryModeration';
+export type * from './ComicReadingSourceModeration';

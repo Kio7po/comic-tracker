@@ -169,6 +169,8 @@
     "reject": "Reject",
     "actionError": "Couldn't complete the action. Please try again.",
     "sourceNotApprovedError": "Can't approve: this link's source isn't approved yet.",
+    "alreadyReviewedError": "Already reviewed by someone else.",
+    "notFoundError": "No longer exists. It may have been deleted.",
     "fields": {
       "id": "ID",
       "slug": "Slug",
@@ -178,7 +180,8 @@
       "comic": "Comic",
       "source": "Source",
       "locale": "Language",
-      "availableChapters": "Available chapters"
+      "availableChapters": "Available chapters",
+      "contributedBy": "Suggested by"
     }
   }
 }

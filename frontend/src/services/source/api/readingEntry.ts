@@ -48,7 +48,7 @@ export function findByStatusIn(
   if (params.limit !== undefined) query.set('limit', String(params.limit));
   if (params.offset !== undefined) query.set('offset', String(params.offset));
 
-  return apiFetch<PageResponse<ComicReadingEntryModeration>>(`/reading-entries?${query.toString()}`, {
+  return apiFetch<PageResponse<ComicReadingEntryModeration>>(`/moderation/reading-entries?${query.toString()}`, {
     signal: options?.signal,
   });
 }

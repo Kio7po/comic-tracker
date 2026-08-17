@@ -6,6 +6,7 @@ import { findByStatusIn } from '@/services/source/api/readingSource';
 import type { ComicReadingEntry } from '@/services/source/types';
 import { ApiError } from '@/common/api/ApiError';
 import { ProblemType } from '@/common/api/ProblemType';
+import { createLanguageNameFormatter } from '@/common/lib/languageName';
 import { Button } from '@/common/components/ui/button';
 import {
   Combobox,
@@ -86,8 +87,8 @@ function SuggestReadingSourceDialog({ comicSlug, onEntrySubmitted }: Readonly<Su
   const { t, i18n } = useTranslation();
 
   const languageOptions = useMemo(() => {
-    const displayNames = new Intl.DisplayNames([i18n.language], { type: 'language' });
-    return LANGUAGE_CODES.map((code) => ({ value: code, label: displayNames.of(code) ?? code })).sort((a, b) =>
+    const nameOf = createLanguageNameFormatter(i18n.language);
+    return LANGUAGE_CODES.map((code) => ({ value: code, label: nameOf(code) })).sort((a, b) =>
       a.label.localeCompare(b.label, i18n.language),
     );
   }, [i18n.language]);

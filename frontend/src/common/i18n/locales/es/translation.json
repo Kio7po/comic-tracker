@@ -169,6 +169,8 @@
     "reject": "Rechazar",
     "actionError": "No se ha podido completar la acción. Inténtalo de nuevo.",
     "sourceNotApprovedError": "No se puede aprobar: la fuente de este enlace todavía no está aprobada.",
+    "alreadyReviewedError": "Ya ha sido revisado por otra persona.",
+    "notFoundError": "Ya no existe. Puede que se haya eliminado.",
     "fields": {
       "id": "ID",
       "slug": "Slug",
@@ -178,7 +180,8 @@
       "comic": "Cómic",
       "source": "Fuente",
       "locale": "Idioma",
-      "availableChapters": "Capítulos disponibles"
+      "availableChapters": "Capítulos disponibles",
+      "contributedBy": "Sugerido por"
     }
   }
 }

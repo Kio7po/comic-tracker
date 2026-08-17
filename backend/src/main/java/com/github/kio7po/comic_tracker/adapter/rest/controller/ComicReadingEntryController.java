@@ -62,7 +62,7 @@ public class ComicReadingEntryController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/reading-entries")
+    @GetMapping("/moderation/reading-entries")
     public PageResponseDto<ComicReadingEntryModerationResponseDto> findByStatusIn(
             @RequestParam List<ComicReadingEntryStatus> statuses,
             @RequestParam(defaultValue = "CREATED_AT") ComicReadingEntrySortField sortBy,

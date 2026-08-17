@@ -1,6 +1,11 @@
 import { apiFetch } from '@/common/api/client';
 import type { SortDirection } from '@/common/api/SortDirection';
-import type { ComicReadingSource, ComicReadingSourceSortField, ComicReadingSourceStatus } from '../types';
+import type {
+  ComicReadingSource,
+  ComicReadingSourceModeration,
+  ComicReadingSourceSortField,
+  ComicReadingSourceStatus,
+} from '../types';
 
 export interface FindByStatusInParams {
   statuses: ComicReadingSourceStatus[];
@@ -18,6 +23,20 @@ export function findByStatusIn(
   if (params.direction) query.set('direction', params.direction);
 
   return apiFetch<ComicReadingSource[]>(`/reading-sources?${query.toString()}`, { signal: options?.signal });
+}
+
+export function findForModerationByStatusIn(
+  params: FindByStatusInParams,
+  options?: { signal?: AbortSignal },
+): Promise<ComicReadingSourceModeration[]> {
+  const query = new URLSearchParams();
+  params.statuses.forEach((status) => query.append('statuses', status));
+  if (params.sortBy) query.set('sortBy', params.sortBy);
+  if (params.direction) query.set('direction', params.direction);
+
+  return apiFetch<ComicReadingSourceModeration[]>(`/moderation/reading-sources?${query.toString()}`, {
+    signal: options?.signal,
+  });
 }
 
 export function approve(id: number): Promise<ComicReadingSource> {

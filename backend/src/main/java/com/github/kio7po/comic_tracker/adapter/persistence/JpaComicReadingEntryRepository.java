@@ -18,9 +18,9 @@ import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntry
 public interface JpaComicReadingEntryRepository
         extends JpaRepository<ComicReadingEntry, Long>, ComicReadingEntryRepository {
 
-    // comic/source are LAZY; this listing can span many rows across many comics, so fetch both
-    // eagerly in the same query instead of risking an N+1 per row.
-    @EntityGraph(attributePaths = { "comic", "source" })
+    // comic/source/contributedBy are LAZY; this listing can span many rows across many comics, so
+    // fetch all of them eagerly in the same query instead of risking an N+1 per row.
+    @EntityGraph(attributePaths = { "comic", "source", "contributedBy" })
     org.springframework.data.domain.Page<ComicReadingEntry> findByStatusIn(List<ComicReadingEntryStatus> statuses,
             Pageable pageable);
 

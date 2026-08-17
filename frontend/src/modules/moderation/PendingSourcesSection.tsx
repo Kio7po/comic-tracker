@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { approve, findByStatusIn, reject } from '@/services/source/api/readingSource';
-import type { ComicReadingSource } from '@/services/source/types';
+import { approve, findForModerationByStatusIn, reject } from '@/services/source/api/readingSource';
+import type { ComicReadingSourceModeration } from '@/services/source/types';
+import { ApiError } from '@/common/api/ApiError';
+import { ProblemType } from '@/common/api/ProblemType';
 import { formatDate } from '@/common/lib/formatDate';
 import ExternalLink from '@/common/components/ExternalLink';
 import { Button } from '@/common/components/ui/button';
@@ -19,12 +21,12 @@ import { Separator } from '@/common/components/ui/separator';
 function PendingSourcesSection() {
   const { t, i18n } = useTranslation();
 
-  const [sources, setSources] = useState<ComicReadingSource[]>([]);
+  const [sources, setSources] = useState<ComicReadingSourceModeration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [pendingActionId, setPendingActionId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [selectedSource, setSelectedSource] = useState<ComicReadingSource | null>(null);
+  const [selectedSource, setSelectedSource] = useState<ComicReadingSourceModeration | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -32,7 +34,7 @@ function PendingSourcesSection() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     setHasError(false);
-    findByStatusIn({ statuses: ['PENDING'] }, { signal: controller.signal })
+    findForModerationByStatusIn({ statuses: ['PENDING'] }, { signal: controller.signal })
       .then(setSources)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') {
@@ -53,6 +55,30 @@ function PendingSourcesSection() {
 
   function closeDialog() {
     setSelectedSource(null);
+    setActionError(null);
+  }
+
+  function removeSource(id: number) {
+    setSources((previous) => previous.filter((item) => item.source.id !== id));
+  }
+
+  function handleActionError(error: unknown, id: number) {
+    if (!(error instanceof ApiError)) {
+      setActionError(t('moderation.actionError'));
+      return;
+    }
+
+    // Stale: someone else already reviewed it, or it's gone. Drop it from the list so it stops
+    // pretending to still be actionable — the dialog stays open so the user can read why first.
+    if (error.type === ProblemType.READING_SOURCE_ALREADY_REVIEWED) {
+      removeSource(id);
+      setActionError(t('moderation.alreadyReviewedError'));
+    } else if (error.type === ProblemType.READING_SOURCE_NOT_FOUND) {
+      removeSource(id);
+      setActionError(t('moderation.notFoundError'));
+    } else {
+      setActionError(t('moderation.actionError'));
+    }
   }
 
   async function handleApprove(id: number) {
@@ -60,10 +86,10 @@ function PendingSourcesSection() {
     setPendingActionId(id);
     try {
       await approve(id);
-      setSources((previous) => previous.filter((source) => source.id !== id));
+      removeSource(id);
       closeDialog();
-    } catch {
-      setActionError(t('moderation.actionError'));
+    } catch (error) {
+      handleActionError(error, id);
     } finally {
       setPendingActionId(null);
     }
@@ -74,10 +100,10 @@ function PendingSourcesSection() {
     setPendingActionId(id);
     try {
       await reject(id);
-      setSources((previous) => previous.filter((source) => source.id !== id));
+      removeSource(id);
       closeDialog();
-    } catch {
-      setActionError(t('moderation.actionError'));
+    } catch (error) {
+      handleActionError(error, id);
     } finally {
       setPendingActionId(null);
     }
@@ -100,29 +126,28 @@ function PendingSourcesSection() {
             <p className="text-sm text-muted-foreground">{t('moderation.empty')}</p>
           ) : (
             <ul className="mt-2 flex flex-col gap-2">
-              {sources.map((source) => (
-                <li key={source.id}>
+              {sources.map((item) => (
+                <li key={item.source.id}>
                   <button
                     type="button"
-                    onClick={() => setSelectedSource(source)}
+                    onClick={() => setSelectedSource(item)}
                     className="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
                   >
-                    {source.iconUrl && (
-                      <img src={source.iconUrl} alt="" className="size-8 shrink-0 rounded-xs" />
+                    {item.source.iconUrl && (
+                      <img src={item.source.iconUrl} alt="" className="size-8 shrink-0 rounded-xs" />
                     )}
                     <span className="flex min-w-0 flex-col">
-                      <span className="font-medium text-foreground">{source.name}</span>
-                      <span className="truncate text-muted-foreground">{source.url}</span>
+                      <span className="font-medium text-foreground">{item.source.name}</span>
+                      <span className="truncate text-muted-foreground">{item.source.url}</span>
                     </span>
                     <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                      {formatDate(source.createdAt, i18n.language)}
+                      {formatDate(item.source.createdAt, i18n.language)}
                     </span>
                   </button>
                 </li>
               ))}
             </ul>
           )}
-          {actionError && <p className="mt-3 text-sm text-destructive">{actionError}</p>}
         </CardContent>
       </Card>
 
@@ -132,53 +157,60 @@ function PendingSourcesSection() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-lg">
-                  {selectedSource.iconUrl && (
-                    <img src={selectedSource.iconUrl} alt="" className="size-6 rounded-xs" />
+                  {selectedSource.source.iconUrl && (
+                    <img src={selectedSource.source.iconUrl} alt="" className="size-6 rounded-xs" />
                   )}
-                  {selectedSource.name}
+                  {selectedSource.source.name}
                 </DialogTitle>
               </DialogHeader>
               <dl className="flex flex-col gap-2 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.id')}</dt>
-                  <dd className="text-foreground">{selectedSource.id}</dd>
+                  <dd className="text-foreground">{selectedSource.source.id}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.slug')}</dt>
-                  <dd className="text-foreground">{selectedSource.slug}</dd>
+                  <dd className="text-foreground">{selectedSource.source.slug}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.url')}</dt>
-                  <dd className="min-w-0 truncate text-right">
+                  <dd className="min-w-0 break-all text-right">
                     <ExternalLink
-                      href={selectedSource.url}
-                      className="text-foreground underline-offset-2 hover:underline"
+                      href={selectedSource.source.url}
+                      className="text-primary underline-offset-4 hover:underline"
                     >
-                      {selectedSource.url}
+                      {selectedSource.source.url}
                     </ExternalLink>
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.status')}</dt>
-                  <dd className="text-foreground">{selectedSource.status}</dd>
+                  <dd className="text-foreground">{selectedSource.source.status}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.submittedAt')}</dt>
-                  <dd className="text-foreground">{formatDate(selectedSource.createdAt, i18n.language)}</dd>
+                  <dd className="text-foreground">{formatDate(selectedSource.source.createdAt, i18n.language)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">{t('moderation.fields.contributedBy')}</dt>
+                  <dd className="text-foreground">{selectedSource.contributedBy.username}</dd>
                 </div>
               </dl>
               <Separator/>
+              <div className="min-h-4">
+                {actionError && <p className="text-sm text-destructive">{actionError}</p>}
+              </div>
               <DialogFooter>
                 <Button
-                  disabled={pendingActionId === selectedSource.id}
-                  onClick={() => handleApprove(selectedSource.id)}
+                  disabled={pendingActionId === selectedSource.source.id}
+                  onClick={() => handleApprove(selectedSource.source.id)}
                 >
                   {t('moderation.approve')}
                 </Button>
                 <Button
                   variant="destructive"
-                  disabled={pendingActionId === selectedSource.id}
-                  onClick={() => handleReject(selectedSource.id)}
+                  disabled={pendingActionId === selectedSource.source.id}
+                  onClick={() => handleReject(selectedSource.source.id)}
                 >
                   {t('moderation.reject')}
                 </Button>

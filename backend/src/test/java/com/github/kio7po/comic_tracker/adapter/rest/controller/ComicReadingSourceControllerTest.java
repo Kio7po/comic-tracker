@@ -22,6 +22,7 @@ import com.github.kio7po.comic_tracker.adapter.rest.security.JwtDecoderConfig;
 import com.github.kio7po.comic_tracker.adapter.rest.security.SecurityConfig;
 import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
+import com.github.kio7po.comic_tracker.domain.entities.User;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
@@ -50,7 +51,14 @@ class ComicReadingSourceControllerTest {
         source.setName(name);
         source.setUrl("https://" + name.toLowerCase() + ".org");
         source.setStatus(status);
+        source.setContributedBy(contributor());
         return source;
+    }
+
+    private static User contributor() {
+        User user = new User();
+        user.setUsername("contributoruser");
+        return user;
     }
 
     @Test
@@ -88,6 +96,36 @@ class ComicReadingSourceControllerTest {
 
         mockMvc.perform(get("/api/reading-sources").param("statuses", "PENDING"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void findForModerationByStatusInRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/moderation/reading-sources").param("statuses", "PENDING"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void findForModerationByStatusInReturnsForbiddenForNonAdminUser() throws Exception {
+        mockMvc.perform(get("/api/moderation/reading-sources")
+                .param("statuses", "PENDING")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void findForModerationByStatusInReturnsSourcesWithContributorForAdminUser() throws Exception {
+        when(comicReadingSourceService.findByStatusIn(List.of(ComicReadingSourceStatus.PENDING),
+                ComicReadingSourceSortField.NAME, SortDirection.ASC))
+                .thenReturn(List.of(source(1L, "MangaDex", ComicReadingSourceStatus.PENDING)));
+
+        mockMvc.perform(get("/api/moderation/reading-sources")
+                .param("statuses", "PENDING")
+                .with(jwt().jwt(builder -> builder.subject("1"))
+                        .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].source.id").value(1))
+                .andExpect(jsonPath("$[0].source.name").value("MangaDex"))
+                .andExpect(jsonPath("$[0].contributedBy.username").value("contributoruser"));
     }
 
     @Test

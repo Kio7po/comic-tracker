@@ -6,6 +6,7 @@ import type { ComicReadingEntryModeration } from '@/services/source/types';
 import { ApiError } from '@/common/api/ApiError';
 import { ProblemType } from '@/common/api/ProblemType';
 import { formatDate } from '@/common/lib/formatDate';
+import { languageName } from '@/common/lib/languageName';
 import ExternalLink from '@/common/components/ExternalLink';
 import { Button } from '@/common/components/ui/button';
 import { Card, CardContent } from '@/common/components/ui/card';
@@ -69,11 +70,35 @@ function PendingEntriesSection() {
 
   function closeDialog() {
     setSelectedEntry(null);
+    setActionError(null);
   }
 
   function removeItem(id: number) {
     setItems((previous) => previous.filter((item) => item.entry.id !== id));
     setTotalItems((previous) => (previous !== null ? previous - 1 : previous));
+  }
+
+  function handleActionError(error: unknown, id: number) {
+    if (!(error instanceof ApiError)) {
+      setActionError(t('moderation.actionError'));
+      return;
+    }
+
+    if (error.type === ProblemType.READING_SOURCE_NOT_APPROVED) {
+      // Not stale, the entry itself is still validly pending, just blocked on its source.
+      // Approving the source first and retrying this same entry should work, so keep it listed.
+      setActionError(t('moderation.sourceNotApprovedError'));
+    } else if (error.type === ProblemType.READING_ENTRY_ALREADY_REVIEWED) {
+      // Stale: someone else already reviewed it. Drop it so it stops pretending to be actionable
+      // the dialog stays open so the user can read why first.
+      removeItem(id);
+      setActionError(t('moderation.alreadyReviewedError'));
+    } else if (error.type === ProblemType.READING_ENTRY_NOT_FOUND) {
+      removeItem(id);
+      setActionError(t('moderation.notFoundError'));
+    } else {
+      setActionError(t('moderation.actionError'));
+    }
   }
 
   async function handleApprove(id: number) {
@@ -84,11 +109,7 @@ function PendingEntriesSection() {
       removeItem(id);
       closeDialog();
     } catch (error) {
-      if (error instanceof ApiError && error.type === ProblemType.READING_SOURCE_NOT_APPROVED) {
-        setActionError(t('moderation.sourceNotApprovedError'));
-      } else {
-        setActionError(t('moderation.actionError'));
-      }
+      handleActionError(error, id);
     } finally {
       setPendingActionId(null);
     }
@@ -101,8 +122,8 @@ function PendingEntriesSection() {
       await reject(id);
       removeItem(id);
       closeDialog();
-    } catch {
-      setActionError(t('moderation.actionError'));
+    } catch (error) {
+      handleActionError(error, id);
     } finally {
       setPendingActionId(null);
     }
@@ -128,24 +149,24 @@ function PendingEntriesSection() {
           ) : (
             <>
               <ul className="mt-2 flex flex-col gap-2">
-                {items.map(({ entry, comic }) => (
-                  <li key={entry.id}>
+                {items.map((item) => (
+                  <li key={item.entry.id}>
                     <button
                       type="button"
-                      onClick={() => setSelectedEntry({ entry, comic })}
+                      onClick={() => setSelectedEntry(item)}
                       className="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
                     >
-                      {comic.coverUrl && (
-                        <img src={comic.coverUrl} alt="" className="h-10 w-8 shrink-0 rounded-xs object-cover" />
+                      {item.comic.coverUrl && (
+                        <img src={item.comic.coverUrl} alt="" className="h-10 w-8 shrink-0 rounded-xs object-cover" />
                       )}
                       <span className="flex min-w-0 flex-col">
-                        <span className="font-medium text-foreground">{comic.title}</span>
+                        <span className="font-medium text-foreground">{item.comic.title}</span>
                         <span className="truncate text-muted-foreground">
-                          {entry.source.name} · {entry.url}
+                          {item.entry.source.name} · {item.entry.url}
                         </span>
                       </span>
                       <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                        {formatDate(entry.createdAt, i18n.language)}
+                        {formatDate(item.entry.createdAt, i18n.language)}
                       </span>
                     </button>
                   </li>
@@ -160,7 +181,6 @@ function PendingEntriesSection() {
               />
             </>
           )}
-          {actionError && <p className="mt-3 text-sm text-destructive">{actionError}</p>}
         </CardContent>
       </Card>
 
@@ -186,7 +206,9 @@ function PendingEntriesSection() {
                   <dd className="text-foreground">
                     <Link
                       to={`/comics/${selectedEntry.comic.slug}`}
-                      className="underline-offset-2 hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline-offset-4 hover:underline"
                     >
                       {selectedEntry.comic.title}
                     </Link>
@@ -198,10 +220,10 @@ function PendingEntriesSection() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.url')}</dt>
-                  <dd className="min-w-0 truncate text-right">
+                  <dd className="min-w-0 break-all text-right">
                     <ExternalLink
                       href={selectedEntry.entry.url}
-                      className="text-foreground underline-offset-2 hover:underline"
+                      className="text-primary underline-offset-4 hover:underline"
                     >
                       {selectedEntry.entry.url}
                     </ExternalLink>
@@ -209,7 +231,7 @@ function PendingEntriesSection() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.locale')}</dt>
-                  <dd className="text-foreground">{selectedEntry.entry.locale}</dd>
+                  <dd className="text-foreground">{languageName(selectedEntry.entry.locale, i18n.language)}</dd>
                 </div>
                 {selectedEntry.entry.availableChapters !== null && (
                   <div className="flex justify-between gap-4">
@@ -225,8 +247,15 @@ function PendingEntriesSection() {
                   <dt className="text-muted-foreground">{t('moderation.fields.submittedAt')}</dt>
                   <dd className="text-foreground">{formatDate(selectedEntry.entry.createdAt, i18n.language)}</dd>
                 </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">{t('moderation.fields.contributedBy')}</dt>
+                  <dd className="text-foreground">{selectedEntry.contributedBy.username}</dd>
+                </div>
               </dl>
               <Separator/>
+              <div className="min-h-4">
+                {actionError && <p className="text-sm text-destructive">{actionError}</p>}
+              </div>
               <DialogFooter>
                 <Button
                   disabled={pendingActionId === selectedEntry.entry.id}
