@@ -35,6 +35,9 @@ function PendingEntriesSection() {
   const [pendingActionId, setPendingActionId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<ComicReadingEntryModeration | null>(null);
+  // Bumped after approving/rejecting/dropping an item to force a refetch of the current page
+  // without changing `page` itself (see refreshAfterRemoval below).
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -66,19 +69,25 @@ function PendingEntriesSection() {
     return () => {
       controller.abort();
     };
-  }, [page]);
+  }, [page, refreshToken]);
 
   function closeDialog() {
     setSelectedEntry(null);
     setActionError(null);
   }
 
-  function removeItem(id: number) {
-    setItems((previous) => previous.filter((item) => item.entry.id !== id));
-    setTotalItems((previous) => (previous !== null ? previous - 1 : previous));
+  // Always refetches the current page instead of splicing `items`/`totalItems` locally: with
+  // server-side pagination, removing the last item on a page after page 1 must go back a page.
+  // In any other case refresh the list since with pagination we can't simply remove the element.
+  function refreshAfterRemoval() {
+    if (items.length <= 1 && page > 1) {
+      setPage((previous) => previous - 1);
+    } else {
+      setRefreshToken((previous) => previous + 1);
+    }
   }
 
-  function handleActionError(error: unknown, id: number) {
+  function handleActionError(error: unknown) {
     if (!(error instanceof ApiError)) {
       setActionError(t('moderation.actionError'));
       return;
@@ -91,10 +100,10 @@ function PendingEntriesSection() {
     } else if (error.type === ProblemType.READING_ENTRY_ALREADY_REVIEWED) {
       // Stale: someone else already reviewed it. Drop it so it stops pretending to be actionable
       // the dialog stays open so the user can read why first.
-      removeItem(id);
+      refreshAfterRemoval();
       setActionError(t('moderation.alreadyReviewedError'));
     } else if (error.type === ProblemType.READING_ENTRY_NOT_FOUND) {
-      removeItem(id);
+      refreshAfterRemoval();
       setActionError(t('moderation.notFoundError'));
     } else {
       setActionError(t('moderation.actionError'));
@@ -106,10 +115,10 @@ function PendingEntriesSection() {
     setPendingActionId(id);
     try {
       await approve(id);
-      removeItem(id);
+      refreshAfterRemoval();
       closeDialog();
     } catch (error) {
-      handleActionError(error, id);
+      handleActionError(error);
     } finally {
       setPendingActionId(null);
     }
@@ -120,10 +129,10 @@ function PendingEntriesSection() {
     setPendingActionId(id);
     try {
       await reject(id);
-      removeItem(id);
+      refreshAfterRemoval();
       closeDialog();
     } catch (error) {
-      handleActionError(error, id);
+      handleActionError(error);
     } finally {
       setPendingActionId(null);
     }

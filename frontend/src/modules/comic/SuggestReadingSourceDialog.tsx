@@ -193,7 +193,9 @@ function SuggestReadingSourceDialog({ comicSlug, onEntrySubmitted }: Readonly<Su
           label: response.source.name,
           isPending: response.source.status === 'PENDING',
         };
-        setSourceOptions((previous) => [...previous, newSource].sort((a, b) => a.label.localeCompare(b.label)));
+        setSourceOptions((previous) =>
+          [...previous, newSource].sort((a, b) => a.label.localeCompare(b.label, i18n.language)),
+        );
       }
       onEntrySubmitted?.(response);
       setIsSuccess(true);

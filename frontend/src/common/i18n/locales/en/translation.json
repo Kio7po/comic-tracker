@@ -164,6 +164,7 @@
     "pendingSources": "Sources pending review",
     "pendingEntries": "Reading links pending review",
     "loadError": "Couldn't load pending sources.",
+    "entriesLoadError": "Couldn't load pending reading links.",
     "empty": "No items pending review.",
     "approve": "Approve",
     "reject": "Reject",

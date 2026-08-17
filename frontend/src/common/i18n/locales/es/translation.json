@@ -164,6 +164,7 @@
     "pendingSources": "Fuentes pendientes de revisión",
     "pendingEntries": "Enlaces pendientes de revisión",
     "loadError": "No se han podido cargar las fuentes pendientes.",
+    "entriesLoadError": "No se han podido cargar los enlaces pendientes.",
     "empty": "No hay elementos pendientes de revisar.",
     "approve": "Aprobar",
     "reject": "Rechazar",

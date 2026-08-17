@@ -2,7 +2,6 @@ package com.github.kio7po.comic_tracker.adapter.persistence;
 
 import java.util.List;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -37,10 +36,17 @@ public interface JpaComicReadingEntryRepository
             case ASC -> Sort.Direction.ASC;
             case DESC -> Sort.Direction.DESC;
         };
-        Pageable pageable = PageRequest.of(offset / limit, limit, Sort.by(sortDirection, property));
+        // Spring Data's Pageable is page-index based, but the port's contract is a raw offset that
+        // isn't guaranteed to be a multiple of limit, PageRequest.of(offset / limit, ...) would
+        // silently truncate to the wrong window whenever it isn't. Use an unpaged/offset query via
+        // a manual Pageable instead so an arbitrary offset is honored exactly.
+        Pageable pageable = new OffsetPageable(offset, limit, Sort.by(sortDirection, property));
 
         org.springframework.data.domain.Page<ComicReadingEntry> page = findByStatusIn(statuses, pageable);
-        return new Page<>(page.getContent(), page.hasNext(), (int) page.getTotalElements());
+        // Not page.hasNext(): that's derived from the Pageable's page number, which OffsetPageable
+        // only approximates for a non-page-aligned offset. This is exact for any offset.
+        boolean existMoreItems = offset + page.getNumberOfElements() < page.getTotalElements();
+        return new Page<>(page.getContent(), existMoreItems, (int) page.getTotalElements());
     }
 
 }
