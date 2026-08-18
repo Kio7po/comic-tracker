@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/common/components/AuthProvider';
 import { ApiError } from '@/common/api/ApiError';
 import { ProblemType } from '@/common/api/ProblemType';
+import { appendFromParam } from '@/common/lib/authRedirect';
 import { Button } from '@/common/components/ui/button';
 import {
   Card,
@@ -36,7 +37,10 @@ const EMPTY_FORM: LoginFormState = {
 function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
+
+  const from = searchParams.get('from');
 
   const [form, setForm] = useState<LoginFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
@@ -78,7 +82,7 @@ function LoginPage() {
         password: form.password,
         rememberMe: form.rememberMe,
       });
-      navigate('/');
+      navigate(from ?? '/', { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.type === ProblemType.INVALID_CREDENTIALS) {
         setFormError(t('auth.login.errors.invalidCredentials'));
@@ -164,7 +168,7 @@ function LoginPage() {
         <Separator/>
         <CardFooter className="justify-center text-sm text-muted-foreground">
           {t('auth.login.noAccount')}{' '}
-          <Link to="/register" className="ml-1 text-primary underline-offset-4 hover:underline">
+          <Link to={appendFromParam('/register', from)} className="ml-1 text-primary underline-offset-4 hover:underline">
             {t('auth.login.registerLink')}
           </Link>
         </CardFooter>

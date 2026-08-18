@@ -1,6 +1,7 @@
 import { useLoaderData } from 'react-router';
 import type { LoaderFunctionArgs } from 'react-router';
 import { getBySlug } from '@/services/comic/api/comic';
+import { ApiError } from '@/common/api/ApiError';
 import ComicCoverPanel from './ComicCoverPanel';
 import ComicHeader from './ComicHeader';
 import ComicSynopsis from './ComicSynopsis';
@@ -8,8 +9,15 @@ import ComicReadingSources from './ComicReadingSources';
 import ComicSidebarInfo from './ComicSidebarInfo';
 import type { Comic } from '@/services/comic/types';
 
-export function comicDetailLoader({ params, request }: LoaderFunctionArgs): Promise<Comic> {
-  return getBySlug(params.slug!, { signal: request.signal });
+export async function comicDetailLoader({ params, request }: LoaderFunctionArgs): Promise<Comic> {
+  try {
+    return await getBySlug(params.slug!, { signal: request.signal });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      throw new Response('Not Found', { status: 404 });
+    }
+    throw error;
+  }
 }
 
 function ComicDetailPage() {
@@ -24,7 +32,7 @@ function ComicDetailPage() {
           <div className="flex flex-col gap-6 lg:flex-row">
             <div className="flex flex-1 flex-col gap-6">
               <ComicSynopsis synopsis={comic.synopsis} />
-              <ComicReadingSources />
+              <ComicReadingSources comicSlug={comic.slug} />
             </div>
             <ComicSidebarInfo comic={comic} />
           </div>

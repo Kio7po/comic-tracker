@@ -7,4 +7,11 @@ export const ProblemType = {
   WEAK_PASSWORD: 'urn:problem-type:weak-password',
   INVALID_CREDENTIALS: 'urn:problem-type:invalid-credentials',
   INVALID_REFRESH_TOKEN: 'urn:problem-type:invalid-refresh-token',
+  DUPLICATE_READING_SOURCE: 'urn:problem-type:duplicate-reading-source',
+  DUPLICATE_READING_ENTRY: 'urn:problem-type:duplicate-reading-entry',
+  READING_SOURCE_NOT_APPROVED: 'urn:problem-type:reading-source-not-approved',
+  READING_SOURCE_ALREADY_REVIEWED: 'urn:problem-type:reading-source-already-reviewed',
+  READING_SOURCE_NOT_FOUND: 'urn:problem-type:reading-source-not-found',
+  READING_ENTRY_ALREADY_REVIEWED: 'urn:problem-type:reading-entry-already-reviewed',
+  READING_ENTRY_NOT_FOUND: 'urn:problem-type:reading-entry-not-found',
 } as const;

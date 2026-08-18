@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router';
-import Header from '@/app/Header';
-import Footer from '@/app/Footer';
+import Header from '@/modules/app/Header';
+import Footer from '@/modules/app/Footer';
 import { TooltipProvider } from '@/common/components/ui/tooltip';
 
 function Layout() {

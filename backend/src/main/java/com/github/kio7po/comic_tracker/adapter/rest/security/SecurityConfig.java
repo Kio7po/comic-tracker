@@ -31,6 +31,14 @@ public class SecurityConfig {
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/catalog/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/comics/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/reading-sources").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/moderation/reading-sources",
+                            "/api/moderation/reading-entries").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.POST, "/api/comics/*/reading-entries").authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/reading-entries/*/approve",
+                            "/api/reading-entries/*/reject").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.POST, "/api/reading-sources/*/approve",
+                            "/api/reading-sources/*/reject").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/scalar/**").permitAll()
                     .anyRequest().denyAll())
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(

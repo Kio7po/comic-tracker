@@ -8,6 +8,14 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicMetadataSourceNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryAlreadyReviewedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
+import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.EmailAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.InvalidCredentialsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.InvalidRefreshTokenException;
@@ -51,6 +59,46 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ComicMetadataSourceNotFoundException.class)
     public ProblemDetail handleComicMetadataSourceNotFound(ComicMetadataSourceNotFoundException ex) {
         return problem(HttpStatus.NOT_FOUND, ex.getMessage(), ProblemType.METADATA_SOURCE_NOT_FOUND);
+    }
+
+    @ExceptionHandler(ComicNotFoundException.class)
+    public ProblemDetail handleComicNotFound(ComicNotFoundException ex) {
+        return problem(HttpStatus.NOT_FOUND, ex.getMessage(), ProblemType.COMIC_NOT_FOUND);
+    }
+
+    @ExceptionHandler(ComicReadingSourceNotFoundException.class)
+    public ProblemDetail handleComicReadingSourceNotFound(ComicReadingSourceNotFoundException ex) {
+        return problem(HttpStatus.NOT_FOUND, ex.getMessage(), ProblemType.READING_SOURCE_NOT_FOUND);
+    }
+
+    @ExceptionHandler(ComicReadingEntryNotFoundException.class)
+    public ProblemDetail handleComicReadingEntryNotFound(ComicReadingEntryNotFoundException ex) {
+        return problem(HttpStatus.NOT_FOUND, ex.getMessage(), ProblemType.READING_ENTRY_NOT_FOUND);
+    }
+
+    @ExceptionHandler(DuplicateComicReadingSourceException.class)
+    public ProblemDetail handleDuplicateComicReadingSource(DuplicateComicReadingSourceException ex) {
+        return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.DUPLICATE_READING_SOURCE);
+    }
+
+    @ExceptionHandler(DuplicateComicReadingEntryException.class)
+    public ProblemDetail handleDuplicateComicReadingEntry(DuplicateComicReadingEntryException ex) {
+        return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.DUPLICATE_READING_ENTRY);
+    }
+
+    @ExceptionHandler(ComicReadingEntryAlreadyReviewedException.class)
+    public ProblemDetail handleComicReadingEntryAlreadyReviewed(ComicReadingEntryAlreadyReviewedException ex) {
+        return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.READING_ENTRY_ALREADY_REVIEWED);
+    }
+
+    @ExceptionHandler(ComicReadingSourceNotApprovedException.class)
+    public ProblemDetail handleComicReadingSourceNotApproved(ComicReadingSourceNotApprovedException ex) {
+        return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.READING_SOURCE_NOT_APPROVED);
+    }
+
+    @ExceptionHandler(ComicReadingSourceAlreadyReviewedException.class)
+    public ProblemDetail handleComicReadingSourceAlreadyReviewed(ComicReadingSourceAlreadyReviewedException ex) {
+        return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.READING_SOURCE_ALREADY_REVIEWED);
     }
 
     private static ProblemDetail problem(HttpStatus status, String detail, String type) {

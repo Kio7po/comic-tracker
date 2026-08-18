@@ -1,0 +1,165 @@
+@host = http://localhost:8080
+@contentType = application/json
+
+### Register a contributor
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "readingcontributor",
+  "email": "readingcontributor@example.com",
+  "password": "password123",
+  "displayName": "Reading Contributor"
+}
+
+### Login as the contributor
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "usernameOrEmail": "readingcontributor",
+  "password": "password123",
+  "rememberMe": false
+}
+
+### Import a comic to attach reading entries to
+# @name importComic
+POST {{host}}/api/catalog/myanimelist/2
+Content-Type: {{contentType}}
+
+### Submit - propose a new source alongside the entry (source starts PENDING, chained into the requests below)
+# @name submitWithNewSource
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceName": "MangaDex",
+  "sourceUrl": "https://mangadex.org",
+  "url": "https://mangadex.org/title/abc123",
+  "locale": "es-ES"
+}
+
+### Submit - reuse the source just created for a second entry on the same comic -> 201
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceId": {{submitWithNewSource.response.body.$.source.id}},
+  "url": "https://mangadex.org/title/abc123/chapter-1",
+  "locale": "es-ES"
+}
+
+### Submit - duplicate (same comic, source and url as the first submit) -> 409 (DuplicateComicReadingEntryException)
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceId": {{submitWithNewSource.response.body.$.source.id}},
+  "url": "https://mangadex.org/title/abc123",
+  "locale": "es-ES"
+}
+
+### Submit - both sourceId and new-source details -> 400 (mutually exclusive, @AssertTrue on the DTO)
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceId": {{submitWithNewSource.response.body.$.source.id}},
+  "sourceName": "MangaDex",
+  "sourceUrl": "https://mangadex.org",
+  "url": "https://mangadex.org/title/xyz",
+  "locale": "es-ES"
+}
+
+### Submit - neither sourceId nor new-source details -> 400
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "url": "https://mangadex.org/title/xyz",
+  "locale": "es-ES"
+}
+
+### Submit - malformed url -> 400
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceId": {{submitWithNewSource.response.body.$.source.id}},
+  "url": "not-a-url",
+  "locale": "es-ES"
+}
+
+### Submit - locale isn't a real ISO language -> 400 (@ValidLocale)
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceId": {{submitWithNewSource.response.body.$.source.id}},
+  "url": "https://mangadex.org/title/xyz",
+  "locale": "xx"
+}
+
+### Submit - no Authorization header -> 401
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+
+{
+  "sourceId": {{submitWithNewSource.response.body.$.source.id}},
+  "url": "https://mangadex.org/title/xyz",
+  "locale": "es-ES"
+}
+
+### Submit - unknown comic slug -> 404
+POST {{host}}/api/comics/does-not-exist/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceId": {{submitWithNewSource.response.body.$.source.id}},
+  "url": "https://mangadex.org/title/xyz",
+  "locale": "es-ES"
+}
+
+### List - every entry for the comic, PENDING included by default -> 200
+GET {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+
+### List - filtered by status, nothing APPROVED yet -> 200 empty
+GET {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries?status=APPROVED
+
+### List - unknown comic slug -> 404
+GET {{host}}/api/comics/does-not-exist/reading-entries
+
+### Approve - no Authorization header -> 401
+POST {{host}}/api/reading-entries/{{submitWithNewSource.response.body.$.id}}/approve
+
+### Approve - authenticated but not ADMIN -> 403
+POST {{host}}/api/reading-entries/{{submitWithNewSource.response.body.$.id}}/approve
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Approve - as ADMIN, but the source isn't APPROVED yet -> 409 (ComicReadingSourceNotApprovedException)
+# There's no endpoint to approve a ComicReadingSource yet (only entries) - getting one to
+# APPROVED for real testing today means updating it directly:
+#   UPDATE comic_reading_source SET status = 'APPROVED' WHERE id = <source id>;
+# @adminToken below needs a JWT for a user whose role is ADMIN - promote one by hand, e.g.
+#   UPDATE app_user SET role = 'ADMIN' WHERE username = 'readingcontributor';
+# then log in again so the token actually carries that claim.
+@adminToken = REPLACE_ME
+POST {{host}}/api/reading-entries/{{submitWithNewSource.response.body.$.id}}/approve
+Authorization: Bearer {{adminToken}}
+
+### Reject - as ADMIN, doesn't require the source to be approved -> 200
+POST {{host}}/api/reading-entries/{{submitWithNewSource.response.body.$.id}}/reject
+Authorization: Bearer {{adminToken}}
+
+### Reject - already reviewed (rejected above) -> 409 (ComicReadingEntryAlreadyReviewedException)
+POST {{host}}/api/reading-entries/{{submitWithNewSource.response.body.$.id}}/reject
+Authorization: Bearer {{adminToken}}

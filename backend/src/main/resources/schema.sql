@@ -117,12 +117,21 @@ CREATE TABLE IF NOT EXISTS comic_metadata_entry (
 -- ─── Fuentes de lectura
 
 -- Sitio de lectura en sí (agregador de scans, plataforma oficial...), no vinculado a ningún cómic.
+-- Aportación comunitaria igual que comic_reading_entry: mismo ciclo PENDING/APPROVED/REJECTED
+-- y mismas columnas de auditoría. Una comic_reading_entry solo puede aprobarse si su source
+-- ya está APPROVED (ver ComicReadingEntryService.approve()).
 CREATE TABLE IF NOT EXISTS comic_reading_source (
-    id   BIGINT NOT NULL PRIMARY KEY,
-    slug VARCHAR(255) NOT NULL UNIQUE,
-    name VARCHAR(255) NOT NULL,
-    url  VARCHAR(255) NOT NULL,
-    icon VARCHAR(255)
+    id                BIGINT NOT NULL PRIMARY KEY,
+    slug              VARCHAR(255) NOT NULL UNIQUE,
+    name              VARCHAR(255) NOT NULL,
+    url               VARCHAR(255) NOT NULL,
+    icon_url          VARCHAR(255),
+    status            VARCHAR(255) NOT NULL CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+    contributed_by_id BIGINT NOT NULL REFERENCES app_user (id),
+    created_at        TIMESTAMPTZ NOT NULL,
+    updated_at        TIMESTAMPTZ NOT NULL,
+    reviewed_at       TIMESTAMPTZ,
+    reviewed_by_id    BIGINT REFERENCES app_user (id)
 );
 
 -- Propuesta de un usuario de que un cómic está disponible en un sitio de lectura concreto.

@@ -82,12 +82,20 @@ classDiagram
 
     %% ─── Fuentes de lectura ──────────────────────────────────────
     %% El sitio de lectura en sí (agregador de scans, plataforma oficial…)
-    %% como entidad propia. Análogo a ComicMetadataSource pero para fuentes de lectura.
+    %% como entidad propia. Análogo a ComicMetadataSource en estructura, pero a diferencia
+    %% de esa (dato curado, precargado), es aportación comunitaria igual que
+    %% ComicReadingEntry: mismo ciclo status (PENDING, APPROVED, REJECTED) y mismas
+    %% columnas de auditoría (created_at/updated_at/reviewed_at/reviewed_by). Una
+    %% ComicReadingEntry solo puede aprobarse si su ComicReadingSource ya está APPROVED.
     class ComicReadingSource {
         + url: string
         + name: string
-        + icon: string
+        + icon_url: string
         + slug: string
+        + status: Enum
+        + created_at: DateTime
+        + updated_at: DateTime
+        + reviewed_at: DateTime
     }
 
     %% Registro de que un cómic concreto está disponible en un ComicReadingSource
@@ -215,6 +223,8 @@ classDiagram
     ComicReadingEntry "1" --> "0..*" ChapterReadingEntry : tentativo
 
     ComicReadingSource "1" --> "0..*" ComicReadingSourceReview
+    ComicReadingSource "0..*" --> "1" User : aportada por
+    ComicReadingSource "0..*" --> "0..1" User : revisada por
 
     ComicReview "0..*" --> "1" User
     ComicReadingSourceReview "0..*" --> "1" User

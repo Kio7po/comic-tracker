@@ -11,8 +11,8 @@ export async function login(request: LoginRequest): Promise<void> {
   setAccessToken(tokens.access_token);
 }
 
-export function me(): Promise<UserResponse> {
-  return apiFetch<UserResponse>('/auth/me');
+export function me(options?: { signal?: AbortSignal }): Promise<UserResponse> {
+  return apiFetch<UserResponse>('/auth/me', { signal: options?.signal });
 }
 
 export async function logout(): Promise<void> {

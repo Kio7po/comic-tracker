@@ -1,0 +1,1 @@
+export type ComicReadingSourceSortField = 'NAME' | 'CREATED_AT';

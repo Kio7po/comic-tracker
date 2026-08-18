@@ -14,6 +14,14 @@ public final class ProblemType {
     public static final String INVALID_REFRESH_TOKEN = "urn:problem-type:invalid-refresh-token";
     public static final String UNSUPPORTED_METADATA_SOURCE = "urn:problem-type:unsupported-metadata-source";
     public static final String METADATA_SOURCE_NOT_FOUND = "urn:problem-type:metadata-source-not-found";
+    public static final String COMIC_NOT_FOUND = "urn:problem-type:comic-not-found";
+    public static final String READING_SOURCE_NOT_FOUND = "urn:problem-type:reading-source-not-found";
+    public static final String READING_ENTRY_NOT_FOUND = "urn:problem-type:reading-entry-not-found";
+    public static final String DUPLICATE_READING_SOURCE = "urn:problem-type:duplicate-reading-source";
+    public static final String DUPLICATE_READING_ENTRY = "urn:problem-type:duplicate-reading-entry";
+    public static final String READING_ENTRY_ALREADY_REVIEWED = "urn:problem-type:reading-entry-already-reviewed";
+    public static final String READING_SOURCE_NOT_APPROVED = "urn:problem-type:reading-source-not-approved";
+    public static final String READING_SOURCE_ALREADY_REVIEWED = "urn:problem-type:reading-source-already-reviewed";
 
     private ProblemType() {
     }
