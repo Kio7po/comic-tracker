@@ -1,0 +1,115 @@
+@host = http://localhost:8080
+@contentType = application/json
+
+### Register a reader
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "readingstateuser",
+  "email": "readingstateuser@example.com",
+  "password": "password123",
+  "displayName": "Reading State User"
+}
+
+### Login as the reader
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "usernameOrEmail": "readingstateuser",
+  "password": "password123",
+  "rememberMe": false
+}
+
+### Import a comic to track
+# @name importComic
+POST {{host}}/api/catalog/myanimelist/2
+Content-Type: {{contentType}}
+
+### Get - not tracked yet -> 404
+GET {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-state
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Get - no Authorization header -> 401
+GET {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-state
+
+### Create - start tracking -> 201
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-state
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "status": "PLAN_TO_READ",
+  "chapters": 0
+}
+
+### Create - already tracked -> 409 (ReadingStateAlreadyExistsException)
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-state
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "status": "PLAN_TO_READ",
+  "chapters": 0
+}
+
+### Create - negative chapters -> 400 (@Min(0) on the DTO)
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-state
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "status": "READING",
+  "chapters": -1
+}
+
+### Create - unknown comic slug -> 404
+POST {{host}}/api/comics/does-not-exist/reading-state
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "status": "PLAN_TO_READ",
+  "chapters": 0
+}
+
+### Get - now tracked -> 200
+GET {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-state
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Update - full replace: mark as reading with progress -> 200
+PUT {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-state
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "status": "READING",
+  "chapters": 12
+}
+
+### Update - unknown comic slug -> 404
+PUT {{host}}/api/comics/does-not-exist/reading-state
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "status": "READING",
+  "chapters": 12
+}
+
+### List - every ReadingState for the current user -> 200
+GET {{host}}/api/reading-states
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### List - no Authorization header -> 401
+GET {{host}}/api/reading-states
+
+### Delete - stop tracking -> 204
+DELETE {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-state
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Delete - already deleted -> 404 (ReadingStateNotFoundException)
+DELETE {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-state
+Authorization: Bearer {{login.response.body.$.access_token}}
