@@ -22,6 +22,8 @@ public final class ProblemType {
     public static final String READING_ENTRY_ALREADY_REVIEWED = "urn:problem-type:reading-entry-already-reviewed";
     public static final String READING_SOURCE_NOT_APPROVED = "urn:problem-type:reading-source-not-approved";
     public static final String READING_SOURCE_ALREADY_REVIEWED = "urn:problem-type:reading-source-already-reviewed";
+    public static final String READING_STATE_NOT_FOUND = "urn:problem-type:reading-state-not-found";
+    public static final String READING_STATE_ALREADY_EXISTS = "urn:problem-type:reading-state-already-exists";
 
     private ProblemType() {
     }
