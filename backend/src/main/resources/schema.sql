@@ -165,6 +165,7 @@ CREATE TABLE IF NOT EXISTS reading_state (
     id          BIGINT NOT NULL PRIMARY KEY,
     status      VARCHAR(255) NOT NULL CHECK (status IN ('READING', 'COMPLETED', 'ON_HOLD', 'PLAN_TO_READ', 'DROPPED')),
     chapters    INTEGER NOT NULL DEFAULT 0,
+    notes       VARCHAR(2048),
     comic_id    BIGINT NOT NULL REFERENCES comic (id),
     user_id     BIGINT NOT NULL REFERENCES app_user (id),
     created_at  TIMESTAMPTZ NOT NULL,

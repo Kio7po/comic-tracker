@@ -14,4 +14,6 @@ export const ProblemType = {
   READING_SOURCE_NOT_FOUND: 'urn:problem-type:reading-source-not-found',
   READING_ENTRY_ALREADY_REVIEWED: 'urn:problem-type:reading-entry-already-reviewed',
   READING_ENTRY_NOT_FOUND: 'urn:problem-type:reading-entry-not-found',
+  READING_STATE_NOT_FOUND: 'urn:problem-type:reading-state-not-found',
+  READING_STATE_ALREADY_EXISTS: 'urn:problem-type:reading-state-already-exists',
 } as const;

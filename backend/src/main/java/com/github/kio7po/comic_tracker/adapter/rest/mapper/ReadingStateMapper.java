@@ -13,7 +13,8 @@ public final class ReadingStateMapper {
 
     public static ReadingStateResponseDto toResponseDto(ReadingState readingState) {
         return new ReadingStateResponseDto(readingState.getId(), readingState.getStatus(),
-                readingState.getChapters(), readingState.getCreatedAt(), readingState.getUpdatedAt());
+                readingState.getChapters(), readingState.getNotes(), readingState.getCreatedAt(),
+                readingState.getUpdatedAt());
     }
 
     public static List<ReadingStateWithComicResponseDto> toWithComicResponseDtoList(

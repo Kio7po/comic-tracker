@@ -1,4 +1,7 @@
 {
+  "common": {
+    "cancel": "Cancel"
+  },
   "nav": {
     "home": "Home",
     "browse": "Browse",
@@ -100,7 +103,35 @@
   },
   "detail": {
     "addToLibrary": "Add to library",
+    "addingToLibrary": "Adding…",
+    "editLibrary": "Edit",
+    "alreadyInLibrary": "You already have this in your library.",
     "chapters": "Chapters",
+    "readingState": {
+      "title": "Edit reading progress",
+      "status": "Status",
+      "chaptersRead": "Last Chapter Read",
+      "notes": "Notes",
+      "notesPlaceholder": "Type your notes here.",
+      "resetChapters": "Set to 0",
+      "setToMaxChapters": "Set to max chapters",
+      "update": "Update",
+      "updating": "Updating…",
+      "remove": "Remove from library",
+      "removing": "Removing…",
+      "removeConfirmTitle": "Remove from library?",
+      "removeConfirmDescription": "This will delete your reading progress and notes for this comic. This can't be undone.",
+      "statuses": {
+        "READING": "Reading",
+        "COMPLETED": "Completed",
+        "ON_HOLD": "On hold",
+        "PLAN_TO_READ": "Plan to read",
+        "DROPPED": "Dropped"
+      },
+      "errors": {
+        "generic": "Couldn't save your changes. Try again."
+      }
+    },
     "synopsis": "Synopsis",
     "noSynopsis": "No synopsis available.",
     "expandSynopsis": "Expand synopsis",
@@ -157,7 +188,8 @@
     "somethingWentWrong": "Something went wrong.",
     "notFound": "We couldn't find what you were looking for.",
     "notAuthorized": "You don't have permission to view this page.",
-    "generic": "Something went wrong loading this page."
+    "generic": "Something went wrong loading this page.",
+    "actionFailed": "Something went wrong. Please try again."
   },
   "moderation": {
     "title": "Moderation",
@@ -168,6 +200,10 @@
     "empty": "No items pending review.",
     "approve": "Approve",
     "reject": "Reject",
+    "rejectConfirmTitle": "Reject this entry?",
+    "rejectConfirmDescription": "This can't be undone once confirmed.",
+    "rejectSourceConfirmTitle": "Reject this source?",
+    "rejectSourceConfirmDescription": "This will also reject any still-pending entries submitted for this source. This can't be undone.",
     "actionError": "Couldn't complete the action. Please try again.",
     "sourceNotApprovedError": "Can't approve: this link's source isn't approved yet.",
     "alreadyReviewedError": "Already reviewed by someone else.",

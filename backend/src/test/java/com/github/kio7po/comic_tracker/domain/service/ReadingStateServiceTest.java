@@ -51,7 +51,7 @@ class ReadingStateServiceTest {
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(
-                () -> readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0))
+                () -> readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null))
                         .isInstanceOf(ComicNotFoundException.class);
 
         verify(readingStateRepository, never()).save(any());
@@ -66,14 +66,14 @@ class ReadingStateServiceTest {
         when(readingStateRepository.findByUserAndComic(user, comic)).thenReturn(Optional.of(new ReadingState()));
 
         assertThatThrownBy(
-                () -> readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0))
+                () -> readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null))
                         .isInstanceOf(ReadingStateAlreadyExistsException.class);
 
         verify(readingStateRepository, never()).save(any());
     }
 
     @Test
-    void createPersistsReadingStateWithGivenStatusAndChapters() {
+    void createPersistsReadingStateWithGivenStatusChaptersAndNotes() {
         User user = new User();
         Comic comic = new Comic();
         when(userService.findById(USER_ID)).thenReturn(user);
@@ -81,12 +81,14 @@ class ReadingStateServiceTest {
         when(readingStateRepository.findByUserAndComic(user, comic)).thenReturn(Optional.empty());
         when(readingStateRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReadingState result = readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12);
+        ReadingState result = readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12,
+                "Great so far");
 
         assertThat(result.getUser()).isSameAs(user);
         assertThat(result.getComic()).isSameAs(comic);
         assertThat(result.getStatus()).isEqualTo(ReadingStateStatus.READING);
         assertThat(result.getChapters()).isEqualTo(12);
+        assertThat(result.getNotes()).isEqualTo("Great so far");
     }
 
     @Test
@@ -135,7 +137,7 @@ class ReadingStateServiceTest {
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(
-                () -> readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.COMPLETED, 50))
+                () -> readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.COMPLETED, 50, null))
                         .isInstanceOf(ComicNotFoundException.class);
 
         verify(readingStateRepository, never()).save(any());
@@ -150,28 +152,31 @@ class ReadingStateServiceTest {
         when(readingStateRepository.findByUserAndComic(user, comic)).thenReturn(Optional.empty());
 
         assertThatThrownBy(
-                () -> readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.COMPLETED, 50))
+                () -> readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.COMPLETED, 50, null))
                         .isInstanceOf(ReadingStateNotFoundException.class);
 
         verify(readingStateRepository, never()).save(any());
     }
 
     @Test
-    void updateReplacesStatusAndChapters() {
+    void updateReplacesStatusChaptersAndNotes() {
         User user = new User();
         Comic comic = new Comic();
         ReadingState readingState = new ReadingState();
         readingState.setStatus(ReadingStateStatus.READING);
         readingState.setChapters(10);
+        readingState.setNotes("Old note");
         when(userService.findById(USER_ID)).thenReturn(user);
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
         when(readingStateRepository.findByUserAndComic(user, comic)).thenReturn(Optional.of(readingState));
         when(readingStateRepository.save(readingState)).thenReturn(readingState);
 
-        ReadingState result = readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.COMPLETED, 50);
+        ReadingState result = readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.COMPLETED, 50,
+                "New note");
 
         assertThat(result.getStatus()).isEqualTo(ReadingStateStatus.COMPLETED);
         assertThat(result.getChapters()).isEqualTo(50);
+        assertThat(result.getNotes()).isEqualTo("New note");
     }
 
     @Test
