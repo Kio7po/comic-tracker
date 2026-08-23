@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookmarkCheck, ChevronsLeft, ChevronsRight, Minus, Plus, Trash2 } from 'lucide-react';
+import { BookmarkCheck, ChevronsLeft, ChevronsRight, Minus, Plus, BookmarkOff } from 'lucide-react';
 import { remove, update } from '@/services/readingState/api/readingState';
 import type { ReadingState, ReadingStateStatus } from '@/services/readingState/types';
 import ConfirmDialog from '@/common/components/ConfirmDialog';
@@ -234,7 +234,7 @@ function EditReadingStateDialog({
                 disabled={isRemoving}
                 onClick={() => setIsRemoveConfirmOpen(true)}
               >
-                {isRemoving ? <Spinner /> : <Trash2 className="size-4" />}
+                {isRemoving ? <Spinner /> : <BookmarkOff className="size-4" />}
                 {isRemoving ? t('detail.readingState.removing') : t('detail.readingState.remove')}
               </Button>
               <Button type="submit" disabled={isSaving || !hasChanges}>

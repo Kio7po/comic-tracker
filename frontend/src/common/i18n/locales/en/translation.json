@@ -8,7 +8,37 @@
     "login": "Log in",
     "logout": "Log out",
     "loggedInAs": "Logged in as",
-    "moderation": "Moderation"
+    "moderation": "Moderation",
+    "library": "Library"
+  },
+  "library": {
+    "title": "Library",
+    "empty": "Nothing here yet.",
+    "searchPlaceholder": "Search…",
+    "filters": {
+      "status": "Reading Status",
+      "allStatuses": "Any status",
+      "pendingOnly": "Unread only",
+      "sortBy": "Sort by",
+      "sortAsc": "Ascending",
+      "sortDesc": "Descending"
+    },
+    "sort": {
+      "TITLE": "Title",
+      "RELEASE_DATE": "Release date",
+      "TOTAL_CHAPTERS": "Total chapters",
+      "UNREAD_CHAPTERS": "Unread chapters",
+      "CREATED_AT": "Date added",
+      "UPDATED_AT": "Last read"
+    },
+    "actions": {
+      "trigger": "Quick actions",
+      "save": "Save",
+      "viewDetails": "View details",
+      "share": "Share",
+      "shareSuccess": "Link copied to clipboard.",
+      "remove": "Remove"
+    }
   },
   "footer": {
     "tagline": "Comic Tracker — a TFG project (UDC)"
@@ -21,7 +51,7 @@
     "importError": "Couldn't open this comic. Try again.",
     "filters": {
       "type": "Type",
-      "status": "Status",
+      "status": "Publication Status",
       "nsfw": "NSFW",
       "allTypes": "Any type",
       "allStatuses": "Any status",

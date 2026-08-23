@@ -8,7 +8,37 @@
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
     "loggedInAs": "Sesión iniciada como",
-    "moderation": "Moderación"
+    "moderation": "Moderación",
+    "library": "Biblioteca"
+  },
+  "library": {
+    "title": "Biblioteca",
+    "empty": "Todavía no hay nada aquí.",
+    "searchPlaceholder": "Buscar…",
+    "filters": {
+      "status": "Estado de lectura",
+      "allStatuses": "Cualquier estado",
+      "pendingOnly": "Solo sin leer",
+      "sortBy": "Ordenar por",
+      "sortAsc": "Ascendente",
+      "sortDesc": "Descendente"
+    },
+    "sort": {
+      "TITLE": "Título",
+      "RELEASE_DATE": "Fecha de publicación",
+      "TOTAL_CHAPTERS": "Capítulos totales",
+      "UNREAD_CHAPTERS": "Capítulos sin leer",
+      "CREATED_AT": "Fecha de añadido",
+      "UPDATED_AT": "Última lectura"
+    },
+    "actions": {
+      "trigger": "Acciones rápidas",
+      "save": "Guardar",
+      "viewDetails": "Ver detalles",
+      "share": "Compartir",
+      "shareSuccess": "Enlace copiado al portapapeles.",
+      "remove": "Quitar"
+    }
   },
   "footer": {
     "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
@@ -21,7 +51,7 @@
     "importError": "No se ha podido abrir este cómic. Inténtalo de nuevo.",
     "filters": {
       "type": "Tipo",
-      "status": "Estado",
+      "status": "Estado de publicación",
       "nsfw": "NSFW",
       "allTypes": "Cualquier tipo",
       "allStatuses": "Cualquier estado",

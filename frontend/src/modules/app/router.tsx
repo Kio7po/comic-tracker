@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router';
 import Layout from '@/common/components/Layout';
 import RouteErrorPage from '@/common/components/RouteErrorPage';
 import SearchPage from '@/modules/catalog/SearchPage';
+import LibraryPage from '@/modules/library/LibraryPage';
 import ComicDetailPage, { comicDetailLoader } from '@/modules/comic/ComicDetailPage';
 import RegisterPage from '@/modules/auth/RegisterPage';
 import LoginPage from '@/modules/auth/LoginPage';
@@ -16,6 +17,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'catalog', element: <SearchPage /> },
+      { path: 'library', element: <LibraryPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'login', element: <LoginPage /> },
       {
