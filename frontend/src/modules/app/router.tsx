@@ -7,7 +7,7 @@ import ComicDetailPage, { comicDetailLoader } from '@/modules/comic/ComicDetailP
 import RegisterPage from '@/modules/auth/RegisterPage';
 import LoginPage from '@/modules/auth/LoginPage';
 import ModerationPage from '@/modules/moderation/ModerationPage';
-import { requireRole } from './routeGuards';
+import { requireAuth, requireRole } from './routeGuards';
 import Home from './Home';
 
 export const router = createBrowserRouter([
@@ -17,7 +17,16 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'catalog', element: <SearchPage /> },
-      { path: 'library', element: <LibraryPage /> },
+      {
+        path: 'library',
+        element: <LibraryPage />,
+        loader: ({ request }) => requireAuth(request),
+        // The page drives its filters/search/sort through useSearchParams, and each update is a
+        // navigation as far as the router's concerned. Without this, the loader would re-run on
+        // every change.
+        shouldRevalidate: ({ currentUrl, nextUrl }) => currentUrl.pathname !== nextUrl.pathname,
+        errorElement: <RouteErrorPage />,
+      },
       { path: 'register', element: <RegisterPage /> },
       { path: 'login', element: <LoginPage /> },
       {

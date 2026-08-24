@@ -1,195 +1,41 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import type { ComicMediaType, ComicStatus, LibraryComic, NsfwRating } from '@/services/comic/types';
-import type { ReadingState, ReadingStateStatus } from '@/services/readingState/types';
+import { SlidersHorizontal } from 'lucide-react';
+import type { ComicMediaType, ComicStatus, NsfwRating } from '@/services/comic/types';
+import { findByUser } from '@/services/readingState/api/readingState';
+import type { ReadingState, ReadingStateStatus, ReadingStateWithComic } from '@/services/readingState/types';
 import type { SortDirection } from '@/common/api/SortDirection';
 import { matchesSearch } from '@/common/lib/matchesSearch';
+import { useMediaQuery } from '@/common/hooks/useMediaQuery';
 import SearchBar from '@/common/components/SearchBar';
+import { Button } from '@/common/components/ui/button';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/common/components/ui/drawer';
+import { Spinner } from '@/common/components/ui/spinner';
 import LibraryComicCard from './LibraryComicCard';
 import LibraryFilters, { SORT_FIELDS, type LibrarySortField } from './LibraryFilters';
-import type { LibraryEntry } from './types';
 
 const DEFAULT_SORT_FIELD: LibrarySortField = 'CREATED_AT';
 const DEFAULT_SORT_DIRECTION: SortDirection = 'DESC';
+// Matches Tailwind's sm: breakpoint (640px), same query used elsewhere for this breakpoint.
+const MOBILE_QUERY = '(max-width: 639px)';
 
-// Client-side filtering over an in-memory array (see the mock data below) - a short debounce
-// just smooths re-renders for fast typers, not throttling an expensive call like catalog's does.
-const SEARCH_DEBOUNCE_MS = 150;
-
-function mockComic(
-  overrides: Pick<
-    LibraryComic,
-    'id' | 'slug' | 'title' | 'coverUrl' | 'alternativeTitles' | 'mediaType' | 'status' | 'nsfw' | 'chapters'
-  > &
-    Partial<Pick<LibraryComic, 'startDate'>>,
-): LibraryComic {
-  return { startDate: null, ...overrides };
-}
-
-function mockReadingState(
-  overrides: Pick<ReadingState, 'id' | 'status' | 'chapters' | 'createdAt' | 'updatedAt'>,
-): ReadingState {
-  return { notes: null, ...overrides };
-}
-
-const COVER = 'https://cdn.myanimelist.net/images/manga/1/157897l.jpg';
-
-// Temporary mock data for laying out the page - replace with a real findByUser() fetch
-// once the visual design is settled.
-const MOCK_ENTRIES: LibraryEntry[] = [
-  {
-    comic: mockComic({
-      id: 1,
-      slug: 'berserk',
-      title: 'Berserk',
-      alternativeTitles: ['Águila Negra'],
-      coverUrl: COVER,
-      mediaType: 'MANGA',
-      status: 'ONGOING',
-      nsfw: 'NONE',
-      chapters: 364,
-      startDate: '1989-08-25',
-    }),
-    readingState: mockReadingState({
-      id: 1,
-      status: 'READING',
-      chapters: 340,
-      createdAt: '2025-01-10T10:00:00Z',
-      updatedAt: '2026-08-22T10:00:00Z',
-    }),
-  },
-  {
-    comic: mockComic({
-      id: 2,
-      slug: 'one-piece',
-      title: 'One Piece',
-      alternativeTitles: ['Búsqueda del Tesoro'],
-      coverUrl: COVER,
-      mediaType: 'MANGA',
-      status: 'ONGOING',
-      nsfw: 'NONE',
-      chapters: null,
-      startDate: '1997-07-22',
-    }),
-    readingState: mockReadingState({
-      id: 2,
-      status: 'READING',
-      chapters: 0,
-      createdAt: '2026-08-23T08:00:00Z',
-      updatedAt: '2026-08-23T08:00:00Z',
-    }),
-  },
-  {
-    comic: mockComic({
-      id: 3,
-      slug: 'vagabond',
-      title: 'Vagabond',
-      alternativeTitles: ['El Camino Errático'],
-      coverUrl: COVER,
-      mediaType: 'MANGA',
-      status: 'HIATUS',
-      nsfw: 'NONE',
-      chapters: 327,
-      startDate: '1998-09-03',
-    }),
-    readingState: mockReadingState({
-      id: 3,
-      status: 'ON_HOLD',
-      chapters: 200,
-      createdAt: '2024-03-05T10:00:00Z',
-      updatedAt: '2026-08-10T10:00:00Z',
-    }),
-  },
-  {
-    comic: mockComic({
-      id: 4,
-      slug: 'vinland-saga',
-      title: 'Vinland Saga',
-      alternativeTitles: ['Épica Vikinga'],
-      coverUrl: COVER,
-      mediaType: 'MANGA',
-      status: 'ONGOING',
-      nsfw: 'NONE',
-      chapters: 216,
-      startDate: '2005-04-13',
-    }),
-    readingState: mockReadingState({
-      id: 4,
-      status: 'COMPLETED',
-      chapters: 216,
-      createdAt: '2023-11-20T10:00:00Z',
-      updatedAt: '2026-06-01T10:00:00Z',
-    }),
-  },
-  {
-    comic: mockComic({
-      id: 5,
-      slug: 'chainsaw-man',
-      title: 'Chainsaw Man',
-      alternativeTitles: ['Corazón de Motosierra'],
-      coverUrl: COVER,
-      mediaType: 'MANGA',
-      status: 'ONGOING',
-      nsfw: 'SUGGESTIVE',
-      chapters: 150,
-      startDate: '2018-12-03',
-    }),
-    readingState: mockReadingState({
-      id: 5,
-      status: 'PLAN_TO_READ',
-      chapters: 0,
-      createdAt: '2026-08-20T10:00:00Z',
-      updatedAt: '2026-08-20T10:00:00Z',
-    }),
-  },
-  {
-    comic: mockComic({
-      id: 6,
-      slug: 'tokyo-ghoul',
-      title: 'Tokyo Ghoul',
-      alternativeTitles: ['Espíritu de Tokio'],
-      coverUrl: COVER,
-      mediaType: 'MANGA',
-      status: 'COMPLETED',
-      nsfw: 'NONE',
-      chapters: 143,
-      startDate: '2011-09-08',
-    }),
-    readingState: mockReadingState({
-      id: 6,
-      status: 'DROPPED',
-      chapters: 45,
-      createdAt: '2025-05-01T10:00:00Z',
-      updatedAt: '2026-07-15T10:00:00Z',
-    }),
-  },
-  {
-    comic: mockComic({
-      id: 7,
-      slug: 'solo-leveling',
-      title: 'Solo Leveling',
-      alternativeTitles: ['Cazador Solitario'],
-      coverUrl: COVER,
-      mediaType: 'MANHWA',
-      status: 'COMPLETED',
-      nsfw: 'NONE',
-      chapters: 200,
-      startDate: '2018-03-04',
-    }),
-    readingState: mockReadingState({
-      id: 7,
-      status: 'READING',
-      chapters: 150,
-      createdAt: '2026-08-19T10:00:00Z',
-      updatedAt: '2026-08-21T10:00:00Z',
-    }),
-  },
-];
+// Client-side filtering/sorting over the full findByUser() result - not paginated, matches the
+// original design ("no estará paginado"). A short debounce just smooths re-renders for fast
+// typers, not throttling an expensive call like catalog's does.
+const SEARCH_DEBOUNCE_MS = 250;
 
 // Floored at 0: readingState.chapters (last chapter read) can legitimately end up ahead of
 // comic.chapters (total known) if the comic's own chapter count is stale/under-reported.
-function pendingChapters(entry: LibraryEntry): number {
+function pendingChapters(entry: ReadingStateWithComic): number {
   return entry.comic.chapters !== null ? Math.max(0, entry.comic.chapters - entry.readingState.chapters) : 0;
 }
 
@@ -202,7 +48,7 @@ function compareNullable<T>(a: T | null, b: T | null, compare: (a: T, b: T) => n
   return compare(a, b);
 }
 
-function compareEntries(a: LibraryEntry, b: LibraryEntry, field: LibrarySortField): number {
+function compareEntries(a: ReadingStateWithComic, b: ReadingStateWithComic, field: LibrarySortField): number {
   switch (field) {
     case 'TITLE':
       return a.comic.title.localeCompare(b.comic.title);
@@ -219,7 +65,7 @@ function compareEntries(a: LibraryEntry, b: LibraryEntry, field: LibrarySortFiel
   }
 }
 
-function sortEntries(entries: LibraryEntry[], field: LibrarySortField, direction: SortDirection): LibraryEntry[] {
+function sortEntries(entries: ReadingStateWithComic[], field: LibrarySortField, direction: SortDirection): ReadingStateWithComic[] {
   const multiplier = direction === 'DESC' ? -1 : 1;
   return [...entries].sort((a, b) => multiplier * compareEntries(a, b, field));
 }
@@ -231,6 +77,7 @@ const NSFW_RANK: Record<NsfwRating, number> = { NONE: 0, SUGGESTIVE: 1, EXPLICIT
 
 function LibraryPage() {
   const { t } = useTranslation();
+  const isMobile = useMediaQuery(MOBILE_QUERY);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const query = searchParams.get('q') ?? '';
@@ -291,8 +138,47 @@ function LibraryPage() {
     updateParams({ dir: value === DEFAULT_SORT_DIRECTION ? null : value });
   }
 
-  const entries = useMemo(() => {
-    const filtered = MOCK_ENTRIES.filter((entry) => {
+  const [entries, setEntries] = useState<ReadingStateWithComic[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsLoading(true);
+    setHasError(false);
+    findByUser({ signal: controller.signal })
+      .then(setEntries)
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+        setHasError(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  const handleEntryUpdated = useCallback((comicSlug: string, readingState: ReadingState) => {
+    setEntries((previous) =>
+      previous.map((entry) => (entry.comic.slug === comicSlug ? { ...entry, readingState } : entry)),
+    );
+  }, []);
+
+  const handleEntryRemoved = useCallback((comicSlug: string) => {
+    setEntries((previous) => previous.filter((entry) => entry.comic.slug !== comicSlug));
+  }, []);
+
+  const filteredEntries = useMemo(() => {
+    const filtered = entries.filter((entry) => {
       const titles = [entry.comic.title, ...entry.comic.alternativeTitles];
       if (!matchesSearch(titles, query)) return false;
       if (readingStatus && entry.readingState.status !== readingStatus) return false;
@@ -303,7 +189,83 @@ function LibraryPage() {
       return true;
     });
     return sortEntries(filtered, sortField, sortDirection);
-  }, [query, readingStatus, pendingOnly, mediaType, publicationStatus, nsfw, sortField, sortDirection]);
+  }, [entries, query, readingStatus, pendingOnly, mediaType, publicationStatus, nsfw, sortField, sortDirection]);
+
+  const filtersProps = {
+    readingStatus,
+    pendingOnly,
+    mediaType,
+    publicationStatus,
+    nsfw,
+    sortField,
+    sortDirection,
+    onReadingStatusChange: handleReadingStatusChange,
+    onPendingOnlyChange: handlePendingOnlyChange,
+    onMediaTypeChange: handleMediaTypeChange,
+    onPublicationStatusChange: handlePublicationStatusChange,
+    onNsfwChange: handleNsfwChange,
+    onSortFieldChange: handleSortFieldChange,
+    onSortDirectionChange: handleSortDirectionChange,
+  };
+
+  function renderFilters() {
+    if (isMobile) {
+      return (
+        <Drawer>
+          <DrawerTrigger render={<Button type="button" variant="outline" className="mt-3" />}>
+            <SlidersHorizontal className="size-4" />
+            {t('library.filters.trigger')}
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>{t('library.filters.trigger')}</DrawerTitle>
+            </DrawerHeader>
+            <div className="overflow-y-auto px-4 pb-4">
+              <LibraryFilters {...filtersProps} alignSelectWithTrigger={false} />
+            </div>
+            <DrawerFooter>
+              <DrawerClose render={<Button type="button" size="lg" variant="outline" />}>
+                {t('common.close')}
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      );
+    }
+
+    return <LibraryFilters {...filtersProps} />;
+  }
+
+  function renderEntries() {
+    if (isLoading) {
+      return (
+        <div className="mt-6 flex justify-center">
+          <Spinner className="size-6" aria-label={t('catalog.loading')} />
+        </div>
+      );
+    }
+
+    if (hasError) {
+      return <p className="mt-6 text-center text-sm text-destructive">{t('library.loadError')}</p>;
+    }
+
+    if (filteredEntries.length === 0) {
+      return <p className="mt-6 text-sm text-muted-foreground">{t('library.empty')}</p>;
+    }
+
+    return (
+      <div className="mt-6 grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+        {filteredEntries.map((entry) => (
+          <LibraryComicCard
+            key={entry.comic.slug}
+            entry={entry}
+            onUpdated={handleEntryUpdated}
+            onRemoved={handleEntryRemoved}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
@@ -314,31 +276,8 @@ function LibraryPage() {
         placeholder={t('library.searchPlaceholder')}
         debounceMs={SEARCH_DEBOUNCE_MS}
       />
-      <LibraryFilters
-        readingStatus={readingStatus}
-        pendingOnly={pendingOnly}
-        mediaType={mediaType}
-        publicationStatus={publicationStatus}
-        nsfw={nsfw}
-        sortField={sortField}
-        sortDirection={sortDirection}
-        onReadingStatusChange={handleReadingStatusChange}
-        onPendingOnlyChange={handlePendingOnlyChange}
-        onMediaTypeChange={handleMediaTypeChange}
-        onPublicationStatusChange={handlePublicationStatusChange}
-        onNsfwChange={handleNsfwChange}
-        onSortFieldChange={handleSortFieldChange}
-        onSortDirectionChange={handleSortDirectionChange}
-      />
-      {entries.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">{t('library.empty')}</p>
-      ) : (
-        <div className="mt-6 grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-          {entries.map((entry) => (
-            <LibraryComicCard key={entry.comic.slug} entry={entry} />
-          ))}
-        </div>
-      )}
+      {renderFilters()}
+      {renderEntries()}
     </div>
   );
 }

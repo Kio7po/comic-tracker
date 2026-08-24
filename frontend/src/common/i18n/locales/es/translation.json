@@ -1,6 +1,7 @@
 {
   "common": {
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "close": "Cerrar"
   },
   "nav": {
     "home": "Inicio",
@@ -14,8 +15,10 @@
   "library": {
     "title": "Biblioteca",
     "empty": "Todavía no hay nada aquí.",
+    "loadError": "Ha ocurrido un error al cargar tu biblioteca.",
     "searchPlaceholder": "Buscar…",
     "filters": {
+      "trigger": "Filtros",
       "status": "Estado de lectura",
       "allStatuses": "Cualquier estado",
       "pendingOnly": "Solo sin leer",
@@ -159,7 +162,8 @@
         "DROPPED": "Abandonado"
       },
       "errors": {
-        "generic": "No se pudieron guardar los cambios. Inténtalo de nuevo."
+        "generic": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+        "alreadyRemoved": "Ya quitado de tu biblioteca."
       }
     },
     "synopsis": "Sinopsis",

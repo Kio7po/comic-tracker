@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 import { register } from '@/services/user/api/auth';
-import { ApiError } from '@/common/api/ApiError';
-import { ProblemType } from '@/common/api/ProblemType';
+import { ApiError, ProblemType } from '@/common/api';
 import { appendFromParam } from '@/common/lib/authRedirect';
 import { Button } from '@/common/components/ui/button';
 import {

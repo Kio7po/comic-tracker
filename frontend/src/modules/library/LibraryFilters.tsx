@@ -66,6 +66,9 @@ interface LibraryFiltersProps {
   onNsfwChange: (value: NsfwRating | undefined) => void;
   onSortFieldChange: (value: LibrarySortField) => void;
   onSortDirectionChange: (value: SortDirection) => void;
+  // Base UI's Select has a real bug combining this with a modal focus trap,
+  // callers rendering these Selects inside a Drawer/Dialog must pass false.
+  alignSelectWithTrigger?: boolean;
 }
 
 function LibraryFilters({
@@ -83,6 +86,7 @@ function LibraryFilters({
   onNsfwChange,
   onSortFieldChange,
   onSortDirectionChange,
+  alignSelectWithTrigger = true,
 }: Readonly<LibraryFiltersProps>) {
   const { t } = useTranslation();
 
@@ -111,7 +115,7 @@ function LibraryFilters({
         <SelectTrigger>
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
           <SelectGroup>
             <SelectLabel>{t('library.filters.status')}</SelectLabel>
             {readingStatuses.map((item) => (
@@ -130,7 +134,7 @@ function LibraryFilters({
         <SelectTrigger>
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.type')}</SelectLabel>
             {mediaTypes.map((item) => (
@@ -149,7 +153,7 @@ function LibraryFilters({
         <SelectTrigger>
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.status')}</SelectLabel>
             {publicationStatuses.map((item) => (
@@ -168,7 +172,7 @@ function LibraryFilters({
         <SelectTrigger>
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.nsfw')}</SelectLabel>
             {nsfwRatings.map((item) => (
@@ -199,7 +203,7 @@ function LibraryFilters({
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
             <SelectGroup>
               <SelectLabel>{t('library.filters.sortBy')}</SelectLabel>
               {sortFields.map((item) => (

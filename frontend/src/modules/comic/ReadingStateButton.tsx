@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
-import { BookmarkPlus } from 'lucide-react';
+import { BookmarkCheck, BookmarkPlus } from 'lucide-react';
 import { create, getByComic } from '@/services/readingState/api/readingState';
 import type { ReadingState } from '@/services/readingState/types';
 import type { ComicSummary } from '@/services/comic/types';
 import { useAuth } from '@/common/components/AuthProvider';
 import { appendFromParam } from '@/common/lib/authRedirect';
-import { ApiError } from '@/common/api/ApiError';
-import { ProblemType } from '@/common/api/ProblemType';
+import { ApiError, ProblemType } from '@/common/api';
 import { Button } from '@/common/components/ui/button';
 import { Spinner } from '@/common/components/ui/spinner';
 import { toast } from '@/common/components/ui/toast';
@@ -32,6 +31,7 @@ function ReadingStateButton({ comic }: Readonly<ReadingStateButtonProps>) {
   const [readingState, setReadingState] = useState<ReadingState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -102,12 +102,20 @@ function ReadingStateButton({ comic }: Readonly<ReadingStateButtonProps>) {
 
   if (readingState) {
     return (
-      <EditReadingStateDialog
-        comic={comic}
-        readingState={readingState}
-        onUpdated={setReadingState}
-        onRemoved={() => setReadingState(null)}
-      />
+      <>
+        <Button type="button" variant="outline" className="mt-4 w-full" onClick={() => setIsEditDialogOpen(true)}>
+          <BookmarkCheck className="size-4" />
+          {t('detail.editLibrary')}
+        </Button>
+        <EditReadingStateDialog
+          comic={comic}
+          readingState={readingState}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onUpdated={setReadingState}
+          onRemoved={() => setReadingState(null)}
+        />
+      </>
     );
   }
 

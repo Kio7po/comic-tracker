@@ -4,8 +4,7 @@ import { TriangleAlert } from 'lucide-react';
 import { submit } from '@/services/source/api/readingEntry';
 import { findByStatusIn } from '@/services/source/api/readingSource';
 import type { ComicReadingEntry } from '@/services/source/types';
-import { ApiError } from '@/common/api/ApiError';
-import { ProblemType } from '@/common/api/ProblemType';
+import { ApiError, ProblemType } from '@/common/api';
 import { createLanguageNameFormatter } from '@/common/lib/languageName';
 import { Button } from '@/common/components/ui/button';
 import {

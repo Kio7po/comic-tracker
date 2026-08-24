@@ -1,6 +1,7 @@
 {
   "common": {
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "close": "Close"
   },
   "nav": {
     "home": "Home",
@@ -14,8 +15,10 @@
   "library": {
     "title": "Library",
     "empty": "Nothing here yet.",
+    "loadError": "Something went wrong loading your library.",
     "searchPlaceholder": "Search…",
     "filters": {
+      "trigger": "Filters",
       "status": "Reading Status",
       "allStatuses": "Any status",
       "pendingOnly": "Unread only",
@@ -159,7 +162,8 @@
         "DROPPED": "Dropped"
       },
       "errors": {
-        "generic": "Couldn't save your changes. Try again."
+        "generic": "Couldn't save your changes. Try again.",
+        "alreadyRemoved": "Already removed from your library."
       }
     },
     "synopsis": "Synopsis",
