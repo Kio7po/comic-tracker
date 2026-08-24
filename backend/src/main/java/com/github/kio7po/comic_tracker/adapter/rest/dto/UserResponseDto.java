@@ -7,5 +7,8 @@ public record UserResponseDto(
         String username,
         String email,
         String displayName,
+        String biography,
+        String pictureUrl,
+        String locale,
         UserRole role) {
 }

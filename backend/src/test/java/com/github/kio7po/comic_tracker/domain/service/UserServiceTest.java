@@ -151,6 +151,51 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.findById(1L)).isInstanceOf(InvalidCredentialsException.class);
     }
 
+    // ─── updateProfile ──────────────────────────────────────────
+
+    @Test
+    void updateProfileReplacesDisplayNameBiographyPictureUrlAndLocale() {
+        User user = existingUser();
+        user.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = userService.updateProfile(1L, "New Name", "New bio", "https://example.com/pic.png", "en-US");
+
+        assertThat(result.getDisplayName()).isEqualTo("New Name");
+        assertThat(result.getBiography()).isEqualTo("New bio");
+        assertThat(result.getPictureUrl()).isEqualTo("https://example.com/pic.png");
+        assertThat(result.getLocale()).isEqualTo("en-US");
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateProfileClearsOptionalFieldsWhenGivenNull() {
+        User user = existingUser();
+        user.setId(1L);
+        user.setBiography("Old bio");
+        user.setPictureUrl("https://example.com/old.png");
+        user.setLocale("es-ES");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = userService.updateProfile(1L, "New Name", null, null, null);
+
+        assertThat(result.getBiography()).isNull();
+        assertThat(result.getPictureUrl()).isNull();
+        assertThat(result.getLocale()).isNull();
+    }
+
+    @Test
+    void updateProfileThrowsInvalidCredentialsExceptionWhenUserNotFound() {
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.updateProfile(1L, "New Name", null, null, null))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        verify(userRepository, never()).save(any());
+    }
+
     // ─── login ──────────────────────────────────────────────────
 
     @Test

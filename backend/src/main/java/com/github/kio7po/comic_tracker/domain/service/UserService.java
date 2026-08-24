@@ -73,6 +73,22 @@ public class UserService {
         return userRepository.findById(id).orElseThrow(InvalidCredentialsException::new);
     }
 
+    /**
+     * @param biography {@code null} clears the stored value.
+     * @param pictureUrl {@code null} clears the stored value.
+     * @param locale {@code null} clears the stored value.
+     */
+    @Transactional
+    public User updateProfile(Long userId, String displayName, @Nullable String biography,
+            @Nullable String pictureUrl, @Nullable String locale) {
+        User user = findById(userId);
+        user.setDisplayName(displayName);
+        user.setBiography(biography);
+        user.setPictureUrl(pictureUrl);
+        user.setLocale(locale);
+        return userRepository.save(user);
+    }
+
     @Transactional
     public TokenPair login(String usernameOrEmail, String rawPassword, boolean rememberMe) {
         User user = userRepository.findByUsername(usernameOrEmail)
