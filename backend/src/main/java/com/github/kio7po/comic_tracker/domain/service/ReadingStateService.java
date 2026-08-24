@@ -3,6 +3,7 @@ package com.github.kio7po.comic_tracker.domain.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +35,8 @@ public class ReadingStateService {
      * @param chapters must be non-negative.
      */
     @Transactional
-    public ReadingState create(Long userId, Long comicId, ReadingStateStatus status, int chapters) {
+    public ReadingState create(Long userId, Long comicId, ReadingStateStatus status, int chapters,
+            @Nullable String notes) {
         User user = userService.findById(userId);
         Comic comic = comicRepository.findById(comicId).orElseThrow(() -> new ComicNotFoundException(comicId));
 
@@ -47,6 +49,7 @@ public class ReadingStateService {
         readingState.setComic(comic);
         readingState.setStatus(status);
         readingState.setChapters(chapters);
+        readingState.setNotes(notes);
 
         return readingStateRepository.save(readingState);
     }
@@ -64,15 +67,17 @@ public class ReadingStateService {
 
     /**
      * Replaces the full mutable state of an existing {@link ReadingState} in one call — the caller
-     * sends the complete new state (status and chapters) rather than incremental deltas.
+     * sends the complete new state (status, chapters and notes) rather than incremental deltas.
      *
      * @param chapters must be non-negative.
      */
     @Transactional
-    public ReadingState update(Long userId, Long comicId, ReadingStateStatus status, int chapters) {
+    public ReadingState update(Long userId, Long comicId, ReadingStateStatus status, int chapters,
+            @Nullable String notes) {
         ReadingState readingState = findExisting(userId, comicId);
         readingState.setStatus(status);
         readingState.setChapters(chapters);
+        readingState.setNotes(notes);
 
         return readingStateRepository.save(readingState);
     }

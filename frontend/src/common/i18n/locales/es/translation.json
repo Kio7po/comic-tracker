@@ -1,11 +1,47 @@
 {
+  "common": {
+    "cancel": "Cancelar",
+    "close": "Cerrar"
+  },
   "nav": {
     "home": "Inicio",
     "browse": "Buscar",
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
     "loggedInAs": "Sesión iniciada como",
-    "moderation": "Moderación"
+    "moderation": "Moderación",
+    "library": "Biblioteca"
+  },
+  "library": {
+    "title": "Biblioteca",
+    "empty": "Todavía no hay nada aquí.",
+    "loadError": "Ha ocurrido un error al cargar tu biblioteca.",
+    "searchPlaceholder": "Buscar…",
+    "filters": {
+      "trigger": "Filtros",
+      "status": "Estado de lectura",
+      "allStatuses": "Cualquier estado",
+      "pendingOnly": "Solo sin leer",
+      "sortBy": "Ordenar por",
+      "sortAsc": "Ascendente",
+      "sortDesc": "Descendente"
+    },
+    "sort": {
+      "TITLE": "Título",
+      "RELEASE_DATE": "Fecha de publicación",
+      "TOTAL_CHAPTERS": "Capítulos totales",
+      "UNREAD_CHAPTERS": "Capítulos sin leer",
+      "CREATED_AT": "Fecha de añadido",
+      "UPDATED_AT": "Última lectura"
+    },
+    "actions": {
+      "trigger": "Acciones rápidas",
+      "save": "Guardar",
+      "viewDetails": "Ver detalles",
+      "share": "Compartir",
+      "shareSuccess": "Enlace copiado al portapapeles.",
+      "remove": "Quitar"
+    }
   },
   "footer": {
     "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
@@ -18,7 +54,7 @@
     "importError": "No se ha podido abrir este cómic. Inténtalo de nuevo.",
     "filters": {
       "type": "Tipo",
-      "status": "Estado",
+      "status": "Estado de publicación",
       "nsfw": "NSFW",
       "allTypes": "Cualquier tipo",
       "allStatuses": "Cualquier estado",
@@ -100,7 +136,36 @@
   },
   "detail": {
     "addToLibrary": "Añadir a la biblioteca",
+    "addingToLibrary": "Añadiendo…",
+    "editLibrary": "Editar",
+    "alreadyInLibrary": "Ya tenías esto en tu biblioteca.",
     "chapters": "Capítulos",
+    "readingState": {
+      "title": "Editar progreso de lectura",
+      "status": "Estado",
+      "chaptersRead": "Último Capítulo Leído",
+      "notes": "Notas",
+      "notesPlaceholder": "Escribe tus notas aquí.",
+      "resetChapters": "Poner a 0",
+      "setToMaxChapters": "Poner al máximo de capítulos",
+      "update": "Actualizar",
+      "updating": "Actualizando…",
+      "remove": "Quitar de la biblioteca",
+      "removing": "Quitando…",
+      "removeConfirmTitle": "¿Quitar de la biblioteca?",
+      "removeConfirmDescription": "Esto eliminará tu progreso de lectura y tus notas de este cómic. No se puede deshacer.",
+      "statuses": {
+        "READING": "Leyendo",
+        "COMPLETED": "Completado",
+        "ON_HOLD": "En pausa",
+        "PLAN_TO_READ": "Quiero leer",
+        "DROPPED": "Abandonado"
+      },
+      "errors": {
+        "generic": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+        "alreadyRemoved": "Ya quitado de tu biblioteca."
+      }
+    },
     "synopsis": "Sinopsis",
     "noSynopsis": "No hay sinopsis disponible.",
     "expandSynopsis": "Expandir sinopsis",
@@ -157,7 +222,8 @@
     "somethingWentWrong": "Algo ha ido mal.",
     "notFound": "No hemos encontrado lo que buscabas.",
     "notAuthorized": "No tienes permiso para ver esta página.",
-    "generic": "Ha ocurrido un error al cargar la página."
+    "generic": "Ha ocurrido un error al cargar la página.",
+    "actionFailed": "Algo ha ido mal. Inténtalo de nuevo."
   },
   "moderation": {
     "title": "Moderación",
@@ -168,6 +234,10 @@
     "empty": "No hay elementos pendientes de revisar.",
     "approve": "Aprobar",
     "reject": "Rechazar",
+    "rejectConfirmTitle": "¿Rechazar esta entrada?",
+    "rejectConfirmDescription": "No se puede deshacer una vez confirmado.",
+    "rejectSourceConfirmTitle": "¿Rechazar esta fuente?",
+    "rejectSourceConfirmDescription": "Esto también rechazará cualquier entrada todavía pendiente enviada para esta fuente. No se puede deshacer.",
     "actionError": "No se ha podido completar la acción. Inténtalo de nuevo.",
     "sourceNotApprovedError": "No se puede aprobar: la fuente de este enlace todavía no está aprobada.",
     "alreadyReviewedError": "Ya ha sido revisado por otra persona.",

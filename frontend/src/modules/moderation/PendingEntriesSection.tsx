@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { approve, findByStatusIn, reject } from '@/services/source/api/readingEntry';
 import type { ComicReadingEntryModeration } from '@/services/source/types';
-import { ApiError } from '@/common/api/ApiError';
-import { ProblemType } from '@/common/api/ProblemType';
+import { ApiError, ProblemType } from '@/common/api';
 import { formatDate } from '@/common/lib/formatDate';
 import { languageName } from '@/common/lib/languageName';
+import ConfirmDialog from '@/common/components/ConfirmDialog';
 import ExternalLink from '@/common/components/ExternalLink';
 import { Button } from '@/common/components/ui/button';
 import { Card, CardContent } from '@/common/components/ui/card';
@@ -35,6 +35,7 @@ function PendingEntriesSection() {
   const [pendingActionId, setPendingActionId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<ComicReadingEntryModeration | null>(null);
+  const [isRejectConfirmOpen, setIsRejectConfirmOpen] = useState(false);
   // Bumped after approving/rejecting/dropping an item to force a refetch of the current page
   // without changing `page` itself (see refreshAfterRemoval below).
   const [refreshToken, setRefreshToken] = useState(0);
@@ -125,6 +126,7 @@ function PendingEntriesSection() {
   }
 
   async function handleReject(id: number) {
+    setIsRejectConfirmOpen(false);
     setActionError(null);
     setPendingActionId(id);
     try {
@@ -284,7 +286,7 @@ function PendingEntriesSection() {
                 <Button
                   variant="destructive"
                   disabled={pendingActionId === selectedEntry.entry.id}
-                  onClick={() => handleReject(selectedEntry.entry.id)}
+                  onClick={() => setIsRejectConfirmOpen(true)}
                 >
                   {t('moderation.reject')}
                 </Button>
@@ -293,6 +295,15 @@ function PendingEntriesSection() {
           )}
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={isRejectConfirmOpen}
+        onOpenChange={setIsRejectConfirmOpen}
+        title={t('moderation.rejectConfirmTitle')}
+        description={t('moderation.rejectConfirmDescription')}
+        confirmLabel={t('moderation.reject')}
+        isConfirming={selectedEntry !== null && pendingActionId === selectedEntry.entry.id}
+        onConfirm={() => selectedEntry && handleReject(selectedEntry.entry.id)}
+      />
     </>
   );
 }

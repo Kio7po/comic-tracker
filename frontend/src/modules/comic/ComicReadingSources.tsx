@@ -81,19 +81,24 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
               href={entry.url}
               className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted"
             >
-              <span className="flex items-center gap-2 font-medium text-foreground">
+              <span className="flex min-w-0 items-center gap-2">
                 {entry.source.iconUrl && (
-                  <img src={entry.source.iconUrl} alt="" className="size-6 rounded-md" />
+                  <img src={entry.source.iconUrl} alt="" className="size-8 shrink-0 rounded-md" />
                 )}
-                {entry.source.name}
-                {entry.status === 'PENDING' && (
-                  <Tooltip>
-                    <TooltipTrigger render={<span tabIndex={0} className="inline-flex text-amber-500" />}>
-                      <TriangleAlert className="size-4" />
-                    </TooltipTrigger>
-                    <TooltipContent>{t('detail.pendingTooltip')}</TooltipContent>
-                  </Tooltip>
-                )}
+                <span className="flex min-w-0 flex-col">
+                  <span className="flex items-center gap-2 font-medium text-foreground">
+                    {entry.source.name}
+                    {entry.status === 'PENDING' && (
+                      <Tooltip>
+                        <TooltipTrigger render={<span tabIndex={0} className="inline-flex text-amber-500" />}>
+                          <TriangleAlert className="size-4" />
+                        </TooltipTrigger>
+                        <TooltipContent>{t('detail.pendingTooltip')}</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">{entry.url}</span>
+                </span>
               </span>
               <span className="flex items-center gap-2 text-muted-foreground">
                 <Badge variant="outline">{languageLabel(entry.locale)}</Badge>

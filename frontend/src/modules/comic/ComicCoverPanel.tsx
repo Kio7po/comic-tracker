@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Activity, BookmarkPlus, BookOpen, Layers, ShieldAlert } from 'lucide-react';
+import { Activity, BookOpen, Layers, ShieldAlert } from 'lucide-react';
 import { Card, CardContent } from '@/common/components/ui/card';
-import { Button } from '@/common/components/ui/button';
 import type { Comic } from '@/services/comic/types';
+import ReadingStateButton from './ReadingStateButton';
 
 interface ComicCoverPanelProps {
   comic: Comic;
@@ -20,10 +20,7 @@ function ComicCoverPanel({ comic }: Readonly<ComicCoverPanelProps>) {
           <div className="aspect-2/3 w-full bg-muted" />
         )}
       </Card>
-      <Button type="button" className="mt-4 w-full">
-        <BookmarkPlus className="size-4" />
-        {t('detail.addToLibrary')}
-      </Button>
+      <ReadingStateButton comic={comic} />
       <Card className="mt-4">
         <CardContent className="grid grid-cols-4 gap-4 text-sm sm:flex sm:flex-col sm:gap-3">
           <div className="flex flex-col items-center gap-1 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">

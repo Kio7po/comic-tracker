@@ -48,7 +48,8 @@ public class ReadingStateController {
     public ResponseEntity<ReadingStateResponseDto> create(@PathVariable String slug,
             @Valid @RequestBody ReadingStateRequestDto request, @CurrentUser Long userId) {
         return comicService.findBySlug(slug)
-                .map(comic -> readingStateService.create(userId, comic.getId(), request.status(), request.chapters()))
+                .map(comic -> readingStateService.create(userId, comic.getId(), request.status(), request.chapters(),
+                        request.notes()))
                 .map(readingState -> ResponseEntity.status(HttpStatus.CREATED)
                         .body(ReadingStateMapper.toResponseDto(readingState)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -58,7 +59,8 @@ public class ReadingStateController {
     public ResponseEntity<ReadingStateResponseDto> update(@PathVariable String slug,
             @Valid @RequestBody ReadingStateRequestDto request, @CurrentUser Long userId) {
         return comicService.findBySlug(slug)
-                .map(comic -> readingStateService.update(userId, comic.getId(), request.status(), request.chapters()))
+                .map(comic -> readingStateService.update(userId, comic.getId(), request.status(), request.chapters(),
+                        request.notes()))
                 .map(ReadingStateMapper::toResponseDto)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());

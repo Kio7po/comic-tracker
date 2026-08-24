@@ -8,6 +8,7 @@ public record ReadingStateResponseDto(
         Long id,
         ReadingStateStatus status,
         int chapters,
+        String notes,
         Instant createdAt,
         Instant updatedAt) {
 }

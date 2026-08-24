@@ -28,6 +28,8 @@ public class ReadingState {
     private ReadingStateStatus status;
     @Column(nullable = false)
     private int chapters;
+    @Column(length = 2048)
+    private String notes;
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "comic_id")
     private Comic comic;
@@ -63,6 +65,14 @@ public class ReadingState {
 
     public void setChapters(int chapters) {
         this.chapters = chapters;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public Comic getComic() {

@@ -67,6 +67,7 @@ class ReadingStateControllerTest {
         readingState.setId(READING_STATE_ID);
         readingState.setStatus(ReadingStateStatus.READING);
         readingState.setChapters(12);
+        readingState.setNotes("Great so far");
         readingState.setComic(comic());
         return readingState;
     }
@@ -122,7 +123,7 @@ class ReadingStateControllerTest {
     @Test
     void createReturnsCreated() throws Exception {
         when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
-        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0))
+        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null))
                 .thenReturn(readingState());
 
         mockMvc.perform(post("/api/comics/{slug}/reading-state", SLUG)
@@ -133,6 +134,21 @@ class ReadingStateControllerTest {
                         """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(READING_STATE_ID));
+    }
+
+    @Test
+    void createForwardsNotesToService() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0,
+                "Recommended by a friend")).thenReturn(readingState());
+
+        mockMvc.perform(post("/api/comics/{slug}/reading-state", SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"status":"PLAN_TO_READ","chapters":0,"notes":"Recommended by a friend"}
+                        """))
+                .andExpect(status().isCreated());
     }
 
     @Test
@@ -173,7 +189,7 @@ class ReadingStateControllerTest {
     @Test
     void createReturnsConflictWhenAlreadyTracked() throws Exception {
         when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
-        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0))
+        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null))
                 .thenThrow(new ReadingStateAlreadyExistsException(USER_ID, COMIC_ID));
 
         mockMvc.perform(post("/api/comics/{slug}/reading-state", SLUG)
@@ -199,7 +215,7 @@ class ReadingStateControllerTest {
     @Test
     void updateReturnsOk() throws Exception {
         when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
-        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12))
+        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12, null))
                 .thenReturn(readingState());
 
         mockMvc.perform(put("/api/comics/{slug}/reading-state", SLUG)
@@ -228,7 +244,7 @@ class ReadingStateControllerTest {
     @Test
     void updateReturnsNotFoundWhenNotTracked() throws Exception {
         when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
-        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12))
+        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12, null))
                 .thenThrow(new ReadingStateNotFoundException(USER_ID, COMIC_ID));
 
         mockMvc.perform(put("/api/comics/{slug}/reading-state", SLUG)

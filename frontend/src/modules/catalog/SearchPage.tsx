@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { search } from '@/services/comic/api/catalog';
 import type { ComicMediaType, ComicSearchResult, ComicStatus, NsfwRating } from '@/services/comic/types';
-import SearchBar from './SearchBar';
+import SearchBar from '@/common/components/SearchBar';
 import SearchFilters, { LIMIT_OPTIONS } from './SearchFilters';
 import SearchResults from './SearchResults';
 import SearchPagination from './SearchPagination';
@@ -10,6 +11,7 @@ import SearchPagination from './SearchPagination';
 const DEFAULT_LIMIT = 24;
 
 function SearchPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
@@ -102,7 +104,7 @@ function SearchPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <SearchBar value={keywords} onChange={handleKeywordsChange} />
+      <SearchBar value={keywords} onChange={handleKeywordsChange} placeholder={t('catalog.searchPlaceholder')} />
       <SearchFilters
         type={type}
         status={status}
