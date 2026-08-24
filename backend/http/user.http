@@ -1,0 +1,99 @@
+@host = http://localhost:8080
+@contentType = application/json
+
+### Register a user
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "profileuser",
+  "email": "profileuser@example.com",
+  "password": "password123",
+  "displayName": "Profile User"
+}
+
+### Login as that user
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "usernameOrEmail": "profileuser",
+  "password": "password123",
+  "rememberMe": false
+}
+
+### Me - returns the authenticated user -> 200
+GET {{host}}/api/users/me
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Me - no Authorization header -> 401
+GET {{host}}/api/users/me
+
+### Update profile - full replace of displayName/biography/pictureUrl/locale -> 200
+PUT {{host}}/api/users/me
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "displayName": "Updated Name",
+  "biography": "Just here reading comics.",
+  "pictureUrl": "https://example.com/avatar.png",
+  "locale": "es-ES"
+}
+
+### Update profile - null biography/pictureUrl/locale clears them, not "leave unchanged" -> 200
+PUT {{host}}/api/users/me
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "displayName": "Updated Name"
+}
+
+### Update profile - no Authorization header -> 401
+PUT {{host}}/api/users/me
+Content-Type: {{contentType}}
+
+{
+  "displayName": "Updated Name"
+}
+
+### Update profile - blank displayName -> 400 (@NotBlank)
+PUT {{host}}/api/users/me
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "displayName": ""
+}
+
+### Update profile - blank biography -> 400 (@NotBlankOrNull: blank isn't the same as omitted)
+PUT {{host}}/api/users/me
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "displayName": "Updated Name",
+  "biography": "   "
+}
+
+### Update profile - malformed pictureUrl -> 400 (@URL)
+PUT {{host}}/api/users/me
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "displayName": "Updated Name",
+  "pictureUrl": "not-a-url"
+}
+
+### Update profile - invalid locale -> 400 (@ValidLocale)
+PUT {{host}}/api/users/me
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "displayName": "Updated Name",
+  "locale": "not-a-locale"
+}
