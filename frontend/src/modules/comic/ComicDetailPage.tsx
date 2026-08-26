@@ -27,10 +27,10 @@ function ComicDetailPage() {
     <div className="mx-auto max-w-6xl px-6 py-8">
       <div className="flex flex-col gap-8 lg:flex-row">
         <ComicCoverPanel comic={comic} />
-        <div className="flex flex-1 flex-col gap-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-6">
           <ComicHeader comic={comic} />
           <div className="flex flex-col gap-6 lg:flex-row">
-            <div className="flex flex-1 flex-col gap-6">
+            <div className="flex min-w-0 flex-1 flex-col gap-6">
               <ComicSynopsis synopsis={comic.synopsis} />
               <ComicReadingSources comicSlug={comic.slug} />
             </div>

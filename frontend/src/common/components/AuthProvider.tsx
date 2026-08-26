@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { login as apiLogin, logout as apiLogout, me } from '@/services/user/api/auth';
+import { login as apiLogin, logout as apiLogout } from '@/services/user/api/auth';
+import { me } from '@/services/user/api/user';
 import type { LoginRequest, UserResponse } from '@/services/user/types';
 
 interface AuthContextValue {
@@ -7,6 +8,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (request: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (user: UserResponse) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -39,12 +41,18 @@ function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setUser(null);
   }, []);
 
+  // setUser ya es una referencia estable (la garantiza useState), así que updateUser no
+  // necesita su propio useCallback - se reexpone directamente con el nombre que espera el
+  // contexto. A diferencia de login/logout, quien llama a updateUser (p. ej. la pantalla de
+  // ajustes) hace su propia llamada a la API y solo usa esto para sincronizar el resultado.
+  const updateUser = setUser;
+
   // useMemo para crear una referencia estable al objeto que solo cambie si
   // realmente cambian sus valores. De esta manera evitamos que el objeto cambie
   // en cada render y cause actualizaciones innecesarias en los consumers.
   const value = useMemo(
-    () => ({user, isLoading, login, logout}),
-    [user, isLoading, login, logout]
+    () => ({user, isLoading, login, logout, updateUser}),
+    [user, isLoading, login, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

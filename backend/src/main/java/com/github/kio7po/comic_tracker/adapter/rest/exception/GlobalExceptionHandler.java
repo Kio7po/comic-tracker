@@ -19,6 +19,8 @@ import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingSo
 import com.github.kio7po.comic_tracker.domain.exceptions.EmailAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.InvalidCredentialsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.InvalidRefreshTokenException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ReadingStateAlreadyExistsException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ReadingStateNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.UnsupportedMetadataSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.UsernameAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.WeakPasswordException;
@@ -99,6 +101,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ComicReadingSourceAlreadyReviewedException.class)
     public ProblemDetail handleComicReadingSourceAlreadyReviewed(ComicReadingSourceAlreadyReviewedException ex) {
         return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.READING_SOURCE_ALREADY_REVIEWED);
+    }
+
+    @ExceptionHandler(ReadingStateNotFoundException.class)
+    public ProblemDetail handleReadingStateNotFound(ReadingStateNotFoundException ex) {
+        return problem(HttpStatus.NOT_FOUND, ex.getMessage(), ProblemType.READING_STATE_NOT_FOUND);
+    }
+
+    @ExceptionHandler(ReadingStateAlreadyExistsException.class)
+    public ProblemDetail handleReadingStateAlreadyExists(ReadingStateAlreadyExistsException ex) {
+        return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.READING_STATE_ALREADY_EXISTS);
     }
 
     private static ProblemDetail problem(HttpStatus status, String detail, String type) {

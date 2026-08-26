@@ -5,5 +5,8 @@ export interface UserResponse {
   username: string;
   email: string;
   displayName: string;
+  biography: string | null;
+  pictureUrl: string | null;
+  locale: string | null;
   role: UserRole;
 }

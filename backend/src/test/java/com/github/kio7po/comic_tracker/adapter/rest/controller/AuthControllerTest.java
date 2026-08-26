@@ -9,8 +9,6 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,8 +37,8 @@ import com.github.kio7po.comic_tracker.domain.service.UserService;
 import jakarta.servlet.http.Cookie;
 
 // Imports the real SecurityConfig/JwtDecoderConfig rather than faking a permissive chain, so
-// this test reflects actual authorization behavior (register/login/refresh/logout public,
-// /me authenticated) instead of drifting from it silently if those rules ever change.
+// this test reflects actual authorization behavior (register/login/refresh/logout public)
+// instead of drifting from it silently if those rules ever change.
 @WebMvcTest(AuthController.class)
 @Import({ SecurityConfig.class, JwtDecoderConfig.class })
 class AuthControllerTest {
@@ -171,15 +169,6 @@ class AuthControllerTest {
                         """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.type").value(ProblemType.INVALID_CREDENTIALS));
-    }
-
-    @Test
-    void meReturnsAuthenticatedUser() throws Exception {
-        when(userService.findById(1L)).thenReturn(user());
-
-        mockMvc.perform(get("/api/auth/me").with(jwt().jwt(builder -> builder.subject("1"))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("testuser"));
     }
 
     @Test

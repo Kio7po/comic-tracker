@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { approve, findForModerationByStatusIn, reject } from '@/services/source/api/readingSource';
 import type { ComicReadingSourceModeration } from '@/services/source/types';
-import { ApiError } from '@/common/api/ApiError';
-import { ProblemType } from '@/common/api/ProblemType';
+import { ApiError, ProblemType } from '@/common/api';
 import { formatDate } from '@/common/lib/formatDate';
+import ConfirmDialog from '@/common/components/ConfirmDialog';
 import ExternalLink from '@/common/components/ExternalLink';
 import { Button } from '@/common/components/ui/button';
 import { Card, CardContent } from '@/common/components/ui/card';
@@ -27,6 +27,7 @@ function PendingSourcesSection() {
   const [pendingActionId, setPendingActionId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<ComicReadingSourceModeration | null>(null);
+  const [isRejectConfirmOpen, setIsRejectConfirmOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -96,6 +97,7 @@ function PendingSourcesSection() {
   }
 
   async function handleReject(id: number) {
+    setIsRejectConfirmOpen(false);
     setActionError(null);
     setPendingActionId(id);
     try {
@@ -219,7 +221,7 @@ function PendingSourcesSection() {
                 <Button
                   variant="destructive"
                   disabled={pendingActionId === selectedSource.source.id}
-                  onClick={() => handleReject(selectedSource.source.id)}
+                  onClick={() => setIsRejectConfirmOpen(true)}
                 >
                   {t('moderation.reject')}
                 </Button>
@@ -228,6 +230,15 @@ function PendingSourcesSection() {
           )}
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={isRejectConfirmOpen}
+        onOpenChange={setIsRejectConfirmOpen}
+        title={t('moderation.rejectSourceConfirmTitle')}
+        description={t('moderation.rejectSourceConfirmDescription')}
+        confirmLabel={t('moderation.reject')}
+        isConfirming={selectedSource !== null && pendingActionId === selectedSource.source.id}
+        onConfirm={() => selectedSource && handleReject(selectedSource.source.id)}
+      />
     </>
   );
 }

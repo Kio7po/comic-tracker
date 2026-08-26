@@ -25,6 +25,11 @@ function Header() {
         <Link to="/catalog" className={navLinkClass}>
           {t('nav.browse')}
         </Link>
+        {user && (
+          <Link to="/library" className={navLinkClass}>
+            {t('nav.library')}
+          </Link>
+        )}
       </nav>
       {!isLoading &&
         (user ? (

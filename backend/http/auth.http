@@ -66,13 +66,6 @@ Content-Type: {{contentType}}
   "rememberMe": false
 }
 
-### Me - returns the authenticated user, chained from the login request above -> 200
-GET {{host}}/api/auth/me
-Authorization: Bearer {{login.response.body.$.access_token}}
-
-### Me - no Authorization header -> 401
-GET {{host}}/api/auth/me
-
 ### Refresh - reads refresh_token cookie set by the client (login above), rotates it
 POST {{host}}/api/auth/refresh
 

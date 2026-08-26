@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { Input } from '@/common/components/ui/input';
 
-const DEBOUNCE_MS = 400;
+const DEFAULT_DEBOUNCE_MS = 400;
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  placeholder: string;
+  debounceMs?: number;
 }
 
-function SearchBar({ value, onChange }: Readonly<SearchBarProps>) {
-  const { t } = useTranslation();
+function SearchBar({
+  value,
+  onChange,
+  placeholder,
+  debounceMs = DEFAULT_DEBOUNCE_MS,
+}: Readonly<SearchBarProps>) {
   const [inputValue, setInputValue] = useState(value);
   const [previousValue, setPreviousValue] = useState(value);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -35,7 +40,7 @@ function SearchBar({ value, onChange }: Readonly<SearchBarProps>) {
     const next = event.target.value;
     setInputValue(next);
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => onChange(next), DEBOUNCE_MS);
+    debounceRef.current = setTimeout(() => onChange(next), debounceMs);
   }
 
   return (
@@ -43,7 +48,7 @@ function SearchBar({ value, onChange }: Readonly<SearchBarProps>) {
       <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="search"
-        placeholder={t('catalog.searchPlaceholder')}
+        placeholder={placeholder}
         className="pl-8"
         value={inputValue}
         onChange={handleChange}

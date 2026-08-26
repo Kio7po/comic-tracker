@@ -22,6 +22,7 @@ CREATE SEQUENCE IF NOT EXISTS comic_reading_source_seq START WITH 1 INCREMENT BY
 CREATE SEQUENCE IF NOT EXISTS comic_reading_entry_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS app_user_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS refresh_token_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS reading_state_seq START WITH 1 INCREMENT BY 50;
 
 -- ─── Usuario
 
@@ -152,6 +153,24 @@ CREATE TABLE IF NOT EXISTS comic_reading_entry (
     reviewed_at       TIMESTAMPTZ,
     reviewed_by_id    BIGINT REFERENCES app_user (id),
     UNIQUE (comic_id, source_id, url)
+);
+
+-- ─── Seguimiento personal
+
+-- Estado de lectura de un usuario sobre un cómic concreto: no es historial,
+-- es una instantánea del progreso actual (chapters: último capítulo leído,
+-- incrementable/decrementable manualmente). Un usuario tiene como mucho un
+-- reading_state por cómic.
+CREATE TABLE IF NOT EXISTS reading_state (
+    id          BIGINT NOT NULL PRIMARY KEY,
+    status      VARCHAR(255) NOT NULL CHECK (status IN ('READING', 'COMPLETED', 'ON_HOLD', 'PLAN_TO_READ', 'DROPPED')),
+    chapters    INTEGER NOT NULL DEFAULT 0,
+    notes       VARCHAR(2048),
+    comic_id    BIGINT NOT NULL REFERENCES comic (id),
+    user_id     BIGINT NOT NULL REFERENCES app_user (id),
+    created_at  TIMESTAMPTZ NOT NULL,
+    updated_at  TIMESTAMPTZ NOT NULL,
+    UNIQUE (comic_id, user_id)
 );
 
 -- ─── Relaciones muchos-a-muchos de Comic

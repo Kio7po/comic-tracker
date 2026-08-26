@@ -27,9 +27,10 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                     // matches rules top-to-bottom, first match wins.
-                    .requestMatchers("/api/auth/me").authenticated()
+                    .requestMatchers("/api/users/me").authenticated()
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/catalog/**").permitAll()
+                    .requestMatchers("/api/comics/*/reading-state").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/comics/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/reading-sources").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/moderation/reading-sources",
@@ -39,6 +40,7 @@ public class SecurityConfig {
                             "/api/reading-entries/*/reject").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.POST, "/api/reading-sources/*/approve",
                             "/api/reading-sources/*/reject").hasRole("ADMIN")
+                    .requestMatchers("/api/reading-states").authenticated()
                     .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/scalar/**").permitAll()
                     .anyRequest().denyAll())
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(

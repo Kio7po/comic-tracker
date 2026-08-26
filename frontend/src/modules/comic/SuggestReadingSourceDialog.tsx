@@ -4,8 +4,8 @@ import { TriangleAlert } from 'lucide-react';
 import { submit } from '@/services/source/api/readingEntry';
 import { findByStatusIn } from '@/services/source/api/readingSource';
 import type { ComicReadingEntry } from '@/services/source/types';
-import { ApiError } from '@/common/api/ApiError';
-import { ProblemType } from '@/common/api/ProblemType';
+import { ApiError, ProblemType } from '@/common/api';
+import { LANGUAGE_CODES } from '@/common/lib/languageCodes';
 import { createLanguageNameFormatter } from '@/common/lib/languageName';
 import { Button } from '@/common/components/ui/button';
 import {
@@ -38,13 +38,6 @@ interface Option {
 interface SourceOption extends Option {
   isPending: boolean;
 }
-
-// Language of the translation, not a specific country/region, hence no ISO 3166 region codes here
-// even though the backend's ValidLocale also accepts them (e.g. "es-ES").
-const LANGUAGE_CODES = [
-  'en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ru',
-  'ar', 'hi', 'th', 'vi', 'id', 'tr', 'pl', 'nl', 'sv', 'uk',
-];
 
 type Mode = 'existing' | 'new';
 

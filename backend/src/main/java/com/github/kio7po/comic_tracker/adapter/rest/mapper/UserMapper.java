@@ -10,7 +10,7 @@ public final class UserMapper {
 
     public static UserResponseDto toResponseDto(User user) {
         return new UserResponseDto(user.getId(), user.getUsername(), user.getEmail(), user.getDisplayName(),
-                user.getRole());
+                user.getBiography(), user.getPictureUrl(), user.getLocale(), user.getRole());
     }
 
 }

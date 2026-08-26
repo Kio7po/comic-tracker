@@ -1,11 +1,50 @@
 {
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close"
+  },
   "nav": {
     "home": "Home",
     "browse": "Browse",
     "login": "Log in",
     "logout": "Log out",
     "loggedInAs": "Logged in as",
-    "moderation": "Moderation"
+    "moderation": "Moderation",
+    "library": "Library",
+    "settings": "Settings"
+  },
+  "library": {
+    "title": "Library",
+    "empty": "Nothing here yet.",
+    "filteredEmpty": "No comics match the selected filters.",
+    "loadError": "Something went wrong loading your library.",
+    "searchPlaceholder": "Search…",
+    "filters": {
+      "trigger": "Filters",
+      "status": "Reading Status",
+      "allStatuses": "Any status",
+      "pendingOnly": "Unread only",
+      "sortBy": "Sort by",
+      "sortAsc": "Ascending",
+      "sortDesc": "Descending",
+      "reset": "Reset"
+    },
+    "sort": {
+      "TITLE": "Title",
+      "RELEASE_DATE": "Release date",
+      "TOTAL_CHAPTERS": "Total chapters",
+      "UNREAD_CHAPTERS": "Unread chapters",
+      "CREATED_AT": "Date added",
+      "UPDATED_AT": "Last read"
+    },
+    "actions": {
+      "trigger": "Quick actions",
+      "save": "Save",
+      "viewDetails": "View details",
+      "share": "Share",
+      "shareSuccess": "Link copied to clipboard.",
+      "remove": "Remove"
+    }
   },
   "footer": {
     "tagline": "Comic Tracker — a TFG project (UDC)"
@@ -18,7 +57,7 @@
     "importError": "Couldn't open this comic. Try again.",
     "filters": {
       "type": "Type",
-      "status": "Status",
+      "status": "Publication Status",
       "nsfw": "NSFW",
       "allTypes": "Any type",
       "allStatuses": "Any status",
@@ -100,14 +139,47 @@
   },
   "detail": {
     "addToLibrary": "Add to library",
+    "addingToLibrary": "Adding…",
+    "editLibrary": "Edit",
+    "alreadyInLibrary": "You already have this in your library.",
     "chapters": "Chapters",
+    "readingState": {
+      "title": "Edit reading progress",
+      "status": "Status",
+      "chaptersRead": "Last Chapter Read",
+      "notes": "Notes",
+      "notesPlaceholder": "Type your notes here.",
+      "resetChapters": "Set to 0",
+      "setToMaxChapters": "Set to max chapters",
+      "update": "Update",
+      "updating": "Updating…",
+      "remove": "Remove from library",
+      "removing": "Removing…",
+      "removeConfirmTitle": "Remove from library?",
+      "removeConfirmDescription": "This will delete your reading progress and notes for this comic. This can't be undone.",
+      "statuses": {
+        "READING": "Reading",
+        "COMPLETED": "Completed",
+        "ON_HOLD": "On hold",
+        "PLAN_TO_READ": "Plan to read",
+        "DROPPED": "Dropped"
+      },
+      "errors": {
+        "generic": "Couldn't save your changes. Try again.",
+        "alreadyRemoved": "Already removed from your library."
+      }
+    },
     "synopsis": "Synopsis",
     "noSynopsis": "No synopsis available.",
     "expandSynopsis": "Expand synopsis",
     "collapseSynopsis": "Collapse synopsis",
     "readingSources": "Reading Sources",
     "readingSourcesEmpty": "No reading sources yet for this comic.",
+    "readingSourcesFilteredEmpty": "No reading sources match the selected filters.",
     "readingSourcesError": "Couldn't load reading sources.",
+    "filterByLocale": "Filter by language",
+    "filterByLocalePlaceholder": "Add a language…",
+    "resetLocaleFilter": "Reset to default",
     "showPendingSources": "Show sources pending approval",
     "pendingTooltip": "This source hasn't been reviewed yet and may not be reliable.",
     "suggestSource": {
@@ -157,7 +229,8 @@
     "somethingWentWrong": "Something went wrong.",
     "notFound": "We couldn't find what you were looking for.",
     "notAuthorized": "You don't have permission to view this page.",
-    "generic": "Something went wrong loading this page."
+    "generic": "Something went wrong loading this page.",
+    "actionFailed": "Something went wrong. Please try again."
   },
   "moderation": {
     "title": "Moderation",
@@ -168,6 +241,10 @@
     "empty": "No items pending review.",
     "approve": "Approve",
     "reject": "Reject",
+    "rejectConfirmTitle": "Reject this entry?",
+    "rejectConfirmDescription": "This can't be undone once confirmed.",
+    "rejectSourceConfirmTitle": "Reject this source?",
+    "rejectSourceConfirmDescription": "This will also reject any still-pending entries submitted for this source. This can't be undone.",
     "actionError": "Couldn't complete the action. Please try again.",
     "sourceNotApprovedError": "Can't approve: this link's source isn't approved yet.",
     "alreadyReviewedError": "Already reviewed by someone else.",
@@ -183,6 +260,39 @@
       "locale": "Language",
       "availableChapters": "Available chapters",
       "contributedBy": "Suggested by"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "appearance": "Appearance"
+    },
+    "appearance": {
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "systemDescription": "\"System\" follows your device's setting and switches automatically if it changes."
+    },
+    "profile": {
+      "displayName": "Display name",
+      "biography": "Biography",
+      "biographyPlaceholder": "Tell us a bit about yourself.",
+      "pictureUrl": "Profile picture URL",
+      "pictureUrlPlaceholder": "https://example.com/avatar.png",
+      "locale": "Preferred reading language",
+      "localeDescription": "Used to prioritize reading sources in this language.",
+      "localePlaceholder": "Search for a language…",
+      "noLanguagesFound": "No languages found.",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "success": "Profile updated.",
+      "errors": {
+        "displayNameRequired": "Display name is required.",
+        "pictureUrlInvalid": "Enter a valid URL.",
+        "generic": "Couldn't save your changes. Try again."
+      }
     }
   }
 }
