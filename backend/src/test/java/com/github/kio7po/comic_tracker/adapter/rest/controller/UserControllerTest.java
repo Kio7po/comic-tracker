@@ -8,7 +8,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -96,53 +101,31 @@ class UserControllerTest {
         verifyNoInteractions(userService);
     }
 
-    @Test
-    void updateProfileReturnsBadRequestOnBlankDisplayName() throws Exception {
-        mockMvc.perform(put("/api/users/me")
-                .with(jwt().jwt(builder -> builder.subject("1")))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
+    // Proveedor de casos de prueba para JSONs que deben devolver BadRequest
+    private static Stream<Arguments> invalidUpdateProfileRequests() {
+        return Stream.of(
+                Arguments.of("blank displayName", """
                         {"displayName":""}
-                        """))
-                .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(userService);
-    }
-
-    @Test
-    void updateProfileReturnsBadRequestOnBlankBiography() throws Exception {
-        mockMvc.perform(put("/api/users/me")
-                .with(jwt().jwt(builder -> builder.subject("1")))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
+                        """),
+                Arguments.of("blank biography", """
                         {"displayName":"New Name","biography":"   "}
-                        """))
-                .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(userService);
-    }
-
-    @Test
-    void updateProfileReturnsBadRequestOnInvalidPictureUrl() throws Exception {
-        mockMvc.perform(put("/api/users/me")
-                .with(jwt().jwt(builder -> builder.subject("1")))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
+                        """),
+                Arguments.of("invalid pictureUrl", """
                         {"displayName":"New Name","pictureUrl":"not-a-url"}
-                        """))
-                .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(userService);
+                        """),
+                Arguments.of("invalid locale", """
+                        {"displayName":"New Name","locale":"not-a-locale"}
+                        """));
     }
 
-    @Test
-    void updateProfileReturnsBadRequestOnInvalidLocale() throws Exception {
+    // Usa el primer argumento como display name del test
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidUpdateProfileRequests")
+    void updateProfileReturnsBadRequestOnInvalidRequest(String caseName, String json) throws Exception {
         mockMvc.perform(put("/api/users/me")
                 .with(jwt().jwt(builder -> builder.subject("1")))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"displayName":"New Name","locale":"not-a-locale"}
-                        """))
+                .content(json))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(userService);
