@@ -27,7 +27,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                     // matches rules top-to-bottom, first match wins.
-                    .requestMatchers("/api/auth/me").authenticated()
+                    .requestMatchers("/api/users/me").authenticated()
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/catalog/**").permitAll()
                     .requestMatchers("/api/comics/*/reading-state").authenticated()

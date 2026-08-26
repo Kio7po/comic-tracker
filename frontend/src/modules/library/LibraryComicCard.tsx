@@ -30,13 +30,13 @@ import TruncatedText from '@/common/components/TruncatedText';
 import EditReadingStateDialog from '@/modules/comic/EditReadingStateDialog';
 
 // Badge's built-in variants don't cover this - each status gets its own pastel color instead.
-// PLAN_TO_READ copies the plain `secondary` variant's own classes (already a neutral pastel).
+// No translucent overlay (e.g. blue-500/15), it'd lose contrast.
 const STATUS_BADGE_CLASSNAME: Record<ReadingStateStatus, string> = {
   PLAN_TO_READ: 'bg-secondary text-secondary-foreground',
-  READING: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
-  COMPLETED: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
-  ON_HOLD: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
-  DROPPED: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+  READING: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  COMPLETED: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
+  ON_HOLD: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  DROPPED: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
 };
 
 interface LibraryComicCardProps {

@@ -7,6 +7,10 @@ import ComicDetailPage, { comicDetailLoader } from '@/modules/comic/ComicDetailP
 import RegisterPage from '@/modules/auth/RegisterPage';
 import LoginPage from '@/modules/auth/LoginPage';
 import ModerationPage from '@/modules/moderation/ModerationPage';
+import SettingsLayout from '@/modules/settings/SettingsLayout';
+import SettingsIndexPage from '@/modules/settings/SettingsIndexPage';
+import ProfileSettingsPage from '@/modules/settings/ProfileSettingsPage';
+import AppearanceSettingsPage from '@/modules/settings/AppearanceSettingsPage';
 import { requireAuth, requireRole } from './routeGuards';
 import Home from './Home';
 
@@ -40,6 +44,20 @@ export const router = createBrowserRouter([
         element: <ModerationPage />,
         loader: ({ request }) => requireRole('ADMIN', request),
         errorElement: <RouteErrorPage />,
+      },
+      {
+        path: 'settings',
+        id: 'settings',
+        element: <SettingsLayout />,
+        // Every settings tab needs the same auth guard, so it lives once on this parent route.
+        // Tabs read the resolved user via useRouteLoaderData('settings') instead of their own loader.
+        loader: ({ request }) => requireAuth(request),
+        errorElement: <RouteErrorPage />,
+        children: [
+          { index: true, element: <SettingsIndexPage /> },
+          { path: 'profile', element: <ProfileSettingsPage /> },
+          { path: 'appearance', element: <AppearanceSettingsPage /> },
+        ],
       },
     ],
   },

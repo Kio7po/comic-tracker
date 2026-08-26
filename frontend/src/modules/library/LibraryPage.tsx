@@ -7,7 +7,7 @@ import { findByUser } from '@/services/readingState/api/readingState';
 import type { ReadingState, ReadingStateStatus, ReadingStateWithComic } from '@/services/readingState/types';
 import type { SortDirection } from '@/common/api/SortDirection';
 import { matchesSearch } from '@/common/lib/matchesSearch';
-import { useMediaQuery } from '@/common/hooks/useMediaQuery';
+import { MOBILE_QUERY, useMediaQuery } from '@/common/hooks/useMediaQuery';
 import SearchBar from '@/common/components/SearchBar';
 import { Button } from '@/common/components/ui/button';
 import {
@@ -25,8 +25,6 @@ import LibraryFilters, { SORT_FIELDS, type LibrarySortField } from './LibraryFil
 
 const DEFAULT_SORT_FIELD: LibrarySortField = 'CREATED_AT';
 const DEFAULT_SORT_DIRECTION: SortDirection = 'DESC';
-// Matches Tailwind's sm: breakpoint (640px), same query used elsewhere for this breakpoint.
-const MOBILE_QUERY = '(max-width: 639px)';
 
 // Client-side filtering/sorting over the full findByUser() result - not paginated, matches the
 // original design ("no estará paginado"). A short debounce just smooths re-renders for fast
@@ -138,6 +136,20 @@ function LibraryPage() {
     updateParams({ dir: value === DEFAULT_SORT_DIRECTION ? null : value });
   }
 
+  function handleResetFilters() {
+    updateParams({ q: null, read: null, pending: null, type: null, pub: null, nsfw: null, sort: null, dir: null });
+  }
+
+  const isAtDefault =
+    query.trim() === '' &&
+    readingStatus === undefined &&
+    !pendingOnly &&
+    mediaType === undefined &&
+    publicationStatus === undefined &&
+    nsfw === undefined &&
+    sortField === DEFAULT_SORT_FIELD &&
+    sortDirection === DEFAULT_SORT_DIRECTION;
+
   const [entries, setEntries] = useState<ReadingStateWithComic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -206,6 +218,8 @@ function LibraryPage() {
     onNsfwChange: handleNsfwChange,
     onSortFieldChange: handleSortFieldChange,
     onSortDirectionChange: handleSortDirectionChange,
+    isAtDefault,
+    onReset: handleResetFilters,
   };
 
   function renderFilters() {
@@ -250,7 +264,8 @@ function LibraryPage() {
     }
 
     if (filteredEntries.length === 0) {
-      return <p className="mt-6 text-sm text-muted-foreground">{t('library.empty')}</p>;
+      const emptyMessage = entries.length > 0 ? t('library.filteredEmpty') : t('library.empty');
+      return <p className="mt-6 text-sm text-muted-foreground">{emptyMessage}</p>;
     }
 
     return (

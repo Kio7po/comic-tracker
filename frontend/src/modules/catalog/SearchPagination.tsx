@@ -8,7 +8,7 @@ import {
   PaginationPrevious,
 } from '@/common/components/ui/pagination';
 import { cn } from '@/common/lib/utils';
-import { useMediaQuery } from '@/common/hooks/useMediaQuery';
+import { MOBILE_QUERY, useMediaQuery } from '@/common/hooks/useMediaQuery';
 
 const SIBLING_COUNT = 2; // amount of siblings at each side a page tries to have (ex. with 5: 2 3 5 6 7)
 const MOBILE_SIBLING_COUNT = 0; // below Tailwind's `sm` breakpoint, just show first/current/last
@@ -70,7 +70,7 @@ function SearchPagination({
   existMoreItems,
   className,
 }: Readonly<SearchPaginationProps>) {
-  const isMobile = useMediaQuery('(max-width: 639px)');
+  const isMobile = useMediaQuery(MOBILE_QUERY);
   const siblingCount = isMobile ? MOBILE_SIBLING_COUNT : SIBLING_COUNT;
 
   const isFirstPage = page === 1;
