@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowDownWideNarrow, ArrowUpNarrowWide } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, FilterX } from 'lucide-react';
 import type { ComicMediaType, ComicStatus, NsfwRating } from '@/services/comic/types';
 import type { ReadingStateStatus } from '@/services/readingState/types';
 import type { SortDirection } from '@/common/api/SortDirection';
@@ -66,6 +66,10 @@ interface LibraryFiltersProps {
   onNsfwChange: (value: NsfwRating | undefined) => void;
   onSortFieldChange: (value: LibrarySortField) => void;
   onSortDirectionChange: (value: SortDirection) => void;
+  // Covers sort too, not just the filters proper - "reset" here means the whole row, ordering
+  // included.
+  isAtDefault: boolean;
+  onReset: () => void;
   // Base UI's Select has a real bug combining this with a modal focus trap,
   // callers rendering these Selects inside a Drawer/Dialog must pass false.
   alignSelectWithTrigger?: boolean;
@@ -86,6 +90,8 @@ function LibraryFilters({
   onNsfwChange,
   onSortFieldChange,
   onSortDirectionChange,
+  isAtDefault,
+  onReset,
   alignSelectWithTrigger = true,
 }: Readonly<LibraryFiltersProps>) {
   const { t } = useTranslation();
@@ -106,13 +112,13 @@ function LibraryFilters({
   const sortFields = SORT_FIELDS.map((value) => ({ value, label: t(`library.sort.${value}`) }));
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-3">
+    <div className="mt-3 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <Select
         value={readingStatus ?? 'ALL'}
         items={readingStatuses}
         onValueChange={(value) => onReadingStatusChange(value === 'ALL' ? undefined : (value as ReadingStateStatus))}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full sm:w-fit">
           <SelectValue />
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
@@ -131,7 +137,7 @@ function LibraryFilters({
         items={mediaTypes}
         onValueChange={(value) => onMediaTypeChange(value === 'ALL' ? undefined : (value as ComicMediaType))}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full sm:w-fit">
           <SelectValue />
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
@@ -150,7 +156,7 @@ function LibraryFilters({
         items={publicationStatuses}
         onValueChange={(value) => onPublicationStatusChange(value === 'ALL' ? undefined : (value as ComicStatus))}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full sm:w-fit">
           <SelectValue />
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
@@ -169,7 +175,7 @@ function LibraryFilters({
         items={nsfwRatings}
         onValueChange={(value) => onNsfwChange(value === 'EXPLICIT' ? undefined : (value as NsfwRating))}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full sm:w-fit">
           <SelectValue />
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
@@ -194,13 +200,13 @@ function LibraryFilters({
         </Label>
       </div>
       <Separator orientation='vertical'/>
-      <ButtonGroup>
+      <ButtonGroup className="w-full sm:w-fit">
         <Select
           value={sortField}
           items={sortFields}
           onValueChange={(value) => onSortFieldChange(value as LibrarySortField)}
         >
-          <SelectTrigger>
+          <SelectTrigger className="flex-1 sm:w-fit sm:flex-none">
             <SelectValue />
           </SelectTrigger>
           <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
@@ -237,6 +243,12 @@ function LibraryFilters({
           </TooltipContent>
         </Tooltip>
       </ButtonGroup>
+      {!isAtDefault && (
+        <Button type="button" variant="ghost" onClick={onReset}>
+          <FilterX className="size-4" />
+          {t('library.filters.reset')}
+        </Button>
+      )}
     </div>
   );
 }

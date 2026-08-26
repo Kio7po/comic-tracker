@@ -16,6 +16,7 @@
   "library": {
     "title": "Library",
     "empty": "Nothing here yet.",
+    "filteredEmpty": "No comics match the selected filters.",
     "loadError": "Something went wrong loading your library.",
     "searchPlaceholder": "Search…",
     "filters": {
@@ -25,7 +26,8 @@
       "pendingOnly": "Unread only",
       "sortBy": "Sort by",
       "sortAsc": "Ascending",
-      "sortDesc": "Descending"
+      "sortDesc": "Descending",
+      "reset": "Reset"
     },
     "sort": {
       "TITLE": "Title",

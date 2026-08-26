@@ -16,6 +16,7 @@
   "library": {
     "title": "Biblioteca",
     "empty": "Todavía no hay nada aquí.",
+    "filteredEmpty": "Ningún cómic coincide con los filtros seleccionados.",
     "loadError": "Ha ocurrido un error al cargar tu biblioteca.",
     "searchPlaceholder": "Buscar…",
     "filters": {
@@ -25,7 +26,8 @@
       "pendingOnly": "Solo sin leer",
       "sortBy": "Ordenar por",
       "sortAsc": "Ascendente",
-      "sortDesc": "Descendente"
+      "sortDesc": "Descendente",
+      "reset": "Restablecer"
     },
     "sort": {
       "TITLE": "Título",

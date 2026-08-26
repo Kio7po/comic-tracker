@@ -136,6 +136,20 @@ function LibraryPage() {
     updateParams({ dir: value === DEFAULT_SORT_DIRECTION ? null : value });
   }
 
+  function handleResetFilters() {
+    updateParams({ q: null, read: null, pending: null, type: null, pub: null, nsfw: null, sort: null, dir: null });
+  }
+
+  const isAtDefault =
+    query.trim() === '' &&
+    readingStatus === undefined &&
+    !pendingOnly &&
+    mediaType === undefined &&
+    publicationStatus === undefined &&
+    nsfw === undefined &&
+    sortField === DEFAULT_SORT_FIELD &&
+    sortDirection === DEFAULT_SORT_DIRECTION;
+
   const [entries, setEntries] = useState<ReadingStateWithComic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -204,6 +218,8 @@ function LibraryPage() {
     onNsfwChange: handleNsfwChange,
     onSortFieldChange: handleSortFieldChange,
     onSortDirectionChange: handleSortDirectionChange,
+    isAtDefault,
+    onReset: handleResetFilters,
   };
 
   function renderFilters() {
@@ -248,7 +264,8 @@ function LibraryPage() {
     }
 
     if (filteredEntries.length === 0) {
-      return <p className="mt-6 text-sm text-muted-foreground">{t('library.empty')}</p>;
+      const emptyMessage = entries.length > 0 ? t('library.filteredEmpty') : t('library.empty');
+      return <p className="mt-6 text-sm text-muted-foreground">{emptyMessage}</p>;
     }
 
     return (
