@@ -66,7 +66,7 @@ chore(TFG-20): actualizar dependencias de Spring Boot
 
 - La clave de Jira aparece una única vez, como scope de Conventional Commits.
 - El `#comando` de Smart Commit (`#comment`, `#time`, `#start`, `#review`, `#done`, `#reject`, `#reopen`) es opcional y solo se añade cuando se quiere disparar esa acción concreta desde el commit (Smart Commits como mecanismo manual complementario).
-- **Riesgo abierto, no confirmado:** la documentación oficial de Atlassian sobre Smart Commits especifica el formato `<CLAVE_ISSUE> #<comando>`, sin confirmar explícitamente que el comando se reconozca cuando la clave va embebida dentro de `tipo(CLAVE): ...` en lugar de al principio absoluto del mensaje. Si en la práctica el comando no se procesa, habrá que mover la clave a un formato más cercano al literal de Atlassian (clave sola, al principio del mensaje).
+- **Riesgo abierto, no confirmado:** la documentación oficial de Atlassian sobre Smart Commits especifica el formato `<CLAVE_ISSUE> #<comando>`, sin confirmar explícitamente que el comando se reconozca cuando la clave va embebida dentro de `tipo(CLAVE): ...` en lugar de al principio absoluto del mensaje. Si en la práctica el comando no se procesa, habrá que mover la clave a un formato más cercano al literal de Atlassian (clave sola, al principio del mensaje). **Confirmado:** funciona correctamente.
 - En general no debe haber commits que afecten a varios issues a la vez (como repetir el bloque `tipo(TFG-XX): ...` por cada clave relevante). De forma excepcional se puede hacer referencia a varias claves dentro del scope, separadas por coma/espacio, si se necesita disparar el mismo comando sobre todas.
 
 ### 3.2. Tipos permitidos
