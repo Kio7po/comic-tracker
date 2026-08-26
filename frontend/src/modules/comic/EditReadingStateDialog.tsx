@@ -4,7 +4,7 @@ import { ChevronsLeft, ChevronsRight, Minus, Plus, BookmarkOff } from 'lucide-re
 import { remove, update } from '@/services/readingState/api/readingState';
 import type { ReadingState, ReadingStateStatus } from '@/services/readingState/types';
 import { ApiError, ProblemType } from '@/common/api';
-import { useMediaQuery } from '@/common/hooks/useMediaQuery';
+import { MOBILE_QUERY, useMediaQuery } from '@/common/hooks/useMediaQuery';
 import ConfirmDialog from '@/common/components/ConfirmDialog';
 import { Button } from '@/common/components/ui/button';
 import { toast } from '@/common/components/ui/toast';
@@ -43,8 +43,6 @@ import type { ComicWithChapters } from './ReadingStateButton';
 const STATUSES: ReadingStateStatus[] = ['READING', 'COMPLETED', 'ON_HOLD', 'PLAN_TO_READ', 'DROPPED'];
 // Matches @Size(max = 2048) on the backend's ReadingStateRequestDto.notes.
 const NOTES_MAX_LENGTH = 2048;
-// Matches Tailwind's sm: breakpoint (640px), same query SearchPagination already uses.
-const MOBILE_QUERY = '(max-width: 639px)';
 
 interface EditReadingStateDialogProps {
   comic: ComicWithChapters;

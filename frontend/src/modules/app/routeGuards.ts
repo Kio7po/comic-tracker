@@ -1,5 +1,5 @@
 import { redirect } from 'react-router';
-import { me } from '@/services/user/api/auth';
+import { me } from '@/services/user/api/user';
 import { ApiError } from '@/common/api/ApiError';
 import { appendFromParam } from '@/common/lib/authRedirect';
 import type { UserResponse, UserRole } from '@/services/user/types';

@@ -10,7 +10,8 @@
     "logout": "Cerrar sesión",
     "loggedInAs": "Sesión iniciada como",
     "moderation": "Moderación",
-    "library": "Biblioteca"
+    "library": "Biblioteca",
+    "settings": "Ajustes"
   },
   "library": {
     "title": "Biblioteca",
@@ -172,7 +173,11 @@
     "collapseSynopsis": "Contraer sinopsis",
     "readingSources": "Fuentes de Lectura",
     "readingSourcesEmpty": "Todavía no hay fuentes de lectura para este cómic.",
+    "readingSourcesFilteredEmpty": "Ninguna fuente de lectura coincide con los filtros seleccionados.",
     "readingSourcesError": "No se han podido cargar las fuentes de lectura.",
+    "filterByLocale": "Filtrar por idioma",
+    "filterByLocalePlaceholder": "Añadir un idioma…",
+    "resetLocaleFilter": "Restablecer por defecto",
     "showPendingSources": "Mostrar fuentes pendientes de aprobar",
     "pendingTooltip": "Esta fuente aún no ha sido revisada y puede no ser fiable.",
     "suggestSource": {
@@ -253,6 +258,39 @@
       "locale": "Idioma",
       "availableChapters": "Capítulos disponibles",
       "contributedBy": "Sugerido por"
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "tabs": {
+      "profile": "Perfil",
+      "appearance": "Apariencia"
+    },
+    "appearance": {
+      "theme": "Tema",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema",
+      "systemDescription": "\"Sistema\" sigue el ajuste de tu dispositivo y cambia automáticamente si este cambia."
+    },
+    "profile": {
+      "displayName": "Nombre visible",
+      "biography": "Biografía",
+      "biographyPlaceholder": "Cuéntanos un poco sobre ti.",
+      "pictureUrl": "URL de la foto de perfil",
+      "pictureUrlPlaceholder": "https://ejemplo.com/avatar.png",
+      "locale": "Idioma de lectura preferido",
+      "localeDescription": "Se usa para priorizar fuentes de lectura en este idioma.",
+      "localePlaceholder": "Buscar un idioma…",
+      "noLanguagesFound": "No se han encontrado idiomas.",
+      "save": "Guardar cambios",
+      "saving": "Guardando…",
+      "success": "Perfil actualizado.",
+      "errors": {
+        "displayNameRequired": "El nombre visible es obligatorio.",
+        "pictureUrlInvalid": "Introduce una URL válida.",
+        "generic": "No se han podido guardar los cambios. Inténtalo de nuevo."
+      }
     }
   }
 }

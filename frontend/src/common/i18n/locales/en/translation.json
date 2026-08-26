@@ -10,7 +10,8 @@
     "logout": "Log out",
     "loggedInAs": "Logged in as",
     "moderation": "Moderation",
-    "library": "Library"
+    "library": "Library",
+    "settings": "Settings"
   },
   "library": {
     "title": "Library",
@@ -172,7 +173,11 @@
     "collapseSynopsis": "Collapse synopsis",
     "readingSources": "Reading Sources",
     "readingSourcesEmpty": "No reading sources yet for this comic.",
+    "readingSourcesFilteredEmpty": "No reading sources match the selected filters.",
     "readingSourcesError": "Couldn't load reading sources.",
+    "filterByLocale": "Filter by language",
+    "filterByLocalePlaceholder": "Add a language…",
+    "resetLocaleFilter": "Reset to default",
     "showPendingSources": "Show sources pending approval",
     "pendingTooltip": "This source hasn't been reviewed yet and may not be reliable.",
     "suggestSource": {
@@ -253,6 +258,39 @@
       "locale": "Language",
       "availableChapters": "Available chapters",
       "contributedBy": "Suggested by"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "appearance": "Appearance"
+    },
+    "appearance": {
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "systemDescription": "\"System\" follows your device's setting and switches automatically if it changes."
+    },
+    "profile": {
+      "displayName": "Display name",
+      "biography": "Biography",
+      "biographyPlaceholder": "Tell us a bit about yourself.",
+      "pictureUrl": "Profile picture URL",
+      "pictureUrlPlaceholder": "https://example.com/avatar.png",
+      "locale": "Preferred reading language",
+      "localeDescription": "Used to prioritize reading sources in this language.",
+      "localePlaceholder": "Search for a language…",
+      "noLanguagesFound": "No languages found.",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "success": "Profile updated.",
+      "errors": {
+        "displayNameRequired": "Display name is required.",
+        "pictureUrlInvalid": "Enter a valid URL.",
+        "generic": "Couldn't save your changes. Try again."
+      }
     }
   }
 }

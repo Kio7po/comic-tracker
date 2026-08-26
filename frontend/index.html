@@ -2,6 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Applies the stored theme before the browser's first paint (a synchronous, blocking
+      inline script - no type="module", no defer/async), so there's no flash of the default
+      light theme while the JS bundle loads and React mounts. Key/value shape ('theme',
+      JSON-stringified) must stay in sync with THEME_STORAGE_KEY in ThemeProvider.tsx.
+    -->
+    <script>
+      (function () {
+        try {
+          const stored = localStorage.getItem('theme');
+          const theme = stored ? JSON.parse(stored) : 'system';
+          const isDark =
+            theme === 'dark' ||
+            (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch {
+          // localStorage disabled/unavailable - fall back to the default light theme.
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>frontend</title>

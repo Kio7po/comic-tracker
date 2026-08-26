@@ -7,7 +7,7 @@ import { findByUser } from '@/services/readingState/api/readingState';
 import type { ReadingState, ReadingStateStatus, ReadingStateWithComic } from '@/services/readingState/types';
 import type { SortDirection } from '@/common/api/SortDirection';
 import { matchesSearch } from '@/common/lib/matchesSearch';
-import { useMediaQuery } from '@/common/hooks/useMediaQuery';
+import { MOBILE_QUERY, useMediaQuery } from '@/common/hooks/useMediaQuery';
 import SearchBar from '@/common/components/SearchBar';
 import { Button } from '@/common/components/ui/button';
 import {
@@ -25,8 +25,6 @@ import LibraryFilters, { SORT_FIELDS, type LibrarySortField } from './LibraryFil
 
 const DEFAULT_SORT_FIELD: LibrarySortField = 'CREATED_AT';
 const DEFAULT_SORT_DIRECTION: SortDirection = 'DESC';
-// Matches Tailwind's sm: breakpoint (640px), same query used elsewhere for this breakpoint.
-const MOBILE_QUERY = '(max-width: 639px)';
 
 // Client-side filtering/sorting over the full findByUser() result - not paginated, matches the
 // original design ("no estará paginado"). A short debounce just smooths re-renders for fast
