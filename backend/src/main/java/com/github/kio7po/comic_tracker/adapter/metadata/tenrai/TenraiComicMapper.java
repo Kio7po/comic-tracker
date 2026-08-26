@@ -1,4 +1,4 @@
-package com.github.kio7po.comic_tracker.adapter.metadata;
+package com.github.kio7po.comic_tracker.adapter.metadata.tenrai;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;

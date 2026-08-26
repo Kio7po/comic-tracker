@@ -1,7 +1,7 @@
-package com.github.kio7po.comic_tracker.adapter.metadata;
+package com.github.kio7po.comic_tracker.adapter.metadata.tenrai;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-record TenraiPaginationItemsDto(int total) {
+record TenraiNamedResourceDto(String name) {
 }

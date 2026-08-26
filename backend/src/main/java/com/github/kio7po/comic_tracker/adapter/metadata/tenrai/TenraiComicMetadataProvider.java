@@ -1,4 +1,4 @@
-package com.github.kio7po.comic_tracker.adapter.metadata;
+package com.github.kio7po.comic_tracker.adapter.metadata.tenrai;
 
 import java.util.List;
 import java.util.Optional;
