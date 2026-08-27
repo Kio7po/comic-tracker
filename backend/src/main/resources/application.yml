@@ -32,3 +32,29 @@ scalar:
   # default values, not needed, but nice to remember
   enabled: true
   path: /scalar
+
+comic:
+  metadata:
+    # Passive TTL: a comic's metadata is only re-fetched from the active provider once this long
+    # has passed (no scheduled job).
+    ttl: 24h
+    # On a failed refresh attempt, retried this soon instead of waiting a full ttl.
+    retry-backoff: 15m
+
+resilience4j:
+  ratelimiter:
+    instances:
+      # Tenrai's per-second and per-minute caps for the current (public) tier, enforced
+      # as two stacked limiters. Daily cap (40000/day) is documented but not enforced here.
+      # resilience4j's RateLimiter is a fixed window counter, so a burst straddling a window
+      # boundary can briefly reach ~2x limit-for-period - each pair below is scaled down from
+      # the real cap (not 4/1s or 120/1m directly) to bound that overshoot, while keeping rpm's
+      # window well above rps's so it still acts as a longer sustained-average budget.
+      tenrai-rps:
+        limit-for-period: 1
+        limit-refresh-period: 250ms
+        timeout-duration: 2s
+      tenrai-rpm:
+        limit-for-period: 20
+        limit-refresh-period: 10s
+        timeout-duration: 2s

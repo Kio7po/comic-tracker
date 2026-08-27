@@ -1,5 +1,7 @@
 package com.github.kio7po.comic_tracker.domain.entities;
 
+import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -22,6 +24,8 @@ public class ComicMetadataEntry {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "source_id")
     private ComicMetadataSource source;
+    @Column(nullable = false)
+    private Instant lastFetchedAt;
 
     public Long getId() {
         return id;
@@ -53,6 +57,14 @@ public class ComicMetadataEntry {
 
     public void setSource(ComicMetadataSource source) {
         this.source = source;
+    }
+
+    public Instant getLastFetchedAt() {
+        return lastFetchedAt;
+    }
+
+    public void setLastFetchedAt(Instant lastFetchedAt) {
+        this.lastFetchedAt = lastFetchedAt;
     }
 
 }

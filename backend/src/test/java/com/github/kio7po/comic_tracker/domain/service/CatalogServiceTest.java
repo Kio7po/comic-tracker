@@ -9,6 +9,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -45,6 +47,9 @@ class CatalogServiceTest {
 
     private static final String SOURCE_SLUG = "myanimelist";
     private static final String EXTERNAL_ID = "152";
+    private static final String SLUG = "berserk";
+    private static final Duration TTL = Duration.ofHours(24);
+    private static final Duration RETRY_BACKOFF = Duration.ofMinutes(15);
 
     @Mock
     private ComicMetadataProvider metadataProvider;
@@ -60,13 +65,16 @@ class CatalogServiceTest {
     private GenreRepository genreRepository;
     @Mock
     private TagRepository tagRepository;
+    @Mock
+    private ComicService comicService;
 
     private CatalogService catalogService;
 
     @BeforeEach
     void setUp() {
         catalogService = new CatalogService(metadataProvider, comicRepository, comicMetadataEntryRepository,
-                comicMetadataSourceRepository, authorRepository, genreRepository, tagRepository);
+                comicMetadataSourceRepository, authorRepository, genreRepository, tagRepository, comicService, TTL,
+                RETRY_BACKOFF);
     }
 
     @Test
@@ -99,11 +107,12 @@ class CatalogServiceTest {
     }
 
     @Test
-    void importComicReturnsExistingComicWithoutCallingProviderFetch() {
+    void importComicReturnsExistingComicUnchangedWhenEntryIsFresh() {
         ComicMetadataSource source = new ComicMetadataSource();
         Comic existingComic = new Comic();
         ComicMetadataEntry entry = new ComicMetadataEntry();
         entry.setComic(existingComic);
+        entry.setLastFetchedAt(Instant.now());
 
         when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
         when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.of(source));
@@ -115,6 +124,38 @@ class CatalogServiceTest {
         assertThat(result).contains(existingComic);
         verify(metadataProvider, never()).fetch(any());
         verify(comicRepository, never()).save(any());
+    }
+
+    @Test
+    void importComicRefreshesTheExistingComicWhenEntryIsStale() {
+        ComicMetadataSource source = new ComicMetadataSource();
+        Comic existingComic = new Comic();
+        existingComic.setTitle("Old title");
+        ComicMetadataEntry entry = new ComicMetadataEntry();
+        entry.setComic(existingComic);
+        entry.setExternalId(EXTERNAL_ID);
+        entry.setLastFetchedAt(Instant.now().minus(TTL).minusSeconds(1));
+
+        Comic fetchedComic = new Comic();
+        fetchedComic.setTitle("New title");
+        fetchedComic.setAuthors(Set.of());
+        fetchedComic.setGenres(Set.of());
+        fetchedComic.setTags(Set.of());
+        ComicMetadataResult fetchResult = new ComicMetadataResult(SOURCE_SLUG, EXTERNAL_ID, fetchedComic);
+
+        when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
+        when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.of(source));
+        when(comicMetadataEntryRepository.findBySourceAndExternalId(source, EXTERNAL_ID))
+                .thenReturn(Optional.of(entry));
+        when(metadataProvider.fetch(EXTERNAL_ID)).thenReturn(Optional.of(fetchResult));
+        when(comicRepository.save(existingComic)).thenReturn(existingComic);
+
+        Optional<Comic> result = catalogService.importComic(SOURCE_SLUG, EXTERNAL_ID);
+
+        assertThat(result).contains(existingComic);
+        assertThat(existingComic.getTitle()).isEqualTo("New title");
+        verify(comicMetadataEntryRepository).save(entry);
+        assertThat(entry.getLastFetchedAt()).isAfter(Instant.now().minusSeconds(2));
     }
 
     @Test
@@ -185,7 +226,8 @@ class CatalogServiceTest {
 
         verify(authorRepository, never()).save(any());
         verify(comicMetadataEntryRepository, times(1)).save(argThat((ComicMetadataEntry entry) -> entry
-                .getExternalId().equals(EXTERNAL_ID) && entry.getComic() == savedComic && entry.getSource() == source));
+                .getExternalId().equals(EXTERNAL_ID) && entry.getComic() == savedComic && entry.getSource() == source
+                && entry.getLastFetchedAt() != null));
     }
 
     @ParameterizedTest
@@ -213,6 +255,144 @@ class CatalogServiceTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().getSlug()).isEqualTo(Slugifier.slugify("Berserk") + "-" + externalId);
+    }
+
+    @Test
+    void getDetailReturnsEmptyWhenComicNotFound() {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.empty());
+
+        Optional<Comic> result = catalogService.getDetail(SLUG);
+
+        assertThat(result).isEmpty();
+        verify(comicMetadataSourceRepository, never()).findBySlug(any());
+    }
+
+    @Test
+    void getDetailReturnsComicUnchangedWhenActiveSourceIsNotSeeded() {
+        Comic comic = new Comic();
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic));
+        when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
+        when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.empty());
+
+        Optional<Comic> result = catalogService.getDetail(SLUG);
+
+        assertThat(result).contains(comic);
+        verify(metadataProvider, never()).fetch(any());
+    }
+
+    @Test
+    void getDetailReturnsComicUnchangedWhenNoEntryExistsForTheActiveSource() {
+        ComicMetadataSource source = new ComicMetadataSource();
+        Comic comic = new Comic();
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic));
+        when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
+        when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.of(source));
+        when(comicMetadataEntryRepository.findByComicAndSource(comic, source)).thenReturn(Optional.empty());
+
+        Optional<Comic> result = catalogService.getDetail(SLUG);
+
+        assertThat(result).contains(comic);
+        verify(metadataProvider, never()).fetch(any());
+    }
+
+    @Test
+    void getDetailReturnsComicUnchangedWhenEntryIsFresh() {
+        ComicMetadataSource source = new ComicMetadataSource();
+        Comic comic = new Comic();
+        ComicMetadataEntry entry = new ComicMetadataEntry();
+        entry.setLastFetchedAt(Instant.now());
+
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic));
+        when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
+        when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.of(source));
+        when(comicMetadataEntryRepository.findByComicAndSource(comic, source)).thenReturn(Optional.of(entry));
+
+        Optional<Comic> result = catalogService.getDetail(SLUG);
+
+        assertThat(result).contains(comic);
+        verify(metadataProvider, never()).fetch(any());
+        verify(comicRepository, never()).save(any());
+    }
+
+    @Test
+    void getDetailRefreshesTheComicWhenEntryIsStale() {
+        ComicMetadataSource source = new ComicMetadataSource();
+        Comic comic = new Comic();
+        comic.setTitle("Old title");
+        ComicMetadataEntry entry = new ComicMetadataEntry();
+        entry.setExternalId(EXTERNAL_ID);
+        entry.setLastFetchedAt(Instant.now().minus(TTL).minusSeconds(1));
+
+        Comic fetchedComic = new Comic();
+        fetchedComic.setTitle("New title");
+        fetchedComic.setAuthors(Set.of());
+        fetchedComic.setGenres(Set.of());
+        fetchedComic.setTags(Set.of());
+        ComicMetadataResult fetchResult = new ComicMetadataResult(SOURCE_SLUG, EXTERNAL_ID, fetchedComic);
+
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic));
+        when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
+        when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.of(source));
+        when(comicMetadataEntryRepository.findByComicAndSource(comic, source)).thenReturn(Optional.of(entry));
+        when(metadataProvider.fetch(EXTERNAL_ID)).thenReturn(Optional.of(fetchResult));
+        when(comicRepository.save(comic)).thenReturn(comic);
+
+        Optional<Comic> result = catalogService.getDetail(SLUG);
+
+        assertThat(result).contains(comic);
+        assertThat(comic.getTitle()).isEqualTo("New title");
+        verify(comicMetadataEntryRepository).save(entry);
+        assertThat(entry.getLastFetchedAt()).isAfter(Instant.now().minusSeconds(2));
+    }
+
+    @Test
+    void getDetailLeavesTheComicUnchangedButBumpsLastFetchedAtWhenTheFetchFindsNothing() {
+        ComicMetadataSource source = new ComicMetadataSource();
+        Comic comic = new Comic();
+        comic.setTitle("Old title");
+        ComicMetadataEntry entry = new ComicMetadataEntry();
+        entry.setExternalId(EXTERNAL_ID);
+        entry.setLastFetchedAt(Instant.now().minus(TTL).minusSeconds(1));
+
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic));
+        when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
+        when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.of(source));
+        when(comicMetadataEntryRepository.findByComicAndSource(comic, source)).thenReturn(Optional.of(entry));
+        when(metadataProvider.fetch(EXTERNAL_ID)).thenReturn(Optional.empty());
+        when(comicRepository.save(comic)).thenReturn(comic);
+
+        Optional<Comic> result = catalogService.getDetail(SLUG);
+
+        assertThat(result).contains(comic);
+        assertThat(comic.getTitle()).isEqualTo("Old title");
+        assertThat(entry.getLastFetchedAt()).isAfter(Instant.now().minusSeconds(2));
+    }
+
+    @Test
+    void getDetailAppliesAShortBackoffInsteadOfTheFullTtlWhenTheRefreshFails() {
+        ComicMetadataSource source = new ComicMetadataSource();
+        Comic comic = new Comic();
+        comic.setTitle("Old title");
+        ComicMetadataEntry entry = new ComicMetadataEntry();
+        entry.setExternalId(EXTERNAL_ID);
+        entry.setLastFetchedAt(Instant.now().minus(TTL).minusSeconds(1));
+
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic));
+        when(metadataProvider.getSourceSlug()).thenReturn(SOURCE_SLUG);
+        when(comicMetadataSourceRepository.findBySlug(SOURCE_SLUG)).thenReturn(Optional.of(source));
+        when(comicMetadataEntryRepository.findByComicAndSource(comic, source)).thenReturn(Optional.of(entry));
+        when(metadataProvider.fetch(EXTERNAL_ID)).thenThrow(new RuntimeException("boom"));
+        when(comicRepository.save(comic)).thenReturn(comic);
+
+        Instant before = Instant.now();
+        Optional<Comic> result = catalogService.getDetail(SLUG);
+        Instant after = Instant.now();
+
+        assertThat(result).contains(comic);
+        assertThat(comic.getTitle()).isEqualTo("Old title");
+        // Stale again after RETRY_BACKOFF, not after a full TTL cycle.
+        assertThat(entry.getLastFetchedAt().plus(TTL))
+                .isBetween(before.plus(RETRY_BACKOFF).minusSeconds(1), after.plus(RETRY_BACKOFF).plusSeconds(1));
     }
 
 }
