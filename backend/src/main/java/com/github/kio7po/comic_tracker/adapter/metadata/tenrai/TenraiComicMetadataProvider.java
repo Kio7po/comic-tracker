@@ -2,12 +2,16 @@ package com.github.kio7po.comic_tracker.adapter.metadata.tenrai;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriBuilder;
+
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 
 import com.github.kio7po.comic_tracker.domain.common.Page;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
@@ -27,10 +31,19 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
     private static final int MAX_PAGE = 1000;
 
     private final RestClient restClient;
+    private final RateLimiter rpsLimiter;
+    private final RateLimiter rpmLimiter;
 
     public TenraiComicMetadataProvider(RestClient.Builder restClientBuilder,
-            @Value("${tenrai.api.base-url:https://api.tenrai.org/v1}") String baseUrl) {
+            @Value("${tenrai.api.base-url:https://api.tenrai.org/v1}") String baseUrl,
+            RateLimiterRegistry rateLimiterRegistry) {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
+        this.rpsLimiter = rateLimiterRegistry.rateLimiter("tenrai-rps");
+        this.rpmLimiter = rateLimiterRegistry.rateLimiter("tenrai-rpm");
+    }
+
+    private <T> T rateLimited(Supplier<T> call) {
+        return RateLimiter.decorateSupplier(rpmLimiter, RateLimiter.decorateSupplier(rpsLimiter, call)).get();
     }
 
     @Override
@@ -38,7 +51,7 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
             ComicMediaType type) {
         int page = (offset / limit) + 1;
 
-        TenraiMangaSearchResponseDto response = restClient.get()
+        TenraiMangaSearchResponseDto response = rateLimited(() -> restClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.path("/manga")
                             .queryParam("q", keywords)
@@ -50,7 +63,7 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
                     return uriBuilder.build();
                 })
                 .retrieve()
-                .body(TenraiMangaSearchResponseDto.class);
+                .body(TenraiMangaSearchResponseDto.class));
 
         if (response == null || response.data() == null) {
             return new Page<>(List.of(), false, null);
@@ -84,10 +97,10 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
     @Override
     public Optional<ComicMetadataResult> fetch(String externalId) {
         try {
-            TenraiMangaResponseDto response = restClient.get()
+            TenraiMangaResponseDto response = rateLimited(() -> restClient.get()
                     .uri("/manga/{id}", externalId)
                     .retrieve()
-                    .body(TenraiMangaResponseDto.class);
+                    .body(TenraiMangaResponseDto.class));
             return Optional.ofNullable(response)
                     .map(TenraiMangaResponseDto::data)
                     .map(dto -> TenraiComicMapper.toResult(dto, SLUG));

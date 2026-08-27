@@ -14,15 +14,24 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.net.SocketTimeoutException;
+import java.time.Duration;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 
 import com.github.kio7po.comic_tracker.domain.common.Page;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
@@ -41,7 +50,7 @@ class TenraiComicMetadataProviderTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        provider = new TenraiComicMetadataProvider(builder, BASE_URL);
+        provider = new TenraiComicMetadataProvider(builder, BASE_URL, RateLimiterRegistry.ofDefaults());
     }
 
     private static String mangaJson(long malId, String title) {
@@ -238,5 +247,71 @@ class TenraiComicMetadataProviderTest {
 
         assertThatThrownBy(() -> provider.search("berserk", 10, 0, null, null, null))
                 .isInstanceOf(HttpServerErrorException.class);
+    }
+
+    private static Stream<Arguments> exhaustedLimiters() {
+        return Stream.of(
+                Arguments.of("rps exhausted", "tenrai-rps"),
+                Arguments.of("rpm exhausted", "tenrai-rpm"));
+    }
+
+    // A single permit that never refreshes within the test's lifetime, and never waits for one either -
+    // the first call consumes it, any further call is rejected immediately instead of blocking.
+    private static RateLimiterConfig exhaustedAfterOneCall() {
+        return RateLimiterConfig.custom()
+                .limitForPeriod(1)
+                .limitRefreshPeriod(Duration.ofMinutes(1))
+                .timeoutDuration(Duration.ZERO)
+                .build();
+    }
+
+    private static TenraiComicMetadataProvider providerWithExhaustedLimiter(RestClient.Builder builder,
+            String exhaustedLimiterName) {
+        RateLimiterConfig rpsConfig = "tenrai-rps".equals(exhaustedLimiterName)
+                ? exhaustedAfterOneCall() : RateLimiterConfig.ofDefaults();
+        RateLimiterConfig rpmConfig = "tenrai-rpm".equals(exhaustedLimiterName)
+                ? exhaustedAfterOneCall() : RateLimiterConfig.ofDefaults();
+        // RateLimiterRegistry.of(Map<String, RateLimiterConfig>) does NOT register these as named
+        // instances, registry.rateLimiter(name, config) is what actually does.
+        RateLimiterRegistry registry = RateLimiterRegistry.custom().build();
+        registry.rateLimiter("tenrai-rps", rpsConfig);
+        registry.rateLimiter("tenrai-rpm", rpmConfig);
+        return new TenraiComicMetadataProvider(builder, BASE_URL, registry);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("exhaustedLimiters")
+    void search_isRejectedWithoutCallingTheApiWhenALimitIsExhausted(String caseName, String exhaustedLimiterName) {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer limitedServer = MockRestServiceServer.bindTo(builder).build();
+        TenraiComicMetadataProvider limitedProvider = providerWithExhaustedLimiter(builder, exhaustedLimiterName);
+        limitedServer.expect(requestTo(startsWith(BASE_URL + "/manga")))
+                .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
+
+        limitedProvider.search("berserk", 10, 0, null, null, null);
+
+        assertThatThrownBy(() -> limitedProvider.search("berserk", 10, 0, null, null, null))
+                .isInstanceOf(RequestNotPermitted.class)
+                .extracting(exception -> ((RequestNotPermitted) exception).getCausingRateLimiterName())
+                .isEqualTo(exhaustedLimiterName);
+        limitedServer.verify();
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("exhaustedLimiters")
+    void fetch_isRejectedWithoutCallingTheApiWhenALimitIsExhausted(String caseName, String exhaustedLimiterName) {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer limitedServer = MockRestServiceServer.bindTo(builder).build();
+        TenraiComicMetadataProvider limitedProvider = providerWithExhaustedLimiter(builder, exhaustedLimiterName);
+        limitedServer.expect(requestTo(BASE_URL + "/manga/2"))
+                .andRespond(withSuccess(mangaJson(2, "Berserk"), MediaType.APPLICATION_JSON));
+
+        limitedProvider.fetch("2");
+
+        assertThatThrownBy(() -> limitedProvider.fetch("2"))
+                .isInstanceOf(RequestNotPermitted.class)
+                .extracting(exception -> ((RequestNotPermitted) exception).getCausingRateLimiterName())
+                .isEqualTo(exhaustedLimiterName);
+        limitedServer.verify();
     }
 }
