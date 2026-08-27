@@ -19,7 +19,7 @@ import com.github.kio7po.comic_tracker.adapter.rest.security.SecurityConfig;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
-import com.github.kio7po.comic_tracker.domain.service.ComicService;
+import com.github.kio7po.comic_tracker.domain.service.CatalogService;
 
 // Imports the real SecurityConfig so this test reflects actual authorization behavior
 // (GET /api/comics public) instead of drifting from it silently if those rules ever change.
@@ -33,7 +33,7 @@ class ComicControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private ComicService comicService;
+    private CatalogService catalogService;
 
     private static Comic comic() {
         Comic comic = new Comic();
@@ -47,7 +47,7 @@ class ComicControllerTest {
 
     @Test
     void getBySlugReturnsComicWhenFound() throws Exception {
-        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(catalogService.getDetail(SLUG)).thenReturn(Optional.of(comic()));
 
         mockMvc.perform(get("/api/comics/{slug}", SLUG))
                 .andExpect(status().isOk())
@@ -57,7 +57,7 @@ class ComicControllerTest {
 
     @Test
     void getBySlugReturnsNotFoundWhenMissing() throws Exception {
-        when(comicService.findBySlug(SLUG)).thenReturn(Optional.empty());
+        when(catalogService.getDetail(SLUG)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/comics/{slug}", SLUG))
                 .andExpect(status().isNotFound());

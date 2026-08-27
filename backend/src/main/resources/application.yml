@@ -33,6 +33,14 @@ scalar:
   enabled: true
   path: /scalar
 
+comic:
+  metadata:
+    # Passive TTL: a comic's metadata is only re-fetched from the active provider once this long
+    # has passed (no scheduled job).
+    ttl: 24h
+    # On a failed refresh attempt, retried this soon instead of waiting a full ttl.
+    retry-backoff: 15m
+
 resilience4j:
   ratelimiter:
     instances:

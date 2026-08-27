@@ -108,10 +108,11 @@ CREATE TABLE IF NOT EXISTS comic_alternative_titles (
 
 -- Dato crudo normalizado que una fuente concreta devuelve para un cómic concreto.
 CREATE TABLE IF NOT EXISTS comic_metadata_entry (
-    id          BIGINT NOT NULL PRIMARY KEY,
-    external_id VARCHAR(255) NOT NULL,
-    comic_id    BIGINT NOT NULL REFERENCES comic (id),
-    source_id   BIGINT NOT NULL REFERENCES comic_metadata_source (id),
+    id              BIGINT NOT NULL PRIMARY KEY,
+    external_id     VARCHAR(255) NOT NULL,
+    comic_id        BIGINT NOT NULL REFERENCES comic (id),
+    source_id       BIGINT NOT NULL REFERENCES comic_metadata_source (id),
+    last_fetched_at TIMESTAMPTZ NOT NULL,
     UNIQUE (source_id, external_id)
 );
 
