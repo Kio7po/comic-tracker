@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.github.kio7po.comic_tracker.domain.common.Page;
 import com.github.kio7po.comic_tracker.domain.common.Slugifier;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.Author;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.ComicMetadataEntry;
@@ -19,6 +20,7 @@ import com.github.kio7po.comic_tracker.domain.entities.ComicMetadataSource;
 import com.github.kio7po.comic_tracker.domain.entities.Genre;
 import com.github.kio7po.comic_tracker.domain.entities.Tag;
 import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
+import com.github.kio7po.comic_tracker.domain.enums.ComicSearchSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicMetadataSourceNotFoundException;
@@ -65,8 +67,8 @@ public class CatalogService {
     }
 
     public Page<ComicMetadataResult> search(String keywords, int limit, int offset, NsfwRating nsfw,
-            ComicStatus status, ComicMediaType type) {
-        return metadataProvider.search(keywords, limit, offset, nsfw, status, type);
+            ComicStatus status, ComicMediaType type, ComicSearchSortField sortBy, SortDirection direction) {
+        return metadataProvider.search(keywords, limit, offset, nsfw, status, type, sortBy, direction);
     }
 
     /*

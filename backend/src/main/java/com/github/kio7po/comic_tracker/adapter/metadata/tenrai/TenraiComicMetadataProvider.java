@@ -14,6 +14,8 @@ import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 
 import com.github.kio7po.comic_tracker.domain.common.Page;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
+import com.github.kio7po.comic_tracker.domain.enums.ComicSearchSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
@@ -48,7 +50,7 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
 
     @Override
     public Page<ComicMetadataResult> search(String keywords, int limit, int offset, NsfwRating nsfw, ComicStatus status,
-            ComicMediaType type) {
+            ComicMediaType type, ComicSearchSortField sortBy, SortDirection direction) {
         int page = (offset / limit) + 1;
 
         TenraiMangaSearchResponseDto response = rateLimited(() -> restClient.get()
@@ -60,6 +62,9 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
                     applyNsfwFilter(uriBuilder, nsfw);
                     TenraiComicMapper.toTenraiStatus(status).ifPresent(value -> uriBuilder.queryParam("status", value));
                     TenraiComicMapper.toTenraiType(type).ifPresent(value -> uriBuilder.queryParam("type", value));
+                    TenraiComicMapper.toTenraiOrderBy(sortBy)
+                            .ifPresent(value -> uriBuilder.queryParam("order_by", value));
+                    TenraiComicMapper.toTenraiSort(direction).ifPresent(value -> uriBuilder.queryParam("sort", value));
                     return uriBuilder.build();
                 })
                 .retrieve()

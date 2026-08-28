@@ -25,12 +25,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.github.kio7po.comic_tracker.domain.common.Page;
 import com.github.kio7po.comic_tracker.domain.common.Slugifier;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.Author;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.ComicMetadataEntry;
 import com.github.kio7po.comic_tracker.domain.entities.ComicMetadataSource;
 import com.github.kio7po.comic_tracker.domain.entities.Genre;
 import com.github.kio7po.comic_tracker.domain.entities.Tag;
+import com.github.kio7po.comic_tracker.domain.enums.ComicSearchSortField;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicMetadataSourceNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.UnsupportedMetadataSourceException;
 import com.github.kio7po.comic_tracker.domain.port.metadata.ComicMetadataProvider;
@@ -80,9 +82,21 @@ class CatalogServiceTest {
     @Test
     void searchDelegatesToMetadataProvider() {
         Page<ComicMetadataResult> expected = new Page<>(List.of(), false, null);
-        when(metadataProvider.search("berserk", 20, 0, null, null, null)).thenReturn(expected);
+        when(metadataProvider.search("berserk", 20, 0, null, null, null, null, null)).thenReturn(expected);
 
-        Page<ComicMetadataResult> result = catalogService.search("berserk", 20, 0, null, null, null);
+        Page<ComicMetadataResult> result = catalogService.search("berserk", 20, 0, null, null, null, null, null);
+
+        assertThat(result).isSameAs(expected);
+    }
+
+    @Test
+    void searchPassesSortByAndDirectionThroughUnchanged() {
+        Page<ComicMetadataResult> expected = new Page<>(List.of(), false, null);
+        when(metadataProvider.search("berserk", 20, 0, null, null, null, ComicSearchSortField.POPULARITY,
+                SortDirection.ASC)).thenReturn(expected);
+
+        Page<ComicMetadataResult> result = catalogService.search("berserk", 20, 0, null, null, null,
+                ComicSearchSortField.POPULARITY, SortDirection.ASC);
 
         assertThat(result).isSameAs(expected);
     }
