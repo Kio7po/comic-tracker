@@ -1,4 +1,5 @@
 export type * from './ComicMediaType';
+export type * from './ComicSearchSortField';
 export type * from './ComicStatus';
 export type * from './NsfwRating';
 export type * from './ComicSearchResult';

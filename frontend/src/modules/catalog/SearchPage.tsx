@@ -2,13 +2,22 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { search } from '@/services/comic/api/catalog';
-import type { ComicMediaType, ComicSearchResult, ComicStatus, NsfwRating } from '@/services/comic/types';
+import type { SortDirection } from '@/common/api/SortDirection';
+import type {
+  ComicMediaType,
+  ComicSearchResult,
+  ComicSearchSortField,
+  ComicStatus,
+  NsfwRating,
+} from '@/services/comic/types';
 import SearchBar from '@/common/components/SearchBar';
-import SearchFilters, { LIMIT_OPTIONS } from './SearchFilters';
+import SearchFilters, { LIMIT_OPTIONS, SORT_FIELDS } from './SearchFilters';
 import SearchResults from './SearchResults';
 import SearchPagination from './SearchPagination';
 
 const DEFAULT_LIMIT = 24;
+const DEFAULT_SORT_FIELD: ComicSearchSortField = 'RELEVANCE';
+const DEFAULT_SORT_DIRECTION: SortDirection = 'DESC';
 
 function SearchPage() {
   const { t } = useTranslation();
@@ -21,6 +30,11 @@ function SearchPage() {
   const nsfw = (searchParams.get('nsfw') as NsfwRating | null) ?? undefined;
   const requestedLimit = Number(searchParams.get('limit'));
   const limit = LIMIT_OPTIONS.includes(requestedLimit) ? requestedLimit : DEFAULT_LIMIT;
+  const requestedSortBy = searchParams.get('sortBy');
+  const sortBy = SORT_FIELDS.includes(requestedSortBy as ComicSearchSortField)
+    ? (requestedSortBy as ComicSearchSortField)
+    : DEFAULT_SORT_FIELD;
+  const direction: SortDirection = searchParams.get('direction') === 'ASC' ? 'ASC' : DEFAULT_SORT_DIRECTION;
 
   function updateParams(updates: Record<string, string | null>) {
     setSearchParams((previous) => {
@@ -60,6 +74,14 @@ function SearchPage() {
     updateParams({ limit: value === DEFAULT_LIMIT ? null : String(value), page: null });
   }
 
+  function handleSortByChange(value: ComicSearchSortField) {
+    updateParams({ sortBy: value === DEFAULT_SORT_FIELD ? null : value, page: null });
+  }
+
+  function handleDirectionChange(value: SortDirection) {
+    updateParams({ direction: value === DEFAULT_SORT_DIRECTION ? null : value, page: null });
+  }
+
   const [results, setResults] = useState<ComicSearchResult[]>([]);
   const [totalItems, setTotalItems] = useState<number | null>(null);
   const [existMoreItems, setExistMoreItems] = useState(true);
@@ -75,7 +97,18 @@ function SearchPage() {
     setIsLoading(true);
     setHasError(false);
     search(
-      { keywords, limit, offset: (page - 1) * limit, type, status, nsfw },
+      {
+        keywords,
+        limit,
+        offset: (page - 1) * limit,
+        type,
+        status,
+        nsfw,
+        sortBy,
+        // Direction has no effect server-side when sortBy is RELEVANCE - omit it too, rather
+        // than sending a value that would just be ignored.
+        direction: sortBy === 'RELEVANCE' ? undefined : direction,
+      },
       { signal: controller.signal },
     )
       .then((response) => {
@@ -98,7 +131,7 @@ function SearchPage() {
     return () => {
       controller.abort();
     };
-  }, [page, keywords, type, status, nsfw, limit]);
+  }, [page, keywords, type, status, nsfw, limit, sortBy, direction]);
 
   const totalPages = totalItems !== null ? Math.max(1, Math.ceil(totalItems / limit)) : null;
 
@@ -110,10 +143,14 @@ function SearchPage() {
         status={status}
         nsfw={nsfw}
         limit={limit}
+        sortBy={sortBy}
+        direction={direction}
         onTypeChange={handleTypeChange}
         onStatusChange={handleStatusChange}
         onNsfwChange={handleNsfwChange}
         onLimitChange={handleLimitChange}
+        onSortByChange={handleSortByChange}
+        onDirectionChange={handleDirectionChange}
       />
       <SearchPagination
         page={page}

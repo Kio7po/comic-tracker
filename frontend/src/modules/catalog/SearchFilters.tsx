@@ -1,4 +1,7 @@
 import { useTranslation } from 'react-i18next';
+import { ArrowDownWideNarrow, ArrowUpNarrowWide } from 'lucide-react';
+import { Button } from '@/common/components/ui/button';
+import { ButtonGroup } from '@/common/components/ui/button-group';
 import {
   Select,
   SelectContent,
@@ -9,7 +12,9 @@ import {
   SelectValue,
 } from '@/common/components/ui/select';
 import { Separator } from '@/common/components/ui/separator';
-import type { ComicMediaType, ComicStatus, NsfwRating } from '@/services/comic/types';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/common/components/ui/tooltip';
+import type { SortDirection } from '@/common/api/SortDirection';
+import type { ComicMediaType, ComicSearchSortField, ComicStatus, NsfwRating } from '@/services/comic/types';
 
 const MEDIA_TYPES: ComicMediaType[] = [
   'MANGA',
@@ -29,15 +34,21 @@ const NSFW_RATINGS: NsfwRating[] = ['NONE', 'SUGGESTIVE', 'EXPLICIT'];
 
 export const LIMIT_OPTIONS = [6, 12, 24, 48];
 
+export const SORT_FIELDS: ComicSearchSortField[] = ['RELEVANCE', 'TITLE', 'POPULARITY', 'RELEASE_DATE'];
+
 interface SearchFiltersProps {
   type: ComicMediaType | undefined;
   status: ComicStatus | undefined;
   nsfw: NsfwRating | undefined;
   limit: number;
+  sortBy: ComicSearchSortField;
+  direction: SortDirection;
   onTypeChange: (value: ComicMediaType | undefined) => void;
   onStatusChange: (value: ComicStatus | undefined) => void;
   onNsfwChange: (value: NsfwRating | undefined) => void;
   onLimitChange: (value: number) => void;
+  onSortByChange: (value: ComicSearchSortField) => void;
+  onDirectionChange: (value: SortDirection) => void;
 }
 
 function SearchFilters({
@@ -45,10 +56,14 @@ function SearchFilters({
   status,
   nsfw,
   limit,
+  sortBy,
+  direction,
   onTypeChange,
   onStatusChange,
   onNsfwChange,
   onLimitChange,
+  onSortByChange,
+  onDirectionChange,
 }: Readonly<SearchFiltersProps>) {
   const { t } = useTranslation();
 
@@ -64,6 +79,7 @@ function SearchFilters({
   // (see TenraiComicMetadataProvider.applyNsfwFilter), so it already means "unrestricted".
   const nsfwRatings = NSFW_RATINGS.map((value) => ({ value, label: t(`catalog.nsfw.${value}`) }));
   const limitOptions = LIMIT_OPTIONS.map((value) => ({ value: String(value), label: String(value) }));
+  const sortFields = SORT_FIELDS.map((value) => ({ value, label: t(`catalog.sort.${value}`) }));
 
   const selectLimitOptions = limitOptions.map(({ value, label }) => ({
     value,
@@ -136,6 +152,51 @@ function SearchFilters({
           </SelectGroup>
         </SelectContent>
       </Select>
+      <Separator orientation="vertical" className="hidden sm:block" />
+      <ButtonGroup>
+        <Select
+          value={sortBy}
+          items={sortFields}
+          onValueChange={(value) => onSortByChange(value as ComicSearchSortField)}
+        >
+          <SelectTrigger>
+            <SelectValue/>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>{t('catalog.filters.sortBy')}</SelectLabel>
+              {sortFields.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={sortBy === 'RELEVANCE'}
+                aria-label={direction === 'ASC' ? t('catalog.filters.sortAsc') : t('catalog.filters.sortDesc')}
+                onClick={() => onDirectionChange(direction === 'ASC' ? 'DESC' : 'ASC')}
+              />
+            }
+          >
+            {direction === 'ASC' ? (
+              <ArrowUpNarrowWide className="size-4" />
+            ) : (
+              <ArrowDownWideNarrow className="size-4" />
+            )}
+          </TooltipTrigger>
+          <TooltipContent>
+            {direction === 'ASC' ? t('catalog.filters.sortAsc') : t('catalog.filters.sortDesc')}
+          </TooltipContent>
+        </Tooltip>
+      </ButtonGroup>
       <Separator orientation="vertical" className="hidden sm:block" />
       <Select
         value={String(limit)}

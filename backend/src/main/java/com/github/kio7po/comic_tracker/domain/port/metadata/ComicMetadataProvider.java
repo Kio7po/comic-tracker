@@ -11,10 +11,10 @@ import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
 
 public interface ComicMetadataProvider {
     /**
-     * @param sortBy    null leaves the ordering entirely up to the provider (e.g. no explicit sort
-     *                  requested, so the provider's own default/relevance order is used).
-     * @param direction null leaves the direction up to the provider's own default for the given
-     *                  sortBy.
+     * @param sortBy    null leaves the sort order entirely up to the provider's own default, which
+     *                  is provider-specific. {@code RELEVANCE} is a distinct, explicit request to
+     *                  sort by relevance specifically.
+     * @param direction has no effect when sortBy is {@code RELEVANCE}.
      */
     Page<ComicMetadataResult> search(String keywords, int limit, int offset, NsfwRating nsfw, ComicStatus status,
             ComicMediaType type, ComicSearchSortField sortBy, SortDirection direction);

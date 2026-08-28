@@ -34,6 +34,8 @@ import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 
 import com.github.kio7po.comic_tracker.domain.common.Page;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
+import com.github.kio7po.comic_tracker.domain.enums.ComicSearchSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
@@ -189,6 +191,59 @@ class TenraiComicMetadataProviderTest {
                 .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
 
         provider.search("berserk", 10, 0, null, ComicStatus.OTHER, ComicMediaType.WEBTOON, null, null);
+
+        server.verify();
+    }
+
+    @Test
+    void search_sendsOrderByAndSortWhenSortByIsGiven() {
+        server.expect(requestTo(startsWith(BASE_URL + "/manga")))
+                .andExpect(queryParam("order_by", "title"))
+                .andExpect(queryParam("sort", "asc"))
+                .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
+
+        provider.search("berserk", 10, 0, null, null, null, ComicSearchSortField.TITLE, SortDirection.ASC);
+
+        server.verify();
+    }
+
+    @Test
+    void search_invertsSortForPopularityRank() {
+        server.expect(requestTo(startsWith(BASE_URL + "/manga")))
+                .andExpect(queryParam("order_by", "popularity"))
+                .andExpect(queryParam("sort", "asc"))
+                .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
+
+        // DESC ("most popular first" from the caller's perspective) must invert to Jikan's own
+        // "asc" - popularity is a members-based rank there, where the lowest number is the most
+        // popular.
+        provider.search("berserk", 10, 0, null, null, null, ComicSearchSortField.POPULARITY, SortDirection.DESC);
+
+        server.verify();
+    }
+
+    @Test
+    void search_omitsSortWhenSortByIsRelevanceEvenWithDirectionGiven() {
+        server.expect(requestTo(allOf(
+                        startsWith(BASE_URL + "/manga"),
+                        not(containsString("order_by")),
+                        not(containsString("sort=")))))
+                .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
+
+        provider.search("berserk", 10, 0, null, null, null, ComicSearchSortField.RELEVANCE, SortDirection.DESC);
+
+        server.verify();
+    }
+
+    @Test
+    void search_omitsOrderByAndSortWhenSortByIsNullEvenWithDirectionGiven() {
+        server.expect(requestTo(allOf(
+                        startsWith(BASE_URL + "/manga"),
+                        not(containsString("order_by")),
+                        not(containsString("sort=")))))
+                .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
+
+        provider.search("berserk", 10, 0, null, null, null, null, SortDirection.DESC);
 
         server.verify();
     }

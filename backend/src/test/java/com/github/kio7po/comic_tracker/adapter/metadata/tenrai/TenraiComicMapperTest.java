@@ -290,17 +290,34 @@ class TenraiComicMapperTest {
         assertThat(TenraiComicMapper.toTenraiOrderBy(null)).isEmpty();
     }
 
+    @Test
+    void toTenraiOrderBy_returnsEmptyWhenSortByIsRelevance() {
+        assertThat(TenraiComicMapper.toTenraiOrderBy(ComicSearchSortField.RELEVANCE)).isEmpty();
+    }
+
     @ParameterizedTest
     @CsvSource({
-            "ASC, asc",
-            "DESC, desc"
+            "TITLE, ASC, asc",
+            "TITLE, DESC, desc",
+            "RELEASE_DATE, ASC, asc",
+            "RELEASE_DATE, DESC, desc"
     })
-    void toTenraiSort_mapsDirectionsWithEquivalent(SortDirection direction, String expected) {
-        assertThat(TenraiComicMapper.toTenraiSort(direction)).contains(expected);
+    void toTenraiSort_mapsDirectionsWithEquivalent(ComicSearchSortField sortBy, SortDirection direction,
+            String expected) {
+        assertThat(TenraiComicMapper.toTenraiSort(sortBy, direction)).contains(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "ASC, desc",
+            "DESC, asc"
+    })
+    void toTenraiSort_invertsDirectionForPopularityRank(SortDirection direction, String expected) {
+        assertThat(TenraiComicMapper.toTenraiSort(ComicSearchSortField.POPULARITY, direction)).contains(expected);
     }
 
     @Test
     void toTenraiSort_returnsEmptyWhenDirectionIsNull() {
-        assertThat(TenraiComicMapper.toTenraiSort(null)).isEmpty();
+        assertThat(TenraiComicMapper.toTenraiSort(ComicSearchSortField.TITLE, null)).isEmpty();
     }
 }

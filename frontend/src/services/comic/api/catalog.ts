@@ -1,6 +1,7 @@
 import { apiFetch } from '@/common/api/client';
 import type { PageResponse } from '@/common/api/PageResponse';
-import type { Comic, ComicMediaType, ComicSearchResult, ComicStatus, NsfwRating } from '../types';
+import type { SortDirection } from '@/common/api/SortDirection';
+import type { Comic, ComicMediaType, ComicSearchResult, ComicSearchSortField, ComicStatus, NsfwRating } from '../types';
 
 export interface SearchParams {
   keywords: string;
@@ -9,6 +10,8 @@ export interface SearchParams {
   nsfw?: NsfwRating;
   status?: ComicStatus;
   type?: ComicMediaType;
+  sortBy?: ComicSearchSortField;
+  direction?: SortDirection;
 }
 
 export function search(
@@ -21,6 +24,8 @@ export function search(
   if (params.nsfw) query.set('nsfw', params.nsfw);
   if (params.status) query.set('status', params.status);
   if (params.type) query.set('type', params.type);
+  if (params.sortBy) query.set('sortBy', params.sortBy);
+  if (params.direction) query.set('direction', params.direction);
 
   return apiFetch<PageResponse<ComicSearchResult>>(`/catalog/search?${query.toString()}`, {
     signal: options?.signal,

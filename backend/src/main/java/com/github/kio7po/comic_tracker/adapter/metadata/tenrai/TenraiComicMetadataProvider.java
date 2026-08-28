@@ -62,9 +62,13 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
                     applyNsfwFilter(uriBuilder, nsfw);
                     TenraiComicMapper.toTenraiStatus(status).ifPresent(value -> uriBuilder.queryParam("status", value));
                     TenraiComicMapper.toTenraiType(type).ifPresent(value -> uriBuilder.queryParam("type", value));
-                    TenraiComicMapper.toTenraiOrderBy(sortBy)
-                            .ifPresent(value -> uriBuilder.queryParam("order_by", value));
-                    TenraiComicMapper.toTenraiSort(direction).ifPresent(value -> uriBuilder.queryParam("sort", value));
+                    Optional<String> orderBy = TenraiComicMapper.toTenraiOrderBy(sortBy);
+                    orderBy.ifPresent(value -> uriBuilder.queryParam("order_by", value));
+                    // "sort" (direction) is meaningless to Jikan without an accompanying order_by field.
+                    if (orderBy.isPresent()) {
+                        TenraiComicMapper.toTenraiSort(sortBy, direction)
+                                .ifPresent(value -> uriBuilder.queryParam("sort", value));
+                    }
                     return uriBuilder.build();
                 })
                 .retrieve()

@@ -182,19 +182,28 @@ final class TenraiComicMapper {
             return Optional.empty();
         }
         return switch (sortBy) {
+            case RELEVANCE -> Optional.empty();
             case TITLE -> Optional.of("title");
             case POPULARITY -> Optional.of("popularity");
             case RELEASE_DATE -> Optional.of("start_date");
         };
     }
 
-    static Optional<String> toTenraiSort(SortDirection direction) {
+    static Optional<String> toTenraiSort(ComicSearchSortField sortBy, SortDirection direction) {
         if (direction == null) {
             return Optional.empty();
         }
-        return switch (direction) {
+        // Jikan's "popularity" field is based on a rank (1st = most popular), the
+        // opposite of "DESC = most popular first" that the domain's SortDirection otherwise
+        // implies for every other field - invert so DESC still means most popular here.
+        SortDirection effectiveDirection = sortBy == ComicSearchSortField.POPULARITY ? invert(direction) : direction;
+        return switch (effectiveDirection) {
             case ASC -> Optional.of("asc");
             case DESC -> Optional.of("desc");
         };
+    }
+
+    private static SortDirection invert(SortDirection direction) {
+        return direction == SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
     }
 }

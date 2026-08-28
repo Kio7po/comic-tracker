@@ -61,7 +61,10 @@
       "nsfw": "NSFW",
       "allTypes": "Any type",
       "allStatuses": "Any status",
-      "limit": "Per page"
+      "limit": "Per page",
+      "sortBy": "Sort by",
+      "sortAsc": "Ascending",
+      "sortDesc": "Descending"
     },
     "nsfw": {
       "NONE": "None",
@@ -85,6 +88,12 @@
       "HIATUS": "Hiatus",
       "CANCELLED": "Cancelled",
       "OTHER": "Other"
+    },
+    "sort": {
+      "RELEVANCE": "Relevance",
+      "TITLE": "Title",
+      "POPULARITY": "Popularity",
+      "RELEASE_DATE": "Release date"
     }
   },
   "auth": {
