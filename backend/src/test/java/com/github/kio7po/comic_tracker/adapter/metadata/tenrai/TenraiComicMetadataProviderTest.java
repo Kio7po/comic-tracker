@@ -183,15 +183,26 @@ class TenraiComicMetadataProviderTest {
     }
 
     @Test
-    void search_omitsStatusAndTypeWhenTheyHaveNoTenraiEquivalent() {
-        server.expect(requestTo(allOf(
-                        startsWith(BASE_URL + "/manga"),
-                        not(containsString("status")),
-                        not(containsString("type")))))
-                .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
+    void search_returnsEmptyPageWithoutCallingTheApiWhenStatusHasNoTenraiEquivalent() {
+        // No server.expect(...) set up on purpose: the request must never reach the network -
+        // MockRestServiceServer fails the test itself if it does.
+        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, ComicStatus.OTHER, null, null, null);
 
-        provider.search("berserk", 10, 0, null, ComicStatus.OTHER, ComicMediaType.WEBTOON, null, null);
+        assertThat(page.getItems()).isEmpty();
+        assertThat(page.isExistMoreItems()).isFalse();
+        assertThat(page.getTotalItems()).isEqualTo(0);
+        server.verify();
+    }
 
+    @Test
+    void search_returnsEmptyPageWithoutCallingTheApiWhenTypeHasNoTenraiEquivalent() {
+        // No server.expect(...) set up on purpose: the request must never reach the network.
+        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, null, ComicMediaType.WEBTOON, null,
+                null);
+
+        assertThat(page.getItems()).isEmpty();
+        assertThat(page.isExistMoreItems()).isFalse();
+        assertThat(page.getTotalItems()).isEqualTo(0);
         server.verify();
     }
 

@@ -51,6 +51,15 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
     @Override
     public Page<ComicMetadataResult> search(String keywords, int limit, int offset, NsfwRating nsfw, ComicStatus status,
             ComicMediaType type, ComicSearchSortField sortBy, SortDirection direction) {
+        Optional<String> tenraiStatus = TenraiComicMapper.toTenraiStatus(status);
+        Optional<String> tenraiType = TenraiComicMapper.toTenraiType(type);
+        // status/type with no Tenrai equivalent (e.g. ComicStatus.OTHER, ComicMediaType.WEBTOON)
+        // can't be honored by the remote API at all - silently dropping the filter and returning
+        // unfiltered results would misrepresent them as matching a filter they don't match.
+        if ((status != null && tenraiStatus.isEmpty()) || (type != null && tenraiType.isEmpty())) {
+            return new Page<>(List.of(), false, 0);
+        }
+
         int page = (offset / limit) + 1;
 
         TenraiMangaSearchResponseDto response = rateLimited(() -> restClient.get()
@@ -60,8 +69,8 @@ public class TenraiComicMetadataProvider implements ComicMetadataProvider {
                             .queryParam("page", page)
                             .queryParam("limit", limit);
                     applyNsfwFilter(uriBuilder, nsfw);
-                    TenraiComicMapper.toTenraiStatus(status).ifPresent(value -> uriBuilder.queryParam("status", value));
-                    TenraiComicMapper.toTenraiType(type).ifPresent(value -> uriBuilder.queryParam("type", value));
+                    tenraiStatus.ifPresent(value -> uriBuilder.queryParam("status", value));
+                    tenraiType.ifPresent(value -> uriBuilder.queryParam("type", value));
                     Optional<String> orderBy = TenraiComicMapper.toTenraiOrderBy(sortBy);
                     orderBy.ifPresent(value -> uriBuilder.queryParam("order_by", value));
                     // "sort" (direction) is meaningless to Jikan without an accompanying order_by field.

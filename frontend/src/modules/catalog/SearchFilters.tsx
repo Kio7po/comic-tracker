@@ -16,12 +16,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/common/components/ui/
 import type { SortDirection } from '@/common/api/SortDirection';
 import type { ComicMediaType, ComicSearchSortField, ComicStatus, NsfwRating } from '@/services/comic/types';
 
+// WEBTOON/COMIC commented out, same as OTHER below: Tenrai/Jikan has no equivalent for them,
+// so TenraiComicMetadataProvider.search now returns an honest empty page rather than silently
+// ignoring the filter - but that means the option can never return anything with the only
+// provider active today. Re-enable if a future provider supports them.
 const MEDIA_TYPES: ComicMediaType[] = [
   'MANGA',
   'MANHWA',
   'MANHUA',
-  'WEBTOON',
-  'COMIC',
+  /* 'WEBTOON', */
+  /* 'COMIC', */
   'NOVEL',
   'ONE_SHOT',
   'DOUJINSHI',
