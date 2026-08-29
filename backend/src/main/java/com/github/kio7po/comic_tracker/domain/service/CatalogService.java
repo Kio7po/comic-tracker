@@ -72,9 +72,8 @@ public class CatalogService {
     }
 
     /*
-     * TODO:
-     * Dedup solo cubre el paso 1 de docs/TFG.md ("Proceso de alta de una fuente nueva"): reutilizar
-     * el comic_id si (sourceSlug, externalId) ya está en ComicMetadataEntry. Los pasos 2-4
+     * TODO: Dedup solo cubre el paso 1 de docs/TFG.md ("Proceso de alta de una fuente nueva"):
+     * reutilizar el comic_id si (sourceSlug, externalId) ya está en ComicMetadataEntry. Los pasos 2-4
      * (referencia cruzada nativa, Wikidata) no aplican todavía porque solo hay un provider activo;
      * con un segundo provider, el mismo cómic buscado desde ambas fuentes generaría dos Comic
      * distintos hasta que se implementen.

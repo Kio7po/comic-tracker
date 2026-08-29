@@ -64,10 +64,12 @@
       "limit": "Por página",
       "sortBy": "Ordenar por",
       "sortAsc": "Ascendente",
-      "sortDesc": "Descendente"
+      "sortDesc": "Descendente",
+      "trigger": "Filtros",
+      "reset": "Restablecer"
     },
     "nsfw": {
-      "NONE": "Ninguno",
+      "NONE": "Seguro",
       "SUGGESTIVE": "Sugerente",
       "EXPLICIT": "Explícito"
     },

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowDownWideNarrow, ArrowUpNarrowWide } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, FilterX } from 'lucide-react';
 import { Button } from '@/common/components/ui/button';
 import { ButtonGroup } from '@/common/components/ui/button-group';
 import {
@@ -39,16 +39,21 @@ export const SORT_FIELDS: ComicSearchSortField[] = ['RELEVANCE', 'TITLE', 'POPUL
 interface SearchFiltersProps {
   type: ComicMediaType | undefined;
   status: ComicStatus | undefined;
-  nsfw: NsfwRating | undefined;
+  nsfw: NsfwRating;
   limit: number;
   sortBy: ComicSearchSortField;
   direction: SortDirection;
   onTypeChange: (value: ComicMediaType | undefined) => void;
   onStatusChange: (value: ComicStatus | undefined) => void;
-  onNsfwChange: (value: NsfwRating | undefined) => void;
+  onNsfwChange: (value: NsfwRating) => void;
   onLimitChange: (value: number) => void;
   onSortByChange: (value: ComicSearchSortField) => void;
   onDirectionChange: (value: SortDirection) => void;
+  isAtDefault: boolean;
+  onReset: () => void;
+  // Base UI's Select has a real bug combining this with a modal focus trap,
+  // callers rendering these Selects inside a Drawer/Dialog must pass false.
+  alignSelectWithTrigger?: boolean;
 }
 
 function SearchFilters({
@@ -64,6 +69,9 @@ function SearchFilters({
   onLimitChange,
   onSortByChange,
   onDirectionChange,
+  isAtDefault,
+  onReset,
+  alignSelectWithTrigger = true,
 }: Readonly<SearchFiltersProps>) {
   const { t } = useTranslation();
 
@@ -75,8 +83,7 @@ function SearchFilters({
     {value: 'ALL', label: t('catalog.filters.allStatuses')},
     ...STATUSES.map((value) => ({value, label: t(`catalog.status.${value}`)}))
   ];
-  // No "any" option here: EXPLICIT is already the ceiling with no filtering applied
-  // (see TenraiComicMetadataProvider.applyNsfwFilter), so it already means "unrestricted".
+  // EXPLICIT is the ceiling with no filtering applied server-side
   const nsfwRatings = NSFW_RATINGS.map((value) => ({ value, label: t(`catalog.nsfw.${value}`) }));
   const limitOptions = LIMIT_OPTIONS.map((value) => ({ value: String(value), label: String(value) }));
   const sortFields = SORT_FIELDS.map((value) => ({ value, label: t(`catalog.sort.${value}`) }));
@@ -94,16 +101,16 @@ function SearchFilters({
   }));
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-3">
+    <div className="mt-3 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <Select
         value={type ?? 'ALL'}
         items={mediaTypes}
         onValueChange={(value) => onTypeChange(value === 'ALL' ? undefined : (value as ComicMediaType))}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full sm:w-fit">
           <SelectValue/>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.type')}</SelectLabel>
             {mediaTypes.map((item) => (
@@ -119,10 +126,10 @@ function SearchFilters({
         items={statuses}
         onValueChange={(value) => onStatusChange(value === 'ALL' ? undefined : (value as ComicStatus))}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full sm:w-fit">
           <SelectValue/>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.status')}</SelectLabel>
             {statuses.map((item) => (
@@ -134,14 +141,14 @@ function SearchFilters({
         </SelectContent>
       </Select>
       <Select
-        value={nsfw ?? 'EXPLICIT'}
+        value={nsfw}
         items={nsfwRatings}
-        onValueChange={(value) => onNsfwChange(value === 'EXPLICIT' ? undefined : (value as NsfwRating))}
+        onValueChange={(value) => onNsfwChange(value as NsfwRating)}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full sm:w-fit">
           <SelectValue/>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.nsfw')}</SelectLabel>
             {nsfwRatings.map((item) => (
@@ -152,17 +159,17 @@ function SearchFilters({
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Separator orientation="vertical" className="hidden sm:block" />
-      <ButtonGroup>
+      <Separator orientation="vertical" />
+      <ButtonGroup className="w-full sm:w-fit">
         <Select
           value={sortBy}
           items={sortFields}
           onValueChange={(value) => onSortByChange(value as ComicSearchSortField)}
         >
-          <SelectTrigger>
+          <SelectTrigger className="flex-1 sm:w-fit sm:flex-none">
             <SelectValue/>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
             <SelectGroup>
               <SelectLabel>{t('catalog.filters.sortBy')}</SelectLabel>
               {sortFields.map((item) => (
@@ -197,16 +204,16 @@ function SearchFilters({
           </TooltipContent>
         </Tooltip>
       </ButtonGroup>
-      <Separator orientation="vertical" className="hidden sm:block" />
+      <Separator orientation="vertical" />
       <Select
         value={String(limit)}
         items={selectLimitOptions}
         onValueChange={(value) => onLimitChange(Number(value))}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full sm:w-fit">
           <SelectValue/>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.limit')}</SelectLabel>
             {limitOptions.map((item) => (
@@ -217,6 +224,12 @@ function SearchFilters({
           </SelectGroup>
         </SelectContent>
       </Select>
+      {!isAtDefault && (
+        <Button type="button" variant="ghost" onClick={onReset}>
+          <FilterX className="size-4" />
+          {t('catalog.filters.reset')}
+        </Button>
+      )}
     </div>
   );
 }
