@@ -16,6 +16,7 @@
   "library": {
     "title": "Library",
     "empty": "Nothing here yet.",
+    "browseCatalog": "Browse the catalog",
     "filteredEmpty": "No comics match the selected filters.",
     "loadError": "Something went wrong loading your library.",
     "searchPlaceholder": "Search…",
@@ -50,6 +51,7 @@
     "tagline": "Comic Tracker — a TFG project (UDC)"
   },
   "catalog": {
+    "title": "Browse",
     "searchPlaceholder": "Search...",
     "loading": "Loading…",
     "loadError": "Something went wrong loading comics.",

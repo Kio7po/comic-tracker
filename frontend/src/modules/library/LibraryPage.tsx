@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { SlidersHorizontal } from 'lucide-react';
 import type { ComicMediaType, ComicStatus, NsfwRating } from '@/services/comic/types';
@@ -264,8 +264,17 @@ function LibraryPage() {
     }
 
     if (filteredEntries.length === 0) {
-      const emptyMessage = entries.length > 0 ? t('library.filteredEmpty') : t('library.empty');
-      return <p className="mt-6 text-sm text-muted-foreground">{emptyMessage}</p>;
+      if (entries.length > 0) {
+        return <p className="mt-6 text-sm text-muted-foreground">{t('library.filteredEmpty')}</p>;
+      }
+      return (
+        <p className="mt-6 text-sm text-muted-foreground">
+          {t('library.empty')}{' '}
+          <Link to="/catalog" className="text-primary underline-offset-4 hover:underline">
+            {t('library.browseCatalog')}
+          </Link>
+        </p>
+      );
     }
 
     return (
