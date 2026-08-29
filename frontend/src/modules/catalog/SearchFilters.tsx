@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, FilterX } from 'lucide-react';
+import { FilterX } from 'lucide-react';
 import { Button } from '@/common/components/ui/button';
-import { ButtonGroup } from '@/common/components/ui/button-group';
 import {
   Select,
   SelectContent,
@@ -12,7 +11,7 @@ import {
   SelectValue,
 } from '@/common/components/ui/select';
 import { Separator } from '@/common/components/ui/separator';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/common/components/ui/tooltip';
+import SortButtonGroup from '@/common/components/SortButtonGroup';
 import type { SortDirection } from '@/common/api/SortDirection';
 import type { ComicMediaType, ComicSearchSortField, ComicStatus, NsfwRating } from '@/services/comic/types';
 
@@ -164,50 +163,16 @@ function SearchFilters({
         </SelectContent>
       </Select>
       <Separator orientation="vertical" />
-      <ButtonGroup className="w-full sm:w-fit">
-        <Select
-          value={sortBy}
-          items={sortFields}
-          onValueChange={(value) => onSortByChange(value as ComicSearchSortField)}
-        >
-          <SelectTrigger className="flex-1 sm:w-fit sm:flex-none">
-            <SelectValue/>
-          </SelectTrigger>
-          <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
-            <SelectGroup>
-              <SelectLabel>{t('catalog.filters.sortBy')}</SelectLabel>
-              {sortFields.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                disabled={sortBy === 'RELEVANCE'}
-                aria-label={direction === 'ASC' ? t('catalog.filters.sortAsc') : t('catalog.filters.sortDesc')}
-                onClick={() => onDirectionChange(direction === 'ASC' ? 'DESC' : 'ASC')}
-              />
-            }
-          >
-            {direction === 'ASC' ? (
-              <ArrowUpNarrowWide className="size-4" />
-            ) : (
-              <ArrowDownWideNarrow className="size-4" />
-            )}
-          </TooltipTrigger>
-          <TooltipContent>
-            {direction === 'ASC' ? t('catalog.filters.sortAsc') : t('catalog.filters.sortDesc')}
-          </TooltipContent>
-        </Tooltip>
-      </ButtonGroup>
+      <SortButtonGroup
+        className="w-full sm:w-fit"
+        items={sortFields}
+        value={sortBy}
+        onValueChange={onSortByChange}
+        direction={direction}
+        onDirectionChange={onDirectionChange}
+        directionDisabled={sortBy === 'RELEVANCE'}
+        alignSelectWithTrigger={alignSelectWithTrigger}
+      />
       <Separator orientation="vertical" />
       <Select
         value={String(limit)}

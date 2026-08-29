@@ -190,7 +190,7 @@ class TenraiComicMetadataProviderTest {
 
         assertThat(page.getItems()).isEmpty();
         assertThat(page.isExistMoreItems()).isFalse();
-        assertThat(page.getTotalItems()).isEqualTo(0);
+        assertThat(page.getTotalItems()).isZero();
         server.verify();
     }
 
@@ -202,7 +202,7 @@ class TenraiComicMetadataProviderTest {
 
         assertThat(page.getItems()).isEmpty();
         assertThat(page.isExistMoreItems()).isFalse();
-        assertThat(page.getTotalItems()).isEqualTo(0);
+        assertThat(page.getTotalItems()).isZero();
         server.verify();
     }
 

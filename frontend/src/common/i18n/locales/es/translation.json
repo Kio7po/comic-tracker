@@ -1,7 +1,12 @@
 {
   "common": {
     "cancel": "Cancelar",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "sort": {
+      "by": "Ordenar por",
+      "asc": "Ascendente",
+      "desc": "Descendente"
+    }
   },
   "nav": {
     "home": "Inicio",
@@ -25,9 +30,6 @@
       "status": "Estado de lectura",
       "allStatuses": "Cualquier estado",
       "pendingOnly": "Solo sin leer",
-      "sortBy": "Ordenar por",
-      "sortAsc": "Ascendente",
-      "sortDesc": "Descendente",
       "reset": "Restablecer"
     },
     "sort": {
@@ -64,9 +66,6 @@
       "allTypes": "Cualquier tipo",
       "allStatuses": "Cualquier estado",
       "limit": "Por página",
-      "sortBy": "Ordenar por",
-      "sortAsc": "Ascendente",
-      "sortDesc": "Descendente",
       "trigger": "Filtros",
       "reset": "Restablecer"
     },
