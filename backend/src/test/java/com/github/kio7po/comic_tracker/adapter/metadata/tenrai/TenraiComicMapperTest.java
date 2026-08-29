@@ -12,10 +12,12 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.Author;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.Genre;
 import com.github.kio7po.comic_tracker.domain.entities.Tag;
+import com.github.kio7po.comic_tracker.domain.enums.ComicSearchSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
@@ -271,5 +273,51 @@ class TenraiComicMapperTest {
     @NullSource
     void toTenraiType_returnsEmptyWhenNoEquivalent(ComicMediaType type) {
         assertThat(TenraiComicMapper.toTenraiType(type)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "TITLE, title",
+            "POPULARITY, popularity",
+            "RELEASE_DATE, start_date"
+    })
+    void toTenraiOrderBy_mapsSortFieldsWithEquivalent(ComicSearchSortField sortBy, String expected) {
+        assertThat(TenraiComicMapper.toTenraiOrderBy(sortBy)).contains(expected);
+    }
+
+    @Test
+    void toTenraiOrderBy_returnsEmptyWhenSortByIsNull() {
+        assertThat(TenraiComicMapper.toTenraiOrderBy(null)).isEmpty();
+    }
+
+    @Test
+    void toTenraiOrderBy_returnsEmptyWhenSortByIsRelevance() {
+        assertThat(TenraiComicMapper.toTenraiOrderBy(ComicSearchSortField.RELEVANCE)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "TITLE, ASC, asc",
+            "TITLE, DESC, desc",
+            "RELEASE_DATE, ASC, asc",
+            "RELEASE_DATE, DESC, desc"
+    })
+    void toTenraiSort_mapsDirectionsWithEquivalent(ComicSearchSortField sortBy, SortDirection direction,
+            String expected) {
+        assertThat(TenraiComicMapper.toTenraiSort(sortBy, direction)).contains(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "ASC, desc",
+            "DESC, asc"
+    })
+    void toTenraiSort_invertsDirectionForPopularityRank(SortDirection direction, String expected) {
+        assertThat(TenraiComicMapper.toTenraiSort(ComicSearchSortField.POPULARITY, direction)).contains(expected);
+    }
+
+    @Test
+    void toTenraiSort_returnsEmptyWhenDirectionIsNull() {
+        assertThat(TenraiComicMapper.toTenraiSort(ComicSearchSortField.TITLE, null)).isEmpty();
     }
 }

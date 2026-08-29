@@ -34,6 +34,8 @@ import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 
 import com.github.kio7po.comic_tracker.domain.common.Page;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
+import com.github.kio7po.comic_tracker.domain.enums.ComicSearchSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
@@ -141,7 +143,7 @@ class TenraiComicMetadataProviderTest {
                 .andExpect(queryParam("limit", "10"))
                 .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
 
-        provider.search("berserk", 10, 10, null, null, null);
+        provider.search("berserk", 10, 10, null, null, null, null, null);
 
         server.verify();
     }
@@ -152,7 +154,7 @@ class TenraiComicMetadataProviderTest {
                 .andExpect(queryParam("sfw-strict", "true"))
                 .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
 
-        provider.search("berserk", 10, 0, NsfwRating.NONE, null, null);
+        provider.search("berserk", 10, 0, NsfwRating.NONE, null, null, null, null);
 
         server.verify();
     }
@@ -163,7 +165,7 @@ class TenraiComicMetadataProviderTest {
                 .andExpect(queryParam("sfw", "true"))
                 .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
 
-        provider.search("berserk", 10, 0, NsfwRating.SUGGESTIVE, null, null);
+        provider.search("berserk", 10, 0, NsfwRating.SUGGESTIVE, null, null, null, null);
 
         server.verify();
     }
@@ -175,20 +177,84 @@ class TenraiComicMetadataProviderTest {
                         not(containsString("sfw")))))
                 .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
 
-        provider.search("berserk", 10, 0, NsfwRating.EXPLICIT, null, null);
+        provider.search("berserk", 10, 0, NsfwRating.EXPLICIT, null, null, null, null);
 
         server.verify();
     }
 
     @Test
-    void search_omitsStatusAndTypeWhenTheyHaveNoTenraiEquivalent() {
-        server.expect(requestTo(allOf(
-                        startsWith(BASE_URL + "/manga"),
-                        not(containsString("status")),
-                        not(containsString("type")))))
+    void search_returnsEmptyPageWithoutCallingTheApiWhenStatusHasNoTenraiEquivalent() {
+        // No server.expect(...) set up on purpose: the request must never reach the network -
+        // MockRestServiceServer fails the test itself if it does.
+        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, ComicStatus.OTHER, null, null, null);
+
+        assertThat(page.getItems()).isEmpty();
+        assertThat(page.isExistMoreItems()).isFalse();
+        assertThat(page.getTotalItems()).isZero();
+        server.verify();
+    }
+
+    @Test
+    void search_returnsEmptyPageWithoutCallingTheApiWhenTypeHasNoTenraiEquivalent() {
+        // No server.expect(...) set up on purpose: the request must never reach the network.
+        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, null, ComicMediaType.WEBTOON, null,
+                null);
+
+        assertThat(page.getItems()).isEmpty();
+        assertThat(page.isExistMoreItems()).isFalse();
+        assertThat(page.getTotalItems()).isZero();
+        server.verify();
+    }
+
+    @Test
+    void search_sendsOrderByAndSortWhenSortByIsGiven() {
+        server.expect(requestTo(startsWith(BASE_URL + "/manga")))
+                .andExpect(queryParam("order_by", "title"))
+                .andExpect(queryParam("sort", "asc"))
                 .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
 
-        provider.search("berserk", 10, 0, null, ComicStatus.OTHER, ComicMediaType.WEBTOON);
+        provider.search("berserk", 10, 0, null, null, null, ComicSearchSortField.TITLE, SortDirection.ASC);
+
+        server.verify();
+    }
+
+    @Test
+    void search_invertsSortForPopularityRank() {
+        server.expect(requestTo(startsWith(BASE_URL + "/manga")))
+                .andExpect(queryParam("order_by", "popularity"))
+                .andExpect(queryParam("sort", "asc"))
+                .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
+
+        // DESC ("most popular first" from the caller's perspective) must invert to Jikan's own
+        // "asc" - popularity is a members-based rank there, where the lowest number is the most
+        // popular.
+        provider.search("berserk", 10, 0, null, null, null, ComicSearchSortField.POPULARITY, SortDirection.DESC);
+
+        server.verify();
+    }
+
+    @Test
+    void search_omitsSortWhenSortByIsRelevanceEvenWithDirectionGiven() {
+        server.expect(requestTo(allOf(
+                        startsWith(BASE_URL + "/manga"),
+                        not(containsString("order_by")),
+                        not(containsString("sort=")))))
+                .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
+
+        provider.search("berserk", 10, 0, null, null, null, ComicSearchSortField.RELEVANCE, SortDirection.DESC);
+
+        server.verify();
+    }
+
+    @Test
+    void search_omitsOrderByAndSortWhenSortByIsNullEvenWithDirectionGiven() {
+        server.expect(requestTo(allOf(
+                        startsWith(BASE_URL + "/manga"),
+                        not(containsString("order_by")),
+                        not(containsString("sort=")))))
+                .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
+
+        provider.search("berserk", 10, 0, null, null, null, null, SortDirection.DESC);
 
         server.verify();
     }
@@ -198,7 +264,7 @@ class TenraiComicMetadataProviderTest {
         server.expect(requestTo(startsWith(BASE_URL + "/manga")))
                 .andRespond(withSuccess(searchJson(true, 42), MediaType.APPLICATION_JSON));
 
-        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, null, null);
+        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, null, null, null, null);
 
         assertThat(page.isExistMoreItems()).isTrue();
         assertThat(page.getTotalItems()).isEqualTo(42);
@@ -213,7 +279,7 @@ class TenraiComicMetadataProviderTest {
         server.expect(requestTo(startsWith(BASE_URL + "/manga")))
                 .andRespond(withSuccess(searchJson(true, 100_000), MediaType.APPLICATION_JSON));
 
-        Page<ComicMetadataResult> page = provider.search("berserk", 10, 9990, null, null, null);
+        Page<ComicMetadataResult> page = provider.search("berserk", 10, 9990, null, null, null, null, null);
 
         assertThat(page.isExistMoreItems()).isFalse();
     }
@@ -223,7 +289,7 @@ class TenraiComicMetadataProviderTest {
         server.expect(requestTo(startsWith(BASE_URL + "/manga")))
                 .andRespond(withSuccess(searchJson(true, 100_000), MediaType.APPLICATION_JSON));
 
-        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, null, null);
+        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, null, null, null, null);
 
         assertThat(page.getTotalItems()).isEqualTo(10_000);
     }
@@ -233,7 +299,7 @@ class TenraiComicMetadataProviderTest {
         server.expect(requestTo(startsWith(BASE_URL + "/manga")))
                 .andRespond(withSuccess("{\"data\":null,\"pagination\":null}", MediaType.APPLICATION_JSON));
 
-        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, null, null);
+        Page<ComicMetadataResult> page = provider.search("berserk", 10, 0, null, null, null, null, null);
 
         assertThat(page.getItems()).isEmpty();
         assertThat(page.isExistMoreItems()).isFalse();
@@ -245,7 +311,7 @@ class TenraiComicMetadataProviderTest {
         server.expect(requestTo(startsWith(BASE_URL + "/manga")))
                 .andRespond(withServerError());
 
-        assertThatThrownBy(() -> provider.search("berserk", 10, 0, null, null, null))
+        assertThatThrownBy(() -> provider.search("berserk", 10, 0, null, null, null, null, null))
                 .isInstanceOf(HttpServerErrorException.class);
     }
 
@@ -288,9 +354,9 @@ class TenraiComicMetadataProviderTest {
         limitedServer.expect(requestTo(startsWith(BASE_URL + "/manga")))
                 .andRespond(withSuccess(searchJson(false, 1), MediaType.APPLICATION_JSON));
 
-        limitedProvider.search("berserk", 10, 0, null, null, null);
+        limitedProvider.search("berserk", 10, 0, null, null, null, null, null);
 
-        assertThatThrownBy(() -> limitedProvider.search("berserk", 10, 0, null, null, null))
+        assertThatThrownBy(() -> limitedProvider.search("berserk", 10, 0, null, null, null, null, null))
                 .isInstanceOf(RequestNotPermitted.class)
                 .extracting(exception -> ((RequestNotPermitted) exception).getCausingRateLimiterName())
                 .isEqualTo(exhaustedLimiterName);

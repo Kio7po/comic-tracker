@@ -1,7 +1,12 @@
 {
   "common": {
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "sort": {
+      "by": "Sort by",
+      "asc": "Ascending",
+      "desc": "Descending"
+    }
   },
   "nav": {
     "home": "Home",
@@ -16,6 +21,7 @@
   "library": {
     "title": "Library",
     "empty": "Nothing here yet.",
+    "browseCatalog": "Browse the catalog",
     "filteredEmpty": "No comics match the selected filters.",
     "loadError": "Something went wrong loading your library.",
     "searchPlaceholder": "Search…",
@@ -24,9 +30,6 @@
       "status": "Reading Status",
       "allStatuses": "Any status",
       "pendingOnly": "Unread only",
-      "sortBy": "Sort by",
-      "sortAsc": "Ascending",
-      "sortDesc": "Descending",
       "reset": "Reset"
     },
     "sort": {
@@ -50,6 +53,7 @@
     "tagline": "Comic Tracker — a TFG project (UDC)"
   },
   "catalog": {
+    "title": "Browse",
     "searchPlaceholder": "Search...",
     "loading": "Loading…",
     "loadError": "Something went wrong loading comics.",
@@ -61,10 +65,12 @@
       "nsfw": "NSFW",
       "allTypes": "Any type",
       "allStatuses": "Any status",
-      "limit": "Per page"
+      "limit": "Per page",
+      "trigger": "Filters",
+      "reset": "Reset"
     },
     "nsfw": {
-      "NONE": "None",
+      "NONE": "Safe",
       "SUGGESTIVE": "Suggestive",
       "EXPLICIT": "Explicit"
     },
@@ -85,6 +91,12 @@
       "HIATUS": "Hiatus",
       "CANCELLED": "Cancelled",
       "OTHER": "Other"
+    },
+    "sort": {
+      "RELEVANCE": "Relevance",
+      "TITLE": "Title",
+      "POPULARITY": "Popularity",
+      "RELEASE_DATE": "Release date"
     }
   },
   "auth": {

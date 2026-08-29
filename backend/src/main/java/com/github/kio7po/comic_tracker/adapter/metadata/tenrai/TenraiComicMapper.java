@@ -10,10 +10,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.Author;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.Genre;
 import com.github.kio7po.comic_tracker.domain.entities.Tag;
+import com.github.kio7po.comic_tracker.domain.enums.ComicSearchSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
 import com.github.kio7po.comic_tracker.domain.enums.NsfwRating;
@@ -173,5 +175,35 @@ final class TenraiComicMapper {
             case MANHUA -> Optional.of("manhua");
             case WEBTOON, COMIC, OTHER -> Optional.empty();
         };
+    }
+
+    static Optional<String> toTenraiOrderBy(ComicSearchSortField sortBy) {
+        if (sortBy == null) {
+            return Optional.empty();
+        }
+        return switch (sortBy) {
+            case RELEVANCE -> Optional.empty();
+            case TITLE -> Optional.of("title");
+            case POPULARITY -> Optional.of("popularity");
+            case RELEASE_DATE -> Optional.of("start_date");
+        };
+    }
+
+    static Optional<String> toTenraiSort(ComicSearchSortField sortBy, SortDirection direction) {
+        if (direction == null) {
+            return Optional.empty();
+        }
+        // Jikan's "popularity" field is based on a rank (1st = most popular), the
+        // opposite of "DESC = most popular first" that the domain's SortDirection otherwise
+        // implies for every other field - invert so DESC still means most popular here.
+        SortDirection effectiveDirection = sortBy == ComicSearchSortField.POPULARITY ? invert(direction) : direction;
+        return switch (effectiveDirection) {
+            case ASC -> Optional.of("asc");
+            case DESC -> Optional.of("desc");
+        };
+    }
+
+    private static SortDirection invert(SortDirection direction) {
+        return direction == SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
     }
 }

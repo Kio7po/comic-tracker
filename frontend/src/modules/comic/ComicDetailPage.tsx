@@ -24,7 +24,7 @@ function ComicDetailPage() {
   const comic = useLoaderData<typeof comicDetailLoader>();
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="flex flex-col gap-8 lg:flex-row">
         <ComicCoverPanel comic={comic} />
         <div className="flex min-w-0 flex-1 flex-col gap-6">
