@@ -33,6 +33,11 @@ scalar:
   enabled: true
   path: /scalar
 
+olympus:
+  # default value, not needed, but scanlation sites like this one change domain
+  # fairly often (to dodge blocking), so this is the first thing to override if it goes stale.
+  base-url: https://olympusxyz.com
+
 comic:
   metadata:
     # Passive TTL: a comic's metadata is only re-fetched from the active provider once this long
