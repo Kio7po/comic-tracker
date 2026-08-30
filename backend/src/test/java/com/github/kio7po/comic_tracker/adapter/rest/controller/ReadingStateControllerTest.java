@@ -28,6 +28,7 @@ import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.entities.ReadingState;
 import com.github.kio7po.comic_tracker.domain.enums.ReadingStateStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.InvalidPreferredReadingEntryException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ReadingStateAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ReadingStateNotFoundException;
 import com.github.kio7po.comic_tracker.domain.service.ComicService;
@@ -123,7 +124,7 @@ class ReadingStateControllerTest {
     @Test
     void createReturnsCreated() throws Exception {
         when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
-        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null))
+        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null, null))
                 .thenReturn(readingState());
 
         mockMvc.perform(post("/api/comics/{slug}/reading-state", SLUG)
@@ -140,7 +141,7 @@ class ReadingStateControllerTest {
     void createForwardsNotesToService() throws Exception {
         when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
         when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0,
-                "Recommended by a friend")).thenReturn(readingState());
+                "Recommended by a friend", null)).thenReturn(readingState());
 
         mockMvc.perform(post("/api/comics/{slug}/reading-state", SLUG)
                 .with(jwt().jwt(builder -> builder.subject("1")))
@@ -149,6 +150,37 @@ class ReadingStateControllerTest {
                         {"status":"PLAN_TO_READ","chapters":0,"notes":"Recommended by a friend"}
                         """))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void createForwardsPreferredEntryIdToService() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null, 5L))
+                .thenReturn(readingState());
+
+        mockMvc.perform(post("/api/comics/{slug}/reading-state", SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"status":"PLAN_TO_READ","chapters":0,"preferredEntryId":5}
+                        """))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void createReturnsBadRequestWhenPreferredEntryIsInvalid() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null, 5L))
+                .thenThrow(new InvalidPreferredReadingEntryException(5L, COMIC_ID));
+
+        mockMvc.perform(post("/api/comics/{slug}/reading-state", SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"status":"PLAN_TO_READ","chapters":0,"preferredEntryId":5}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(ProblemType.INVALID_PREFERRED_READING_ENTRY));
     }
 
     @Test
@@ -189,7 +221,7 @@ class ReadingStateControllerTest {
     @Test
     void createReturnsConflictWhenAlreadyTracked() throws Exception {
         when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
-        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null))
+        when(readingStateService.create(USER_ID, COMIC_ID, ReadingStateStatus.PLAN_TO_READ, 0, null, null))
                 .thenThrow(new ReadingStateAlreadyExistsException(USER_ID, COMIC_ID));
 
         mockMvc.perform(post("/api/comics/{slug}/reading-state", SLUG)
@@ -215,7 +247,7 @@ class ReadingStateControllerTest {
     @Test
     void updateReturnsOk() throws Exception {
         when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
-        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12, null))
+        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12, null, null))
                 .thenReturn(readingState());
 
         mockMvc.perform(put("/api/comics/{slug}/reading-state", SLUG)
@@ -226,6 +258,37 @@ class ReadingStateControllerTest {
                         """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.chapters").value(12));
+    }
+
+    @Test
+    void updateForwardsPreferredEntryIdToService() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12, null, 5L))
+                .thenReturn(readingState());
+
+        mockMvc.perform(put("/api/comics/{slug}/reading-state", SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"status":"READING","chapters":12,"preferredEntryId":5}
+                        """))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateReturnsBadRequestWhenPreferredEntryIsInvalid() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12, null, 5L))
+                .thenThrow(new InvalidPreferredReadingEntryException(5L, COMIC_ID));
+
+        mockMvc.perform(put("/api/comics/{slug}/reading-state", SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"status":"READING","chapters":12,"preferredEntryId":5}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(ProblemType.INVALID_PREFERRED_READING_ENTRY));
     }
 
     @Test
@@ -244,7 +307,7 @@ class ReadingStateControllerTest {
     @Test
     void updateReturnsNotFoundWhenNotTracked() throws Exception {
         when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
-        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12, null))
+        when(readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12, null, null))
                 .thenThrow(new ReadingStateNotFoundException(USER_ID, COMIC_ID));
 
         mockMvc.perform(put("/api/comics/{slug}/reading-state", SLUG)

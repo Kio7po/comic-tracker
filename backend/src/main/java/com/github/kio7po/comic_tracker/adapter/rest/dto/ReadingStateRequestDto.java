@@ -12,5 +12,6 @@ import jakarta.validation.constraints.Size;
 public record ReadingStateRequestDto(
         @NotNull ReadingStateStatus status,
         @Min(0) int chapters,
-        @Nullable @NotBlankOrNull @Size(max = 2048) String notes) {
+        @Nullable @NotBlankOrNull @Size(max = 2048) String notes,
+        @Nullable Long preferredEntryId) {
 }

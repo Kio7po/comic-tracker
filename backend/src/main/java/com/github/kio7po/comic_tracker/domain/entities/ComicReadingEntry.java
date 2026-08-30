@@ -105,6 +105,10 @@ public class ComicReadingEntry {
         this.status = status;
     }
 
+    public boolean isRejected() {
+        return status == ComicReadingEntryStatus.REJECTED;
+    }
+
     public Comic getComic() {
         return comic;
     }
