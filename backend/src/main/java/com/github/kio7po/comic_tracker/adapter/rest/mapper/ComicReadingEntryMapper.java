@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntryModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntryResponseDto;
+import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntrySummaryResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicSummaryResponseDto;
@@ -26,6 +27,10 @@ public final class ComicReadingEntryMapper {
         return new ComicReadingEntryResponseDto(entry.getId(), entry.getUrl(), entry.getTitle(),
                 entry.getAvailableChapters(), entry.getLocale(), entry.getStatus(),
                 toSourceResponseDto(entry.getSource()), entry.getCreatedAt());
+    }
+
+    public static ComicReadingEntrySummaryResponseDto toSummaryResponseDto(ComicReadingEntry entry) {
+        return new ComicReadingEntrySummaryResponseDto(entry.getId(), entry.getUrl());
     }
 
     public static ComicReadingSourceResponseDto toSourceResponseDto(ComicReadingSource source) {

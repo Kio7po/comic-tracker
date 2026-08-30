@@ -1,11 +1,14 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronsLeft, ChevronsRight, Minus, Plus, BookmarkOff } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Minus, Plus, BookmarkOff, TriangleAlert } from 'lucide-react';
 import { remove, update } from '@/services/readingState/api/readingState';
 import type { ReadingState, ReadingStateStatus } from '@/services/readingState/types';
+import { findByComic } from '@/services/source/api/readingEntry';
+import type { ComicReadingEntry } from '@/services/source/types';
 import { ApiError, ProblemType } from '@/common/api';
 import { MOBILE_QUERY, useMediaQuery } from '@/common/hooks/useMediaQuery';
 import ConfirmDialog from '@/common/components/ConfirmDialog';
+import { Badge } from '@/common/components/ui/badge';
 import { Button } from '@/common/components/ui/button';
 import { toast } from '@/common/components/ui/toast';
 import {
@@ -43,6 +46,12 @@ import type { ComicWithChapters } from './ReadingStateButton';
 const STATUSES: ReadingStateStatus[] = ['READING', 'COMPLETED', 'ON_HOLD', 'PLAN_TO_READ', 'DROPPED'];
 // Matches @Size(max = 2048) on the backend's ReadingStateRequestDto.notes.
 const NOTES_MAX_LENGTH = 2048;
+// Entry ids are always numeric, so this can never collide with a real one.
+const NO_PREFERRED_ENTRY = 'none';
+
+function languageLabel(locale: string): string {
+  return locale.split('-')[0].toUpperCase();
+}
 
 interface EditReadingStateDialogProps {
   comic: ComicWithChapters;
@@ -65,11 +74,16 @@ function EditReadingStateDialog({
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const statusId = useId();
   const chaptersId = useId();
+  const preferredEntrySelectId = useId();
   const notesId = useId();
 
   const [status, setStatus] = useState<ReadingStateStatus>(readingState.status);
   const [chapters, setChapters] = useState(readingState.chapters);
   const [notes, setNotes] = useState(readingState.notes ?? '');
+  const [selectedEntryId, setSelectedEntryId] = useState(readingState.preferredEntry?.id ?? null);
+  const [entries, setEntries] = useState<ComicReadingEntry[]>([]);
+  const [isLoadingEntries, setIsLoadingEntries] = useState(false);
+  const [hasEntriesLoadError, setHasEntriesLoadError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false);
@@ -85,9 +99,46 @@ function EditReadingStateDialog({
       setStatus(readingState.status);
       setChapters(readingState.chapters);
       setNotes(readingState.notes ?? '');
+      setSelectedEntryId(readingState.preferredEntry?.id ?? null);
       setFormError(null);
     }
   }
+
+  // This dialog is mounted once per card up front (open/closed is just a prop), so the fetch has
+  // to be gated on the open transition rather than on mount - otherwise every card in a library
+  // listing would fetch its comic's reading entries immediately, defeating the point of loading
+  // them lazily.
+  useEffect(() => {
+    if (!open) return;
+
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsLoadingEntries(true);
+    setHasEntriesLoadError(false);
+    findByComic(comic.slug, undefined, { signal: controller.signal })
+      .then((fetchedEntries) => {
+        setEntries(fetchedEntries);
+        // REJECTED entries are marked as obsolete, not hidden
+        setSelectedEntryId((current) =>
+          current !== null && !fetchedEntries.some((entry) => entry.id === current) ? null : current,
+        );
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+        setHasEntriesLoadError(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoadingEntries(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [open, comic.slug]);
 
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -95,7 +146,14 @@ function EditReadingStateDialog({
     setIsSaving(true);
     try {
       const trimmedNotes = notes.trim();
-      onUpdated(await update(comic.slug, { status, chapters, notes: trimmedNotes === '' ? undefined : trimmedNotes }));
+      onUpdated(
+        await update(comic.slug, {
+          status,
+          chapters,
+          notes: trimmedNotes === '' ? undefined : trimmedNotes,
+          preferredEntryId: selectedEntryId ?? undefined,
+        }),
+      );
       onOpenChange(false);
     } catch (error) {
       if (error instanceof ApiError && error.type === ProblemType.READING_STATE_NOT_FOUND) {
@@ -136,10 +194,39 @@ function EditReadingStateDialog({
   }
 
   const statusOptions = STATUSES.map((value) => ({ value, label: t(`detail.readingState.statuses.${value}`) }));
+  // A REJECTED entry is never selectable going forward, but if it's already the saved
+  // preference it still needs to show here (marked obsolete) instead of silently vanishing
+  const selectableEntries = entries.filter((entry) => entry.status !== 'REJECTED' || entry.id === selectedEntryId);
+  const entryOptions = [
+    { value: NO_PREFERRED_ENTRY, label: t('detail.readingState.preferredEntryNone') },
+    ...selectableEntries.map((entry) => ({ value: String(entry.id), label: entry.source.name })),
+  ];
   const hasChanges =
     status !== readingState.status ||
     chapters !== readingState.chapters ||
-    notes.trim() !== (readingState.notes ?? '');
+    notes.trim() !== (readingState.notes ?? '') ||
+    selectedEntryId !== (readingState.preferredEntry?.id ?? null);
+
+  // Shared between the trigger's closed-state display and each dropdown item, so both agree on
+  // what an entry looks like instead of the trigger falling back to plain text.
+  function renderEntryLabel(entry: ComicReadingEntry) {
+    return (
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate">{entry.source.name}</span>
+        <Badge variant="outline">{languageLabel(entry.locale)}</Badge>
+        {entry.status === 'PENDING' && (
+          <span className="inline-flex shrink-0 text-amber-500" title={t('detail.pendingTooltip')}>
+            <TriangleAlert className="size-3.5" />
+          </span>
+        )}
+        {entry.status === 'REJECTED' && (
+          <Badge variant="destructive" title={t('detail.rejectedTooltip')}>
+            {t('detail.readingState.obsolete')}
+          </Badge>
+        )}
+      </span>
+    );
+  }
 
   function renderFields() {
     return (
@@ -228,6 +315,37 @@ function EditReadingStateDialog({
               <TooltipContent>{t('detail.readingState.setToMaxChapters')}</TooltipContent>
             </Tooltip>
           </div>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor={preferredEntrySelectId}>{t('detail.readingState.preferredEntry')}</FieldLabel>
+          <Select
+            value={selectedEntryId === null ? NO_PREFERRED_ENTRY : String(selectedEntryId)}
+            items={entryOptions}
+            disabled={isLoadingEntries || hasEntriesLoadError}
+            onValueChange={(value) => setSelectedEntryId(value === NO_PREFERRED_ENTRY ? null : Number(value))}
+          >
+            <SelectTrigger id={preferredEntrySelectId} className="w-full">
+              <SelectValue>
+                {(value: string) => {
+                  if (isLoadingEntries) return t('detail.readingState.loadingEntries');
+                  if (hasEntriesLoadError) return t('detail.readingState.entriesLoadError');
+                  if (value === NO_PREFERRED_ENTRY) return t('detail.readingState.preferredEntryNone');
+                  const entry = entries.find((candidate) => String(candidate.id) === value);
+                  return entry ? renderEntryLabel(entry) : t('detail.readingState.preferredEntryNone');
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={!isMobile}>
+              <SelectGroup>
+                <SelectItem value={NO_PREFERRED_ENTRY}>{t('detail.readingState.preferredEntryNone')}</SelectItem>
+                {selectableEntries.map((entry) => (
+                  <SelectItem key={entry.id} value={String(entry.id)} disabled={entry.status === 'REJECTED'}>
+                    {renderEntryLabel(entry)}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </Field>
         <Field>
           <FieldLabel htmlFor={notesId}>{t('detail.readingState.notes')}</FieldLabel>

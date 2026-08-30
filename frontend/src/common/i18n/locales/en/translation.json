@@ -42,6 +42,7 @@
     },
     "actions": {
       "trigger": "Quick actions",
+      "continueReading": "Continue reading",
       "save": "Save",
       "viewDetails": "View details",
       "share": "Share",
@@ -159,6 +160,11 @@
       "title": "Edit reading progress",
       "status": "Status",
       "chaptersRead": "Last Chapter Read",
+      "preferredEntry": "Continue reading at",
+      "preferredEntryNone": "No preference",
+      "obsolete": "OBSOLETE",
+      "loadingEntries": "Loading…",
+      "entriesLoadError": "Couldn't load reading sources",
       "notes": "Notes",
       "notesPlaceholder": "Type your notes here.",
       "resetChapters": "Set to 0",
@@ -194,6 +200,7 @@
     "resetLocaleFilter": "Reset to default",
     "showPendingSources": "Show sources pending approval",
     "pendingTooltip": "This source hasn't been reviewed yet and may not be reliable.",
+    "rejectedTooltip": "This source was rejected and can no longer be used.",
     "suggestSource": {
       "trigger": "Suggest a source",
       "loginPrompt": "Log in to suggest a source",
