@@ -408,7 +408,7 @@ function EditReadingStateDialog({
       <>
         <Drawer open={open} onOpenChange={onOpenChange}>
           <DrawerContent>
-            <div className="relative overflow-hidden rounded-t-xl">
+            <div className="relative shrink-0 overflow-hidden rounded-t-xl">
               {comic.coverUrl && (
                 <img
                   src={comic.coverUrl}
@@ -426,7 +426,7 @@ function EditReadingStateDialog({
               <DrawerFooter>
                 {renderUpdateButton()}
                 {renderRemoveButton()}
-                <DrawerClose render={<Button type="button" size="lg" variant="ghost" />}>
+                <DrawerClose render={<Button type="button" size="sm" variant="ghost" />}>
                   {t('common.cancel')}
                 </DrawerClose>
               </DrawerFooter>
@@ -441,7 +441,7 @@ function EditReadingStateDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg">{comic.title}</DialogTitle>
             <DialogDescription>{t('detail.readingState.title')}</DialogDescription>

@@ -33,6 +33,11 @@ scalar:
   enabled: true
   path: /scalar
 
+olympus:
+  # default value, not needed, but scanlation sites like this one change domain
+  # fairly often (to dodge blocking), so this is the first thing to override if it goes stale.
+  base-url: https://olympusxyz.com
+
 comic:
   metadata:
     # Passive TTL: a comic's metadata is only re-fetched from the active provider once this long
@@ -40,6 +45,11 @@ comic:
     ttl: 24h
     # On a failed refresh attempt, retried this soon instead of waiting a full ttl.
     retry-backoff: 15m
+  reading-entry:
+    # Shorter than comic.metadata.ttl: chapter counts are more time-sensitive, and these sites
+    # are less reliable, so backoff below is longer than metadata's.
+    ttl: 6h
+    retry-backoff: 30m
 
 resilience4j:
   ratelimiter:
@@ -57,4 +67,18 @@ resilience4j:
       tenrai-rpm:
         limit-for-period: 20
         limit-refresh-period: 10s
+        timeout-duration: 2s
+      # Olympus's own Mihon/Tachiyomi extension documents these caps client-side (1 req/2s on the
+      # main domain, 2 req/s on the panel. API subdomain).
+      # Checked empirically: the site itself doesn't appear to enforce any hard rate limit and
+      # handles well above these numbers (tested up to 16 req/s) without issue - these are a
+      # deliberately conservative self-imposed courtesy limit, not a defensive measure against a
+      # real 429. olympus-panel is scaled down (1/500ms, not 2/1s) because of fixed-window boundary-burst.
+      olympus-base:
+        limit-for-period: 1
+        limit-refresh-period: 2s
+        timeout-duration: 2s
+      olympus-panel:
+        limit-for-period: 1
+        limit-refresh-period: 500ms
         timeout-duration: 2s

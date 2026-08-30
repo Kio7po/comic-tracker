@@ -20,4 +20,5 @@ public interface ComicReadingEntryRepository {
     Page<ComicReadingEntry> findByStatusIn(List<ComicReadingEntryStatus> statuses, ComicReadingEntrySortField sortBy,
             SortDirection direction, int limit, int offset);
     ComicReadingEntry save(ComicReadingEntry entry);
+    List<ComicReadingEntry> saveAll(List<ComicReadingEntry> entries);
 }
