@@ -87,7 +87,7 @@ public class ReadingStateService {
         readingState.setStatus(status);
         readingState.setChapters(chapters);
         readingState.setNotes(notes);
-        readingState.setPreferredEntry(resolvePreferredEntry(readingState.getComic(), preferredEntryId));
+        readingState.setPreferredEntry(resolvePreferredEntryForUpdate(readingState, preferredEntryId));
 
         return readingStateRepository.save(readingState);
     }
@@ -103,6 +103,21 @@ public class ReadingStateService {
 
         return readingStateRepository.findByUserAndComic(user, comic)
                 .orElseThrow(() -> new ReadingStateNotFoundException(userId, comicId));
+    }
+
+    /**
+     * Leaves an unchanged {@code preferredEntryId} as-is instead of re-validating it, so a
+     * {@code readingState.preferredEntry} that has since become invalid doesn't block unrelated
+     * edits to the same {@link ReadingState} as long as the caller keeps it unchanged.
+     */
+    private @Nullable ComicReadingEntry resolvePreferredEntryForUpdate(ReadingState readingState,
+            @Nullable Long preferredEntryId) {
+        ComicReadingEntry current = readingState.getPreferredEntry();
+        if (preferredEntryId != null && current != null && preferredEntryId.equals(current.getId())) {
+            return current;
+        }
+
+        return resolvePreferredEntry(readingState.getComic(), preferredEntryId);
     }
 
     private @Nullable ComicReadingEntry resolvePreferredEntry(Comic comic, @Nullable Long preferredEntryId) {

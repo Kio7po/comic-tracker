@@ -348,6 +348,30 @@ class ReadingStateServiceTest {
     }
 
     @Test
+    void updateKeepsUnchangedPreferredEntryEvenIfItHasSinceBeenRejected() {
+        User user = new User();
+        Comic comic = new Comic();
+        comic.setId(COMIC_ID);
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setId(ENTRY_ID);
+        entry.setComic(comic);
+        entry.setStatus(ComicReadingEntryStatus.REJECTED);
+        ReadingState readingState = new ReadingState();
+        readingState.setComic(comic);
+        readingState.setPreferredEntry(entry);
+        when(userService.findById(USER_ID)).thenReturn(user);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(readingStateRepository.findByUserAndComic(user, comic)).thenReturn(Optional.of(readingState));
+        when(readingStateRepository.save(readingState)).thenReturn(readingState);
+
+        ReadingState result = readingStateService.update(USER_ID, COMIC_ID, ReadingStateStatus.READING, 12, null,
+                ENTRY_ID);
+
+        assertThat(result.getPreferredEntry()).isSameAs(entry);
+        verify(comicReadingEntryRepository, never()).findById(any());
+    }
+
+    @Test
     void deleteThrowsWhenReadingStateDoesNotExist() {
         User user = new User();
         Comic comic = new Comic();

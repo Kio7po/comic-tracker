@@ -19,6 +19,7 @@ import {
 } from '@/common/components/ui/dialog';
 import { Spinner } from '@/common/components/ui/spinner';
 import { Separator } from '@/common/components/ui/separator';
+import TruncatedText from '@/common/components/TruncatedText';
 import SearchPagination from '@/modules/catalog/SearchPagination';
 
 const PAGE_SIZE = 20;
@@ -170,7 +171,7 @@ function PendingEntriesSection() {
                   <img src={item.comic.coverUrl} alt="" className="h-10 w-8 shrink-0 rounded-xs object-cover" />
                 )}
                 <span className="flex min-w-0 flex-col">
-                  <span className="font-medium text-foreground">{item.comic.title}</span>
+                  <TruncatedText text={item.comic.title} className="font-medium text-foreground" />
                   <span className="truncate text-muted-foreground">
                     {item.entry.source.name} · {item.entry.url}
                   </span>
@@ -211,9 +212,13 @@ function PendingEntriesSection() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-lg">
                   {selectedEntry.comic.coverUrl && (
-                    <img src={selectedEntry.comic.coverUrl} alt="" className="h-8 w-6 rounded-xs object-cover" />
+                    <img
+                      src={selectedEntry.comic.coverUrl}
+                      alt=""
+                      className="h-8 w-6 shrink-0 rounded-xs object-cover"
+                    />
                   )}
-                  {selectedEntry.comic.title}
+                  <span className="min-w-0 break-all">{selectedEntry.comic.title}</span>
                 </DialogTitle>
               </DialogHeader>
               <dl className="flex flex-col gap-2 text-sm">
@@ -223,7 +228,7 @@ function PendingEntriesSection() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.comic')}</dt>
-                  <dd className="text-foreground">
+                  <dd className="min-w-0 break-all text-right text-foreground">
                     <Link
                       to={`/comics/${selectedEntry.comic.slug}`}
                       target="_blank"
@@ -236,7 +241,7 @@ function PendingEntriesSection() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.source')}</dt>
-                  <dd className="text-foreground">{selectedEntry.entry.source.name}</dd>
+                  <dd className="min-w-0 break-all text-right text-foreground">{selectedEntry.entry.source.name}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.url')}</dt>

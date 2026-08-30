@@ -79,7 +79,9 @@ function ReadingStateButton({ comic }: Readonly<ReadingStateButtonProps>) {
 
     setIsSaving(true);
     try {
-      setReadingState(await create(comicSlug, { status: 'PLAN_TO_READ', chapters: 0 }));
+      setReadingState(
+        await create(comicSlug, { status: 'PLAN_TO_READ', chapters: 0, notes: undefined, preferredEntryId: undefined }),
+      );
     } catch (error) {
       if (error instanceof ApiError && error.type === ProblemType.READING_STATE_ALREADY_EXISTS) {
         // Race condition (double-click, another tab...): already tracked, not a real failure.

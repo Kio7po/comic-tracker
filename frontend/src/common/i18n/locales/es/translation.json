@@ -42,6 +42,7 @@
     },
     "actions": {
       "trigger": "Acciones rápidas",
+      "continueReading": "Seguir leyendo",
       "save": "Guardar",
       "viewDetails": "Ver detalles",
       "share": "Compartir",
@@ -159,6 +160,11 @@
       "title": "Editar progreso de lectura",
       "status": "Estado",
       "chaptersRead": "Último Capítulo Leído",
+      "preferredEntry": "Seguir leyendo en",
+      "preferredEntryNone": "Sin preferencia",
+      "obsolete": "OBSOLETO",
+      "loadingEntries": "Cargando…",
+      "entriesLoadError": "No se pudieron cargar las fuentes de lectura",
       "notes": "Notas",
       "notesPlaceholder": "Escribe tus notas aquí.",
       "resetChapters": "Poner a 0",
@@ -194,6 +200,7 @@
     "resetLocaleFilter": "Restablecer por defecto",
     "showPendingSources": "Mostrar fuentes pendientes de aprobar",
     "pendingTooltip": "Esta fuente aún no ha sido revisada y puede no ser fiable.",
+    "rejectedTooltip": "Esta fuente fue rechazada y ya no se puede usar.",
     "suggestSource": {
       "trigger": "Proponer una fuente",
       "loginPrompt": "Inicia sesión para proponer una fuente",
