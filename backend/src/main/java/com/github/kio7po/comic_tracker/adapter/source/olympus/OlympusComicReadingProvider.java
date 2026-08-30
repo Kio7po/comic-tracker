@@ -11,6 +11,9 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+
+import com.github.kio7po.comic_tracker.adapter.common.RateLimiterExecutor;
 import com.github.kio7po.comic_tracker.domain.common.TextSearch;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingProvider;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
@@ -26,13 +29,18 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
     private final String baseUrl;
     private final String panelBaseUrl;
     private final String host;
+    private final RateLimiterExecutor baseLimiter;
+    private final RateLimiterExecutor panelLimiter;
 
     public OlympusComicReadingProvider(RestClient.Builder restClientBuilder,
-            @Value("${olympus.base-url:https://olympusxyz.com}") String baseUrl) {
+            @Value("${olympus.base-url:https://olympusxyz.com}") String baseUrl,
+            RateLimiterRegistry rateLimiterRegistry) {
         this.restClient = restClientBuilder.build();
         this.baseUrl = baseUrl;
         this.panelBaseUrl = baseUrl.replace("https://", "https://panel.");
         this.host = URI.create(baseUrl).getHost().toLowerCase(Locale.ROOT);
+        this.baseLimiter = new RateLimiterExecutor(rateLimiterRegistry.rateLimiter("olympus-base"));
+        this.panelLimiter = new RateLimiterExecutor(rateLimiterRegistry.rateLimiter("olympus-panel"));
     }
 
     @Override
@@ -62,10 +70,10 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
     @Override
     public List<ComicReadingSearchResult> search(String keywords) {
         URI uri = UriComponentsBuilder.fromUriString(baseUrl).path("/api/series/list").build().toUri();
-        OlympusMangaListResponseDto response = restClient.get()
+        OlympusMangaListResponseDto response = baseLimiter.execute(() -> restClient.get()
                 .uri(uri)
                 .retrieve()
-                .body(OlympusMangaListResponseDto.class);
+                .body(OlympusMangaListResponseDto.class));
         if (response == null || response.data() == null) {
             return List.of();
         }
@@ -86,10 +94,10 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
                 .buildAndExpand(slug)
                 .toUri();
         try {
-            OlympusMangaDetailResponseDto response = restClient.get()
+            OlympusMangaDetailResponseDto response = baseLimiter.execute(() -> restClient.get()
                     .uri(uri)
                     .retrieve()
-                    .body(OlympusMangaDetailResponseDto.class);
+                    .body(OlympusMangaDetailResponseDto.class));
             return response == null ? null : response.data();
         } catch (HttpClientErrorException.NotFound e) {
             return null;
@@ -104,10 +112,10 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
                 .queryParam("type", TYPE_COMIC)
                 .buildAndExpand(slug)
                 .toUri();
-        return restClient.get()
+        return panelLimiter.execute(() -> restClient.get()
                 .uri(uri)
                 .retrieve()
-                .body(OlympusChapterListResponseDto.class);
+                .body(OlympusChapterListResponseDto.class));
     }
 
     private static Optional<String> extractSlug(String url) {

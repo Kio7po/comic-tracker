@@ -8,17 +8,26 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
+
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDetails;
@@ -35,7 +44,7 @@ class OlympusComicReadingProviderTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        provider = new OlympusComicReadingProvider(builder, BASE_URL);
+        provider = new OlympusComicReadingProvider(builder, BASE_URL, RateLimiterRegistry.ofDefaults());
     }
 
     private static String mangaDetailJson(String name) {
@@ -239,5 +248,81 @@ class OlympusComicReadingProviderTest {
 
         assertThatThrownBy(() -> provider.search("berserk"))
                 .isInstanceOf(HttpServerErrorException.class);
+    }
+
+    @Test
+    void search_isRejectedWithoutCallingTheApiWhenTheBaseLimiterIsExhausted() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer limitedServer = MockRestServiceServer.bindTo(builder).build();
+        OlympusComicReadingProvider limitedProvider = providerWithExhaustedLimiter(builder, "olympus-base");
+        limitedServer.expect(requestTo(BASE_URL + "/api/series/list"))
+                .andRespond(withSuccess(seriesListJson(), MediaType.APPLICATION_JSON));
+
+        limitedProvider.search("sword");
+
+        assertThatThrownBy(() -> limitedProvider.search("sword"))
+                .isInstanceOf(RequestNotPermitted.class)
+                .extracting(exception -> ((RequestNotPermitted) exception).getCausingRateLimiterName())
+                .isEqualTo("olympus-base");
+        limitedServer.verify();
+    }
+
+    private static Stream<Arguments> exhaustedLimiters() {
+        return Stream.of(
+                Arguments.of("olympus-base exhausted", "olympus-base"),
+                Arguments.of("olympus-panel exhausted", "olympus-panel"));
+    }
+
+    // A single permit that never refreshes within the test's lifetime, and never waits for one either -
+    // the first call consumes it, any further call is rejected immediately instead of blocking.
+    private static RateLimiterConfig exhaustedAfterOneCall() {
+        return RateLimiterConfig.custom()
+                .limitForPeriod(1)
+                .limitRefreshPeriod(Duration.ofMinutes(1))
+                .timeoutDuration(Duration.ZERO)
+                .build();
+    }
+
+    private static OlympusComicReadingProvider providerWithExhaustedLimiter(RestClient.Builder builder,
+            String exhaustedLimiterName) {
+        RateLimiterConfig baseConfig = "olympus-base".equals(exhaustedLimiterName)
+                ? exhaustedAfterOneCall() : RateLimiterConfig.ofDefaults();
+        RateLimiterConfig panelConfig = "olympus-panel".equals(exhaustedLimiterName)
+                ? exhaustedAfterOneCall() : RateLimiterConfig.ofDefaults();
+        // RateLimiterRegistry.of(Map<String, RateLimiterConfig>) does NOT register these as named
+        // instances, registry.rateLimiter(name, config) is what actually does.
+        RateLimiterRegistry registry = RateLimiterRegistry.custom().build();
+        registry.rateLimiter("olympus-base", baseConfig);
+        registry.rateLimiter("olympus-panel", panelConfig);
+        return new OlympusComicReadingProvider(builder, BASE_URL, registry);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("exhaustedLimiters")
+    void fetch_isRejectedWithoutCallingTheApiWhenALimitIsExhausted(String caseName, String exhaustedLimiterName) {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer limitedServer = MockRestServiceServer.bindTo(builder).build();
+        OlympusComicReadingProvider limitedProvider = providerWithExhaustedLimiter(builder, exhaustedLimiterName);
+
+        // MockRestServiceServer expects requests in declaration order, so this has to match the
+        // actual interleaving: manga then chapters for the first (successful) fetch() always: base
+        // exhausted stops the second fetch() before it reaches fetchManga at all; panel exhausted
+        // lets fetchManga succeed again but rejects fetchChapters before it reaches the network.
+        limitedServer.expect(requestTo(BASE_URL + "/api/series/berserk?type=comic"))
+                .andRespond(withSuccess(mangaDetailJson("Berserk"), MediaType.APPLICATION_JSON));
+        limitedServer.expect(requestTo(PANEL_BASE_URL + "/api/series/berserk/chapters?page=1&direction=desc&type=comic"))
+                .andRespond(withSuccess(chaptersJson(1, "2024-06-01T10:00:00.000000Z"), MediaType.APPLICATION_JSON));
+        if (!"olympus-base".equals(exhaustedLimiterName)) {
+            limitedServer.expect(requestTo(BASE_URL + "/api/series/berserk?type=comic"))
+                    .andRespond(withSuccess(mangaDetailJson("Berserk"), MediaType.APPLICATION_JSON));
+        }
+
+        limitedProvider.fetch("https://olympusxyz.com/series/comic-berserk");
+
+        assertThatThrownBy(() -> limitedProvider.fetch("https://olympusxyz.com/series/comic-berserk"))
+                .isInstanceOf(RequestNotPermitted.class)
+                .extracting(exception -> ((RequestNotPermitted) exception).getCausingRateLimiterName())
+                .isEqualTo(exhaustedLimiterName);
+        limitedServer.verify();
     }
 }

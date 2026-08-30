@@ -68,3 +68,17 @@ resilience4j:
         limit-for-period: 20
         limit-refresh-period: 10s
         timeout-duration: 2s
+      # Olympus's own Mihon/Tachiyomi extension documents these caps client-side (1 req/2s on the
+      # main domain, 2 req/s on the panel. API subdomain).
+      # Checked empirically: the site itself doesn't appear to enforce any hard rate limit and
+      # handles well above these numbers (tested up to 16 req/s) without issue - these are a
+      # deliberately conservative self-imposed courtesy limit, not a defensive measure against a
+      # real 429. olympus-panel is scaled down (1/500ms, not 2/1s) because of fixed-window boundary-burst.
+      olympus-base:
+        limit-for-period: 1
+        limit-refresh-period: 2s
+        timeout-duration: 2s
+      olympus-panel:
+        limit-for-period: 1
+        limit-refresh-period: 500ms
+        timeout-duration: 2s
