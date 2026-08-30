@@ -57,7 +57,7 @@ class OlympusComicReadingProviderTest {
 
     private static String chaptersJson(int total, String... publishedAt) {
         String data = java.util.Arrays.stream(publishedAt)
-                .map(date -> "{ \"published_at\": \"%s\" }".formatted(date))
+                .map("{ \"published_at\": \"%s\" }"::formatted)
                 .reduce((a, b) -> a + "," + b)
                 .orElse("");
         return """
