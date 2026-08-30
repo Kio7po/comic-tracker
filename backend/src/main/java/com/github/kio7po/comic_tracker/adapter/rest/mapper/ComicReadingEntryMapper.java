@@ -25,7 +25,7 @@ public final class ComicReadingEntryMapper {
 
     public static ComicReadingEntryResponseDto toResponseDto(ComicReadingEntry entry) {
         return new ComicReadingEntryResponseDto(entry.getId(), entry.getUrl(), entry.getTitle(),
-                entry.getAvailableChapters(), entry.getLocale(), entry.getStatus(),
+                entry.getAvailableChapters(), entry.getLatestChapterAt(), entry.getLocale(), entry.getStatus(),
                 toSourceResponseDto(entry.getSource()), entry.getCreatedAt());
     }
 

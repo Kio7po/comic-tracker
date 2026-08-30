@@ -22,11 +22,11 @@ final class OlympusComicReadingMapper {
 
     static ComicReadingSourceDetails toDetails(OlympusMangaDto manga, OlympusChapterListResponseDto chapters) {
         Integer availableChapters = chapters == null || chapters.meta() == null ? null : chapters.meta().total();
-        Instant lastChapterAt = lastChapterAt(chapters == null ? null : chapters.data());
-        return new ComicReadingSourceDetails(manga.name(), availableChapters, lastChapterAt);
+        Instant latestChapterAt = latestChapterAt(chapters == null ? null : chapters.data());
+        return new ComicReadingSourceDetails(manga.name(), availableChapters, latestChapterAt);
     }
 
-    private static Instant lastChapterAt(List<OlympusChapterDto> chapterList) {
+    private static Instant latestChapterAt(List<OlympusChapterDto> chapterList) {
         if (chapterList == null || chapterList.isEmpty()) {
             return null;
         }

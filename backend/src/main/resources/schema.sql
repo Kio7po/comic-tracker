@@ -137,13 +137,15 @@ CREATE TABLE IF NOT EXISTS comic_reading_source (
 );
 
 -- Propuesta de un usuario de que un cómic está disponible en un sitio de lectura concreto.
--- title/available_chapters quedan NULL hasta que el ComicReadingProvider los hidrata tras
--- la aprobación (o permanecen NULL si no hay adaptador para la fuente).
+-- title/available_chapters/latest_chapter_at quedan NULL hasta que el ComicReadingProvider los
+-- hidrata (o permanecen NULL si no hay adaptador para la fuente).
 CREATE TABLE IF NOT EXISTS comic_reading_entry (
     id                BIGINT NOT NULL PRIMARY KEY,
     url               VARCHAR(255) NOT NULL,
     title             VARCHAR(255),
     available_chapters INTEGER,
+    latest_chapter_at TIMESTAMPTZ,
+    last_fetched_at   TIMESTAMPTZ,
     locale            VARCHAR(35) NOT NULL,
     status            VARCHAR(255) NOT NULL CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
     comic_id          BIGINT NOT NULL REFERENCES comic (id),

@@ -117,7 +117,7 @@ class OlympusComicReadingProviderTest {
         assertThat(result).isPresent();
         assertThat(result.get().title()).isEqualTo("Berserk");
         assertThat(result.get().availableChapters()).isEqualTo(374);
-        assertThat(result.get().lastChapterAt()).isEqualTo(Instant.parse("2024-06-01T10:00:00.000000Z"));
+        assertThat(result.get().latestChapterAt()).isEqualTo(Instant.parse("2024-06-01T10:00:00.000000Z"));
     }
 
     @Test
@@ -163,7 +163,7 @@ class OlympusComicReadingProviderTest {
     }
 
     @Test
-    void fetch_handlesAnEmptyChapterListByLeavingLastChapterAtNull() {
+    void fetch_handlesAnEmptyChapterListByLeavingLatestChapterAtNull() {
         server.expect(requestTo(BASE_URL + "/api/series/berserk?type=comic"))
                 .andRespond(withSuccess(mangaDetailJson("Berserk"), MediaType.APPLICATION_JSON));
         server.expect(requestTo(PANEL_BASE_URL + "/api/series/berserk/chapters?page=1&direction=desc&type=comic"))
@@ -173,7 +173,7 @@ class OlympusComicReadingProviderTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().availableChapters()).isZero();
-        assertThat(result.get().lastChapterAt()).isNull();
+        assertThat(result.get().latestChapterAt()).isNull();
     }
 
     @Test

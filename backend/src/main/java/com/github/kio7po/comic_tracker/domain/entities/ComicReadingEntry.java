@@ -25,11 +25,13 @@ public class ComicReadingEntry {
     private Long id;
     @Column(nullable = false, length = 255)
     private String url;
-    // Hidratado por el ComicReadingProvider tras la aprobación; null hasta entonces (o si no hay adaptador para la fuente).
+    // title/availableChapters/latestChapterAt/lastFetchedAt: hidratados por el ComicReadingProvider,
+    // null si aún no se ha hidratado o no hay adaptador.
     @Column(length = 255)
     private String title;
-    // Hidratado por el ComicReadingProvider tras la aprobación; null hasta entonces (o si no hay adaptador para la fuente).
     private Integer availableChapters;
+    private Instant latestChapterAt;
+    private Instant lastFetchedAt;
     // Código de locale estándar (BCP 47, p.ej. "es-ES", "en-US"), no un enum cerrado. Aportado por el usuario al proponer la fuente.
     @Column(nullable = false, length = 35)
     private String locale;
@@ -87,6 +89,22 @@ public class ComicReadingEntry {
 
     public void setAvailableChapters(Integer availableChapters) {
         this.availableChapters = availableChapters;
+    }
+
+    public Instant getLatestChapterAt() {
+        return latestChapterAt;
+    }
+
+    public void setLatestChapterAt(Instant latestChapterAt) {
+        this.latestChapterAt = latestChapterAt;
+    }
+
+    public Instant getLastFetchedAt() {
+        return lastFetchedAt;
+    }
+
+    public void setLastFetchedAt(Instant lastFetchedAt) {
+        this.lastFetchedAt = lastFetchedAt;
     }
 
     public String getLocale() {

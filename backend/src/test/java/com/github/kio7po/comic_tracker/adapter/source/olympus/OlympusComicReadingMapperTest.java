@@ -23,7 +23,7 @@ class OlympusComicReadingMapperTest {
     }
 
     @Test
-    void toDetails_mapsTitleTotalChaptersAndLastChapterAtFromTheNewestChapter() {
+    void toDetails_mapsTitleTotalChaptersAndLatestChapterAtFromTheNewestChapter() {
         OlympusMangaDto manga = new OlympusMangaDto("Berserk", "berserk", "comic");
         OlympusChapterListResponseDto chapters = new OlympusChapterListResponseDto(
                 List.of(new OlympusChapterDto("2024-06-01T10:00:00.000000Z"),
@@ -34,29 +34,29 @@ class OlympusComicReadingMapperTest {
 
         assertThat(details.title()).isEqualTo("Berserk");
         assertThat(details.availableChapters()).isEqualTo(374);
-        assertThat(details.lastChapterAt()).isEqualTo(Instant.parse("2024-06-01T10:00:00.000000Z"));
+        assertThat(details.latestChapterAt()).isEqualTo(Instant.parse("2024-06-01T10:00:00.000000Z"));
     }
 
     @Test
-    void toDetails_leavesLastChapterAtNullWhenTheChapterListIsEmpty() {
+    void toDetails_leavesLatestChapterAtNullWhenTheChapterListIsEmpty() {
         OlympusMangaDto manga = new OlympusMangaDto("Berserk", "berserk", "comic");
         OlympusChapterListResponseDto chapters = new OlympusChapterListResponseDto(List.of(), new OlympusChapterMetaDto(0));
 
         ComicReadingSourceDetails details = OlympusComicReadingMapper.toDetails(manga, chapters);
 
         assertThat(details.availableChapters()).isZero();
-        assertThat(details.lastChapterAt()).isNull();
+        assertThat(details.latestChapterAt()).isNull();
     }
 
     @Test
-    void toDetails_leavesLastChapterAtNullWhenThePublishedDateIsUnparseable() {
+    void toDetails_leavesLatestChapterAtNullWhenThePublishedDateIsUnparseable() {
         OlympusMangaDto manga = new OlympusMangaDto("Berserk", "berserk", "comic");
         OlympusChapterListResponseDto chapters = new OlympusChapterListResponseDto(
                 List.of(new OlympusChapterDto("not a date")), new OlympusChapterMetaDto(1));
 
         ComicReadingSourceDetails details = OlympusComicReadingMapper.toDetails(manga, chapters);
 
-        assertThat(details.lastChapterAt()).isNull();
+        assertThat(details.latestChapterAt()).isNull();
     }
 
     @Test
@@ -67,6 +67,6 @@ class OlympusComicReadingMapperTest {
 
         assertThat(details.title()).isEqualTo("Berserk");
         assertThat(details.availableChapters()).isNull();
-        assertThat(details.lastChapterAt()).isNull();
+        assertThat(details.latestChapterAt()).isNull();
     }
 }

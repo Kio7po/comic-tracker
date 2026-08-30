@@ -49,4 +49,13 @@ public interface JpaComicReadingEntryRepository
         return new Page<>(page.getContent(), existMoreItems, (int) page.getTotalElements());
     }
 
+    // List<ComicReadingEntry> avoids an erasure clash with JpaRepository's own generic
+    // saveAll(Iterable<S>), so Spring Data doesn't auto-implement this overload - forward to the
+    // real one explicitly. The cast is what selects it over this same method (a List is an
+    // Iterable, so without it Java would just call itself here).
+    @Override
+    default List<ComicReadingEntry> saveAll(List<ComicReadingEntry> entries) {
+        return saveAll((Iterable<ComicReadingEntry>) entries);
+    }
+
 }

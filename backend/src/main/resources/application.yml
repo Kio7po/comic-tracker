@@ -45,6 +45,11 @@ comic:
     ttl: 24h
     # On a failed refresh attempt, retried this soon instead of waiting a full ttl.
     retry-backoff: 15m
+  reading-entry:
+    # Shorter than comic.metadata.ttl: chapter counts are more time-sensitive, and these sites
+    # are less reliable, so backoff below is longer than metadata's.
+    ttl: 6h
+    retry-backoff: 30m
 
 resilience4j:
   ratelimiter:
