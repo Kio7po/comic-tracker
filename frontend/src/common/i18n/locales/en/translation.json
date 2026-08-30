@@ -156,6 +156,7 @@
     "editLibrary": "Edit",
     "alreadyInLibrary": "You already have this in your library.",
     "chapters": "Chapters",
+    "updated": "Updated",
     "readingState": {
       "title": "Edit reading progress",
       "status": "Status",

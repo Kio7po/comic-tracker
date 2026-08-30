@@ -8,6 +8,7 @@ import { useAuth } from '@/common/components/AuthProvider';
 import ExternalLink from '@/common/components/ExternalLink';
 import TruncatedText from '@/common/components/TruncatedText';
 import { appendFromParam } from '@/common/lib/authRedirect';
+import { formatRelativeTime } from '@/common/lib/formatRelativeTime';
 import { createLanguageNameFormatter } from '@/common/lib/languageName';
 import { useLocalStorage } from '@/common/hooks/useLocalStorage';
 import { Badge } from '@/common/components/ui/badge';
@@ -115,6 +116,7 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
           <li key={entry.id}>
             <ExternalLink
               href={entry.url}
+              title={entry.url}
               className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted"
             >
               <span className="flex min-w-0 items-center gap-2">
@@ -135,16 +137,18 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
                       </Tooltip>
                     )}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">{entry.url}</span>
+                  {(entry.availableChapters !== null || entry.latestChapterAt !== null) && (
+                    <span className="text-xs text-muted-foreground">
+                      {entry.availableChapters !== null && `${entry.availableChapters} ${t('detail.chapters')}`}
+                      {entry.availableChapters !== null && entry.latestChapterAt !== null && ' · '}
+                      {entry.latestChapterAt !== null &&
+                        `${t('detail.updated')} ${formatRelativeTime(entry.latestChapterAt, i18n.language)}`}
+                    </span>
+                  )}
                 </span>
               </span>
               <span className="flex items-center gap-2 text-muted-foreground">
                 <Badge variant="outline">{languageLabel(entry.locale)}</Badge>
-                {entry.availableChapters !== null && (
-                  <span>
-                    {t('detail.chapters')} {entry.availableChapters}
-                  </span>
-                )}
                 <ExternalLinkIcon className="size-4" />
               </span>
             </ExternalLink>
