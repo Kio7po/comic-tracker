@@ -36,6 +36,10 @@ public class ReadingState {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
+    // Sitio por defecto en el que el usuario prefiere continuar leyendo este cómic; null si no ha elegido ninguno.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "preferred_entry_id")
+    private ComicReadingEntry preferredEntry;
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -89,6 +93,14 @@ public class ReadingState {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public ComicReadingEntry getPreferredEntry() {
+        return preferredEntry;
+    }
+
+    public void setPreferredEntry(ComicReadingEntry preferredEntry) {
+        this.preferredEntry = preferredEntry;
     }
 
     public Instant getCreatedAt() {

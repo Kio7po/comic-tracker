@@ -9,6 +9,7 @@ public record ComicReadingEntryResponseDto(
         String url,
         String title,
         Integer availableChapters,
+        Instant latestChapterAt,
         String locale,
         ComicReadingEntryStatus status,
         ComicReadingSourceResponseDto source,

@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -22,8 +24,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.github.kio7po.comic_tracker.adapter.rest.security.JwtDecoderConfig;
 import com.github.kio7po.comic_tracker.adapter.rest.security.SecurityConfig;
 import com.github.kio7po.comic_tracker.domain.common.Page;
+import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.enums.ComicMediaType;
+import com.github.kio7po.comic_tracker.domain.enums.ComicSearchSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicMetadataSourceNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.UnsupportedMetadataSourceException;
@@ -58,7 +62,7 @@ class CatalogControllerTest {
     @Test
     void searchReturnsMappedResults() throws Exception {
         ComicMetadataResult result = new ComicMetadataResult(SOURCE_SLUG, EXTERNAL_ID, comic());
-        when(catalogService.search(eq("berserk"), eq(20), eq(0), isNull(), isNull(), isNull()))
+        when(catalogService.search(eq("berserk"), eq(20), eq(0), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(new Page<>(List.of(result), false, 1));
 
         mockMvc.perform(get("/api/catalog/search").param("keywords", "berserk"))
@@ -68,6 +72,25 @@ class CatalogControllerTest {
                 .andExpect(jsonPath("$.items[0].sourceSlug").value(SOURCE_SLUG))
                 .andExpect(jsonPath("$.items[0].externalId").value(EXTERNAL_ID))
                 .andExpect(jsonPath("$.items[0].title").value("Berserk"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "POPULARITY, ASC",
+            "TITLE, DESC"
+    })
+    void searchPassesSortByAndDirectionThroughToTheService(ComicSearchSortField sortBy, SortDirection direction)
+            throws Exception {
+        ComicMetadataResult result = new ComicMetadataResult(SOURCE_SLUG, EXTERNAL_ID, comic());
+        when(catalogService.search(eq("berserk"), eq(20), eq(0), isNull(), isNull(), isNull(), eq(sortBy),
+                eq(direction))).thenReturn(new Page<>(List.of(result), false, 1));
+
+        mockMvc.perform(get("/api/catalog/search")
+                .param("keywords", "berserk")
+                .param("sortBy", sortBy.name())
+                .param("direction", direction.name()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].sourceSlug").value(SOURCE_SLUG));
     }
 
     @Test

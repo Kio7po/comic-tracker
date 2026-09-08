@@ -1,3 +1,4 @@
+import type { ComicReadingEntrySummary } from '@/services/source/types';
 import type { ReadingStateStatus } from './ReadingStateStatus';
 
 export interface ReadingState {
@@ -5,6 +6,7 @@ export interface ReadingState {
   status: ReadingStateStatus;
   chapters: number;
   notes: string | null;
+  preferredEntry: ComicReadingEntrySummary | null;
   createdAt: string;
   updatedAt: string;
 }

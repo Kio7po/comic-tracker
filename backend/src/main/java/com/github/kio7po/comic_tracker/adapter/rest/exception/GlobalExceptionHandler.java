@@ -18,6 +18,7 @@ import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEn
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.EmailAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.InvalidCredentialsException;
+import com.github.kio7po.comic_tracker.domain.exceptions.InvalidPreferredReadingEntryException;
 import com.github.kio7po.comic_tracker.domain.exceptions.InvalidRefreshTokenException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ReadingStateAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ReadingStateNotFoundException;
@@ -111,6 +112,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ReadingStateAlreadyExistsException.class)
     public ProblemDetail handleReadingStateAlreadyExists(ReadingStateAlreadyExistsException ex) {
         return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.READING_STATE_ALREADY_EXISTS);
+    }
+
+    @ExceptionHandler(InvalidPreferredReadingEntryException.class)
+    public ProblemDetail handleInvalidPreferredReadingEntry(InvalidPreferredReadingEntryException ex) {
+        return problem(HttpStatus.BAD_REQUEST, ex.getMessage(), ProblemType.INVALID_PREFERRED_READING_ENTRY);
     }
 
     private static ProblemDetail problem(HttpStatus status, String detail, String type) {

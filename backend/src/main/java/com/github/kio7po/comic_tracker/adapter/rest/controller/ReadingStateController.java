@@ -49,7 +49,7 @@ public class ReadingStateController {
             @Valid @RequestBody ReadingStateRequestDto request, @CurrentUser Long userId) {
         return comicService.findBySlug(slug)
                 .map(comic -> readingStateService.create(userId, comic.getId(), request.status(), request.chapters(),
-                        request.notes()))
+                        request.notes(), request.preferredEntryId()))
                 .map(readingState -> ResponseEntity.status(HttpStatus.CREATED)
                         .body(ReadingStateMapper.toResponseDto(readingState)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -60,7 +60,7 @@ public class ReadingStateController {
             @Valid @RequestBody ReadingStateRequestDto request, @CurrentUser Long userId) {
         return comicService.findBySlug(slug)
                 .map(comic -> readingStateService.update(userId, comic.getId(), request.status(), request.chapters(),
-                        request.notes()))
+                        request.notes(), request.preferredEntryId()))
                 .map(ReadingStateMapper::toResponseDto)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());

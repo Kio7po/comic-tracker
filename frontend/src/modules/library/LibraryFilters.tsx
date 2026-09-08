@@ -1,10 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, FilterX } from 'lucide-react';
+import { FilterX } from 'lucide-react';
 import type { ComicMediaType, ComicStatus, NsfwRating } from '@/services/comic/types';
 import type { ReadingStateStatus } from '@/services/readingState/types';
 import type { SortDirection } from '@/common/api/SortDirection';
 import { Button } from '@/common/components/ui/button';
-import { ButtonGroup } from '@/common/components/ui/button-group';
 import { Checkbox } from '@/common/components/ui/checkbox';
 import { Label } from '@/common/components/ui/label';
 import {
@@ -16,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/common/components/ui/select';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/common/components/ui/tooltip';
 import { Separator } from '@/common/components/ui/separator';
+import SortButtonGroup from '@/common/components/SortButtonGroup';
 
 export type LibrarySortField =
   | 'TITLE'
@@ -200,49 +199,15 @@ function LibraryFilters({
         </Label>
       </div>
       <Separator orientation='vertical'/>
-      <ButtonGroup className="w-full sm:w-fit">
-        <Select
-          value={sortField}
-          items={sortFields}
-          onValueChange={(value) => onSortFieldChange(value as LibrarySortField)}
-        >
-          <SelectTrigger className="flex-1 sm:w-fit sm:flex-none">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
-            <SelectGroup>
-              <SelectLabel>{t('library.filters.sortBy')}</SelectLabel>
-              {sortFields.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label={sortDirection === 'ASC' ? t('library.filters.sortAsc') : t('library.filters.sortDesc')}
-                onClick={() => onSortDirectionChange(sortDirection === 'ASC' ? 'DESC' : 'ASC')}
-              />
-            }
-          >
-            {sortDirection === 'ASC' ? (
-              <ArrowUpNarrowWide className="size-4" />
-            ) : (
-              <ArrowDownWideNarrow className="size-4" />
-            )}
-          </TooltipTrigger>
-          <TooltipContent>
-            {sortDirection === 'ASC' ? t('library.filters.sortAsc') : t('library.filters.sortDesc')}
-          </TooltipContent>
-        </Tooltip>
-      </ButtonGroup>
+      <SortButtonGroup
+        className="w-full sm:w-fit"
+        items={sortFields}
+        value={sortField}
+        onValueChange={onSortFieldChange}
+        direction={sortDirection}
+        onDirectionChange={onSortDirectionChange}
+        alignSelectWithTrigger={alignSelectWithTrigger}
+      />
       {!isAtDefault && (
         <Button type="button" variant="ghost" onClick={onReset}>
           <FilterX className="size-4" />

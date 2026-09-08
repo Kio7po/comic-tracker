@@ -6,6 +6,7 @@ export interface ComicReadingEntry {
   url: string;
   title: string | null;
   availableChapters: number | null;
+  latestChapterAt: string | null;
   locale: string;
   status: ComicReadingEntryStatus;
   source: ComicReadingSource;

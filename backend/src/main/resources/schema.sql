@@ -108,10 +108,11 @@ CREATE TABLE IF NOT EXISTS comic_alternative_titles (
 
 -- Dato crudo normalizado que una fuente concreta devuelve para un cómic concreto.
 CREATE TABLE IF NOT EXISTS comic_metadata_entry (
-    id          BIGINT NOT NULL PRIMARY KEY,
-    external_id VARCHAR(255) NOT NULL,
-    comic_id    BIGINT NOT NULL REFERENCES comic (id),
-    source_id   BIGINT NOT NULL REFERENCES comic_metadata_source (id),
+    id              BIGINT NOT NULL PRIMARY KEY,
+    external_id     VARCHAR(255) NOT NULL,
+    comic_id        BIGINT NOT NULL REFERENCES comic (id),
+    source_id       BIGINT NOT NULL REFERENCES comic_metadata_source (id),
+    last_fetched_at TIMESTAMPTZ NOT NULL,
     UNIQUE (source_id, external_id)
 );
 
@@ -136,13 +137,15 @@ CREATE TABLE IF NOT EXISTS comic_reading_source (
 );
 
 -- Propuesta de un usuario de que un cómic está disponible en un sitio de lectura concreto.
--- title/available_chapters quedan NULL hasta que el ComicReadingProvider los hidrata tras
--- la aprobación (o permanecen NULL si no hay adaptador para la fuente).
+-- title/available_chapters/latest_chapter_at quedan NULL hasta que el ComicReadingProvider los
+-- hidrata (o permanecen NULL si no hay adaptador para la fuente).
 CREATE TABLE IF NOT EXISTS comic_reading_entry (
     id                BIGINT NOT NULL PRIMARY KEY,
     url               VARCHAR(255) NOT NULL,
     title             VARCHAR(255),
     available_chapters INTEGER,
+    latest_chapter_at TIMESTAMPTZ,
+    last_fetched_at   TIMESTAMPTZ,
     locale            VARCHAR(35) NOT NULL,
     status            VARCHAR(255) NOT NULL CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
     comic_id          BIGINT NOT NULL REFERENCES comic (id),
@@ -162,14 +165,16 @@ CREATE TABLE IF NOT EXISTS comic_reading_entry (
 -- incrementable/decrementable manualmente). Un usuario tiene como mucho un
 -- reading_state por cómic.
 CREATE TABLE IF NOT EXISTS reading_state (
-    id          BIGINT NOT NULL PRIMARY KEY,
-    status      VARCHAR(255) NOT NULL CHECK (status IN ('READING', 'COMPLETED', 'ON_HOLD', 'PLAN_TO_READ', 'DROPPED')),
-    chapters    INTEGER NOT NULL DEFAULT 0,
-    notes       VARCHAR(2048),
-    comic_id    BIGINT NOT NULL REFERENCES comic (id),
-    user_id     BIGINT NOT NULL REFERENCES app_user (id),
-    created_at  TIMESTAMPTZ NOT NULL,
-    updated_at  TIMESTAMPTZ NOT NULL,
+    id                 BIGINT NOT NULL PRIMARY KEY,
+    status             VARCHAR(255) NOT NULL CHECK (status IN ('READING', 'COMPLETED', 'ON_HOLD', 'PLAN_TO_READ', 'DROPPED')),
+    chapters           INTEGER NOT NULL DEFAULT 0,
+    notes              VARCHAR(2048),
+    comic_id           BIGINT NOT NULL REFERENCES comic (id),
+    user_id            BIGINT NOT NULL REFERENCES app_user (id),
+    -- Sitio por defecto en el que continuar leyendo; debe pertenecer al mismo comic_id.
+    preferred_entry_id BIGINT REFERENCES comic_reading_entry (id),
+    created_at         TIMESTAMPTZ NOT NULL,
+    updated_at         TIMESTAMPTZ NOT NULL,
     UNIQUE (comic_id, user_id)
 );
 

@@ -1,7 +1,12 @@
 {
   "common": {
     "cancel": "Cancel",
-    "close": "Close"
+    "close": "Close",
+    "sort": {
+      "by": "Sort by",
+      "asc": "Ascending",
+      "desc": "Descending"
+    }
   },
   "nav": {
     "home": "Home",
@@ -16,6 +21,7 @@
   "library": {
     "title": "Library",
     "empty": "Nothing here yet.",
+    "browseCatalog": "Browse the catalog",
     "filteredEmpty": "No comics match the selected filters.",
     "loadError": "Something went wrong loading your library.",
     "searchPlaceholder": "Search…",
@@ -24,9 +30,6 @@
       "status": "Reading Status",
       "allStatuses": "Any status",
       "pendingOnly": "Unread only",
-      "sortBy": "Sort by",
-      "sortAsc": "Ascending",
-      "sortDesc": "Descending",
       "reset": "Reset"
     },
     "sort": {
@@ -39,6 +42,7 @@
     },
     "actions": {
       "trigger": "Quick actions",
+      "continueReading": "Continue reading",
       "save": "Save",
       "viewDetails": "View details",
       "share": "Share",
@@ -50,6 +54,7 @@
     "tagline": "Comic Tracker — a TFG project (UDC)"
   },
   "catalog": {
+    "title": "Browse",
     "searchPlaceholder": "Search...",
     "loading": "Loading…",
     "loadError": "Something went wrong loading comics.",
@@ -61,10 +66,12 @@
       "nsfw": "NSFW",
       "allTypes": "Any type",
       "allStatuses": "Any status",
-      "limit": "Per page"
+      "limit": "Per page",
+      "trigger": "Filters",
+      "reset": "Reset"
     },
     "nsfw": {
-      "NONE": "None",
+      "NONE": "Safe",
       "SUGGESTIVE": "Suggestive",
       "EXPLICIT": "Explicit"
     },
@@ -85,6 +92,12 @@
       "HIATUS": "Hiatus",
       "CANCELLED": "Cancelled",
       "OTHER": "Other"
+    },
+    "sort": {
+      "RELEVANCE": "Relevance",
+      "TITLE": "Title",
+      "POPULARITY": "Popularity",
+      "RELEASE_DATE": "Release date"
     }
   },
   "auth": {
@@ -143,10 +156,16 @@
     "editLibrary": "Edit",
     "alreadyInLibrary": "You already have this in your library.",
     "chapters": "Chapters",
+    "updated": "Updated",
     "readingState": {
       "title": "Edit reading progress",
       "status": "Status",
       "chaptersRead": "Last Chapter Read",
+      "preferredEntry": "Continue reading at",
+      "preferredEntryNone": "No preference",
+      "obsolete": "OBSOLETE",
+      "loadingEntries": "Loading…",
+      "entriesLoadError": "Couldn't load reading sources",
       "notes": "Notes",
       "notesPlaceholder": "Type your notes here.",
       "resetChapters": "Set to 0",
@@ -182,6 +201,7 @@
     "resetLocaleFilter": "Reset to default",
     "showPendingSources": "Show sources pending approval",
     "pendingTooltip": "This source hasn't been reviewed yet and may not be reliable.",
+    "rejectedTooltip": "This source was rejected and can no longer be used.",
     "suggestSource": {
       "trigger": "Suggest a source",
       "loginPrompt": "Log in to suggest a source",

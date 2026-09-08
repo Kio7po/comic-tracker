@@ -8,21 +8,21 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.mapper.CatalogMapper;
-import com.github.kio7po.comic_tracker.domain.service.ComicService;
+import com.github.kio7po.comic_tracker.domain.service.CatalogService;
 
 @RestController
 @RequestMapping("/api/comics")
 public class ComicController {
 
-    private final ComicService comicService;
+    private final CatalogService catalogService;
 
-    public ComicController(ComicService comicService) {
-        this.comicService = comicService;
+    public ComicController(CatalogService catalogService) {
+        this.catalogService = catalogService;
     }
 
     @GetMapping("/{slug}")
     public ResponseEntity<ComicResponseDto> getBySlug(@PathVariable String slug) {
-        return comicService.findBySlug(slug)
+        return catalogService.getDetail(slug)
                 .map(CatalogMapper::toResponseDto)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());

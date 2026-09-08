@@ -8,6 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,6 +40,7 @@ import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingSo
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntryRepository;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingSourceRepository;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicRepository;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDetails;
 
 @ExtendWith(MockitoExtension.class)
 class ComicReadingEntryServiceTest {
@@ -48,6 +51,8 @@ class ComicReadingEntryServiceTest {
     private static final Long USER_ID = 4L;
     private static final String URL = "https://example.com/berserk";
     private static final String LOCALE = "es-ES";
+    private static final Duration TTL = Duration.ofHours(6);
+    private static final Duration RETRY_BACKOFF = Duration.ofMinutes(30);
 
     @Mock
     private ComicReadingEntryRepository comicReadingEntryRepository;
@@ -58,6 +63,8 @@ class ComicReadingEntryServiceTest {
     @Mock
     private ComicReadingSourceIconResolverRegistry iconResolverRegistry;
     @Mock
+    private ComicReadingProviderRegistry readingProviderRegistry;
+    @Mock
     private UserService userService;
 
     private ComicReadingEntryService comicReadingEntryService;
@@ -65,7 +72,8 @@ class ComicReadingEntryServiceTest {
     @BeforeEach
     void setUp() {
         comicReadingEntryService = new ComicReadingEntryService(comicReadingEntryRepository,
-                comicReadingSourceRepository, comicRepository, iconResolverRegistry, userService);
+                comicReadingSourceRepository, comicRepository, iconResolverRegistry, readingProviderRegistry,
+                userService, TTL, RETRY_BACKOFF);
     }
 
     @Test
@@ -214,6 +222,117 @@ class ComicReadingEntryServiceTest {
                 .isSameAs(pendingEntries);
 
         verify(comicReadingEntryRepository, never()).findByComic(any());
+    }
+
+    @Test
+    void findByComicHydratesAStaleEntryViaTheRegistryAndSavesIt() {
+        Comic comic = new Comic();
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setUrl(URL);
+        entry.setStatus(ComicReadingEntryStatus.APPROVED);
+        ComicReadingSourceDetails details = new ComicReadingSourceDetails("Berserk", 374,
+                Instant.parse("2024-06-01T10:00:00Z"));
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
+        when(readingProviderRegistry.fetch(URL)).thenReturn(Optional.of(details));
+        when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        assertThat(entry.getTitle()).isEqualTo("Berserk");
+        assertThat(entry.getAvailableChapters()).isEqualTo(374);
+        assertThat(entry.getLatestChapterAt()).isEqualTo(Instant.parse("2024-06-01T10:00:00Z"));
+        assertThat(entry.getLastFetchedAt()).isNotNull();
+        verify(comicReadingEntryRepository).saveAll(List.of(entry));
+    }
+
+    @Test
+    void findByComicHydratesAPendingEntryToo() {
+        Comic comic = new Comic();
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setUrl(URL);
+        entry.setStatus(ComicReadingEntryStatus.PENDING);
+        ComicReadingSourceDetails details = new ComicReadingSourceDetails("Berserk", 374, null);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
+        when(readingProviderRegistry.fetch(URL)).thenReturn(Optional.of(details));
+        when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        assertThat(entry.getTitle()).isEqualTo("Berserk");
+    }
+
+    @Test
+    void findByComicNeverRefreshesARejectedEntry() {
+        Comic comic = new Comic();
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setUrl(URL);
+        entry.setStatus(ComicReadingEntryStatus.REJECTED);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        verify(readingProviderRegistry, never()).fetch(any());
+        verify(comicReadingEntryRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void findByComicDoesNotRefreshAnEntryStillWithinTtl() {
+        Comic comic = new Comic();
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setUrl(URL);
+        entry.setStatus(ComicReadingEntryStatus.APPROVED);
+        entry.setLastFetchedAt(Instant.now());
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        verify(readingProviderRegistry, never()).fetch(any());
+        verify(comicReadingEntryRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void findByComicAppliesBackoffInsteadOfAFullTtlWhenTheRegistryFails() {
+        Comic comic = new Comic();
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setUrl(URL);
+        entry.setStatus(ComicReadingEntryStatus.APPROVED);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
+        when(readingProviderRegistry.fetch(URL)).thenThrow(new RuntimeException("site is down"));
+        when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        assertThat(entry.getTitle()).isNull();
+        assertThat(entry.getLastFetchedAt()).isAfter(Instant.now().minus(TTL));
+        assertThat(entry.getLastFetchedAt()).isBefore(Instant.now());
+    }
+
+    @Test
+    void findByComicRefreshesEachStaleEntryIndependentlyWhenOneProviderCallFails() {
+        Comic comic = new Comic();
+        ComicReadingEntry failingEntry = new ComicReadingEntry();
+        failingEntry.setUrl("https://example.com/failing");
+        failingEntry.setStatus(ComicReadingEntryStatus.APPROVED);
+        ComicReadingEntry succeedingEntry = new ComicReadingEntry();
+        succeedingEntry.setUrl("https://example.com/succeeding");
+        succeedingEntry.setStatus(ComicReadingEntryStatus.APPROVED);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(failingEntry, succeedingEntry));
+        when(readingProviderRegistry.fetch("https://example.com/failing"))
+                .thenThrow(new RuntimeException("site is down"));
+        when(readingProviderRegistry.fetch("https://example.com/succeeding"))
+                .thenReturn(Optional.of(new ComicReadingSourceDetails("One Piece", 1000, null)));
+        when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        assertThat(failingEntry.getTitle()).isNull();
+        assertThat(succeedingEntry.getTitle()).isEqualTo("One Piece");
     }
 
     @Test

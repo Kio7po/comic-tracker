@@ -27,7 +27,7 @@ Este documento define el estándar de ramas y commits del proyecto TFG. Sigue Gi
 
 - El nombre de la versión (`vX.Y.Z`, SemVer) se fija **al crear la rama**, no al fusionarla.
 - No lleva clave de Jira: agrupa varios issues ya fusionados en `develop`, no corresponde a un issue individual.
-- Se fusiona en `main` (con tag `vX.Y.Z`) y, mediante back-merge, en `develop`.
+- Se fusiona en `main` vía PR (con tag `vX.Y.Z` sobre el commit de merge resultante). El back-merge a `develop` se hace aparte, después, con `git pull --no-ff --no-rebase` (trayendo `main` a `develop`) directamente en local, no con una segunda PR, no aportaría nada.
 - Al no llevar clave, ninguna de las dos fusiones dispara transiciones automáticas en Jira.
 
 ### 1.3. `hotfix/*`
@@ -102,6 +102,16 @@ El `<version>` de `backend/pom.xml` sigue el ciclo `-SNAPSHOT` habitual de Maven
 - Ninguno de los dos commits lleva clave de Jira, igual que el resto de `release/*`.
 - `frontend/package.json` no sigue esta convención (`0.0.0` fijo, sin uso real todavía).
 
+### 4.2. Checklist de una release
+
+1. Fijar la versión: `MINOR` sobre el último tag de `main` (`vX.Y.Z` → `vX.(Y+1).0`).
+2. Crear `release/vX.Y.Z` desde `develop`.
+3. En esa rama, quitar el `-SNAPSHOT` de `backend/pom.xml` → commit `chore: bump version X.Y.Z`.
+4. PR `release/vX.Y.Z` → `main`, fusionar como merge commit (nunca squash ni rebase).
+5. Tag `vX.Y.Z` sobre ese commit de merge, en `main`.
+6. Back-merge a `develop`: `git pull --no-ff --no-rebase` desde `main`, en local — sin PR (ver 1.2).
+7. En `develop`, subir a `X.(Y+1).0-SNAPSHOT` en `backend/pom.xml` → commit `chore: bump version X.(Y+1).0-SNAPSHOT`.
+
 ---
 
 ## 5. Resumen de automatización Jira bajo este estándar
@@ -111,8 +121,9 @@ El `<version>` de `backend/pom.xml` sigue el ciclo `-SNAPSHOT` habitual de Maven
 | Crear rama con clave | `feature/TFG-XX-*` | *En curso* |
 | Crear rama sin clave | `release/*`, `hotfix/*` | Ninguna |
 | Abrir PR | `feature/TFG-XX-*` → `develop` | *En revisión* |
-| Abrir PR | `release/*` → `main`, `release/*` → `develop`, `hotfix/*` → `main`, `hotfix/*` → `develop` | Ninguna |
+| Abrir PR | `release/*` → `main`, `hotfix/*` → `main`, `hotfix/*` → `develop` | Ninguna |
+| `git pull --no-ff --no-rebase` (sin PR) | `main` → `develop`, back-merge de `release/*` | Ninguna |
 | PR fusionada | `feature/TFG-XX-*` → `develop` | *Finalizado* |
-| PR fusionada | `release/*`, `hotfix/*` (cualquier destino) | Ninguna — actualizar manualmente o vía Smart Commit puntual |
+| PR fusionada | `release/*`, `hotfix/*` → `main` | Ninguna — actualizar manualmente o vía Smart Commit puntual |
 
 No hay transiciones `block`/`unblock`, de uso manual desde el tablero.

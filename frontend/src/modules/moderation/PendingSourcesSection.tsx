@@ -17,6 +17,7 @@ import {
 } from '@/common/components/ui/dialog';
 import { Spinner } from '@/common/components/ui/spinner';
 import { Separator } from '@/common/components/ui/separator';
+import TruncatedText from '@/common/components/TruncatedText';
 
 function PendingSourcesSection() {
   const { t, i18n } = useTranslation();
@@ -138,7 +139,7 @@ function PendingSourcesSection() {
                 <img src={item.source.iconUrl} alt="" className="size-8 shrink-0 rounded-xs" />
               )}
               <span className="flex min-w-0 flex-col">
-                <span className="font-medium text-foreground">{item.source.name}</span>
+                <TruncatedText text={item.source.name} className="font-medium text-foreground" />
                 <span className="truncate text-muted-foreground">{item.source.url}</span>
               </span>
               <span className="ml-auto shrink-0 text-xs text-muted-foreground">
@@ -169,9 +170,9 @@ function PendingSourcesSection() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-lg">
                   {selectedSource.source.iconUrl && (
-                    <img src={selectedSource.source.iconUrl} alt="" className="size-6 rounded-xs" />
+                    <img src={selectedSource.source.iconUrl} alt="" className="size-6 shrink-0 rounded-xs" />
                   )}
-                  {selectedSource.source.name}
+                  <span className="min-w-0 break-all">{selectedSource.source.name}</span>
                 </DialogTitle>
               </DialogHeader>
               <dl className="flex flex-col gap-2 text-sm">
@@ -181,7 +182,7 @@ function PendingSourcesSection() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.slug')}</dt>
-                  <dd className="text-foreground">{selectedSource.source.slug}</dd>
+                  <dd className="min-w-0 break-all text-right text-foreground">{selectedSource.source.slug}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">{t('moderation.fields.url')}</dt>

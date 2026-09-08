@@ -1,7 +1,17 @@
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-import { BookmarkOff, Info, MoreHorizontal, Save, Minus, Share2, SquarePen, Plus } from 'lucide-react';
+import {
+  BookmarkOff,
+  ExternalLink as ExternalLinkIcon,
+  Info,
+  MoreHorizontal,
+  Save,
+  Minus,
+  Share2,
+  SquarePen,
+  Plus,
+} from 'lucide-react';
 import { remove, update } from '@/services/readingState/api/readingState';
 import type { ReadingState, ReadingStateStatus, ReadingStateWithComic } from '@/services/readingState/types';
 import { cn } from '@/common/lib/utils';
@@ -10,6 +20,7 @@ import { Button } from '@/common/components/ui/button';
 import { Card } from '@/common/components/ui/card';
 import { Spinner } from '@/common/components/ui/spinner';
 import ConfirmDialog from '@/common/components/ConfirmDialog';
+import ExternalLink from '@/common/components/ExternalLink';
 import {
   Drawer,
   DrawerClose,
@@ -96,6 +107,7 @@ function LibraryComicCard({ entry, onUpdated, onRemoved }: Readonly<LibraryComic
           status: readingState.status,
           chapters: draftChapters,
           notes: readingState.notes ?? undefined,
+          preferredEntryId: readingState.preferredEntry?.id ?? undefined,
         }),
       );
     } catch {
@@ -195,6 +207,17 @@ function LibraryComicCard({ entry, onUpdated, onRemoved }: Readonly<LibraryComic
                 <SquarePen className="size-5" />
                 {t('detail.editLibrary')}
               </DrawerClose>
+              {readingState.preferredEntry && (
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  render={<ExternalLink href={readingState.preferredEntry.url} />}
+                >
+                  <ExternalLinkIcon className="size-5" />
+                  {t('library.actions.continueReading')}
+                </Button>
+              )}
               <Button type="button" size="lg" variant="outline" onClick={handleShare}>
                 <Share2 className="size-5" />
                 {t('library.actions.share')}
@@ -236,6 +259,18 @@ function LibraryComicCard({ entry, onUpdated, onRemoved }: Readonly<LibraryComic
               <Button type="button" variant="outline" size="icon-sm" onClick={() => setIsEditDialogOpen(true)}>
                 <SquarePen className="size-5" />
               </Button>
+              {readingState.preferredEntry && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t('library.actions.continueReading')}
+                  title={t('library.actions.continueReading')}
+                  render={<ExternalLink href={readingState.preferredEntry.url} />}
+                >
+                  <ExternalLinkIcon className="size-5" />
+                </Button>
+              )}
               <DropdownMenu onOpenChange={setIsDropdownOpen}>
                 <DropdownMenuTrigger
                   render={

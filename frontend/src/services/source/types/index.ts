@@ -4,6 +4,7 @@ export type * from './ComicReadingSource';
 export type * from './ComicReadingEntryStatus';
 export type * from './ComicReadingEntrySortField';
 export type * from './ComicReadingEntry';
+export type * from './ComicReadingEntrySummary';
 export type * from './ComicReadingEntryRequest';
 export type * from './ComicReadingEntryModeration';
 export type * from './ComicReadingSourceModeration';

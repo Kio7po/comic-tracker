@@ -6,7 +6,9 @@ import { findByComic } from '@/services/source/api/readingEntry';
 import type { ComicReadingEntry } from '@/services/source/types';
 import { useAuth } from '@/common/components/AuthProvider';
 import ExternalLink from '@/common/components/ExternalLink';
+import TruncatedText from '@/common/components/TruncatedText';
 import { appendFromParam } from '@/common/lib/authRedirect';
+import { formatRelativeTime } from '@/common/lib/formatRelativeTime';
 import { createLanguageNameFormatter } from '@/common/lib/languageName';
 import { useLocalStorage } from '@/common/hooks/useLocalStorage';
 import { Badge } from '@/common/components/ui/badge';
@@ -114,34 +116,39 @@ function ComicReadingSources({ comicSlug }: Readonly<{ comicSlug: string }>) {
           <li key={entry.id}>
             <ExternalLink
               href={entry.url}
-              className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted"
+              title={entry.url}
+              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted"
             >
               <span className="flex min-w-0 items-center gap-2">
                 {entry.source.iconUrl && (
                   <img src={entry.source.iconUrl} alt="" className="size-8 shrink-0 rounded-md" />
                 )}
                 <span className="flex min-w-0 flex-col">
-                  <span className="flex items-center gap-2 font-medium text-foreground">
-                    {entry.source.name}
+                  <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
+                    <TruncatedText text={entry.source.name} />
                     {entry.status === 'PENDING' && (
                       <Tooltip>
-                        <TooltipTrigger render={<span tabIndex={0} className="inline-flex text-amber-500" />}>
+                        <TooltipTrigger
+                          render={<span tabIndex={0} className="inline-flex shrink-0 text-amber-500" />}
+                        >
                           <TriangleAlert className="size-4" />
                         </TooltipTrigger>
                         <TooltipContent>{t('detail.pendingTooltip')}</TooltipContent>
                       </Tooltip>
                     )}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">{entry.url}</span>
+                  {(entry.availableChapters !== null || entry.latestChapterAt !== null) && (
+                    <span className="text-xs text-muted-foreground">
+                      {entry.availableChapters !== null && `${entry.availableChapters} ${t('detail.chapters')}`}
+                      {entry.availableChapters !== null && entry.latestChapterAt !== null && ' · '}
+                      {entry.latestChapterAt !== null &&
+                        `${t('detail.updated')} ${formatRelativeTime(entry.latestChapterAt, i18n.language)}`}
+                    </span>
+                  )}
                 </span>
               </span>
               <span className="flex items-center gap-2 text-muted-foreground">
                 <Badge variant="outline">{languageLabel(entry.locale)}</Badge>
-                {entry.availableChapters !== null && (
-                  <span>
-                    {t('detail.chapters')} {entry.availableChapters}
-                  </span>
-                )}
                 <ExternalLinkIcon className="size-4" />
               </span>
             </ExternalLink>

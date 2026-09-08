@@ -1,7 +1,12 @@
 {
   "common": {
     "cancel": "Cancelar",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "sort": {
+      "by": "Ordenar por",
+      "asc": "Ascendente",
+      "desc": "Descendente"
+    }
   },
   "nav": {
     "home": "Inicio",
@@ -16,6 +21,7 @@
   "library": {
     "title": "Biblioteca",
     "empty": "Todavía no hay nada aquí.",
+    "browseCatalog": "Explora el catálogo",
     "filteredEmpty": "Ningún cómic coincide con los filtros seleccionados.",
     "loadError": "Ha ocurrido un error al cargar tu biblioteca.",
     "searchPlaceholder": "Buscar…",
@@ -24,9 +30,6 @@
       "status": "Estado de lectura",
       "allStatuses": "Cualquier estado",
       "pendingOnly": "Solo sin leer",
-      "sortBy": "Ordenar por",
-      "sortAsc": "Ascendente",
-      "sortDesc": "Descendente",
       "reset": "Restablecer"
     },
     "sort": {
@@ -39,6 +42,7 @@
     },
     "actions": {
       "trigger": "Acciones rápidas",
+      "continueReading": "Seguir leyendo",
       "save": "Guardar",
       "viewDetails": "Ver detalles",
       "share": "Compartir",
@@ -50,6 +54,7 @@
     "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
   },
   "catalog": {
+    "title": "Buscar",
     "searchPlaceholder": "Buscar...",
     "loading": "Cargando…",
     "loadError": "Ha ocurrido un error al cargar los cómics.",
@@ -61,10 +66,12 @@
       "nsfw": "NSFW",
       "allTypes": "Cualquier tipo",
       "allStatuses": "Cualquier estado",
-      "limit": "Por página"
+      "limit": "Por página",
+      "trigger": "Filtros",
+      "reset": "Restablecer"
     },
     "nsfw": {
-      "NONE": "Ninguno",
+      "NONE": "Seguro",
       "SUGGESTIVE": "Sugerente",
       "EXPLICIT": "Explícito"
     },
@@ -85,6 +92,12 @@
       "HIATUS": "En pausa",
       "CANCELLED": "Cancelado",
       "OTHER": "Otro"
+    },
+    "sort": {
+      "RELEVANCE": "Relevancia",
+      "TITLE": "Título",
+      "POPULARITY": "Popularidad",
+      "RELEASE_DATE": "Fecha de publicación"
     }
   },
   "auth": {
@@ -143,10 +156,16 @@
     "editLibrary": "Editar",
     "alreadyInLibrary": "Ya tenías esto en tu biblioteca.",
     "chapters": "Capítulos",
+    "updated": "Actualizado",
     "readingState": {
       "title": "Editar progreso de lectura",
       "status": "Estado",
       "chaptersRead": "Último Capítulo Leído",
+      "preferredEntry": "Seguir leyendo en",
+      "preferredEntryNone": "Sin preferencia",
+      "obsolete": "OBSOLETO",
+      "loadingEntries": "Cargando…",
+      "entriesLoadError": "No se pudieron cargar las fuentes de lectura",
       "notes": "Notas",
       "notesPlaceholder": "Escribe tus notas aquí.",
       "resetChapters": "Poner a 0",
@@ -182,6 +201,7 @@
     "resetLocaleFilter": "Restablecer por defecto",
     "showPendingSources": "Mostrar fuentes pendientes de aprobar",
     "pendingTooltip": "Esta fuente aún no ha sido revisada y puede no ser fiable.",
+    "rejectedTooltip": "Esta fuente fue rechazada y ya no se puede usar.",
     "suggestSource": {
       "trigger": "Proponer una fuente",
       "loginPrompt": "Inicia sesión para proponer una fuente",

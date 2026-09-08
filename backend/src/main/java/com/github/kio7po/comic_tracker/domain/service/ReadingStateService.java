@@ -8,12 +8,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
+import com.github.kio7po.comic_tracker.domain.entities.ComicReadingEntry;
 import com.github.kio7po.comic_tracker.domain.entities.ReadingState;
 import com.github.kio7po.comic_tracker.domain.entities.User;
 import com.github.kio7po.comic_tracker.domain.enums.ReadingStateStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.InvalidPreferredReadingEntryException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ReadingStateAlreadyExistsException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ReadingStateNotFoundException;
+import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntryRepository;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicRepository;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ReadingStateRepository;
 
@@ -22,21 +26,24 @@ public class ReadingStateService {
 
     private final ReadingStateRepository readingStateRepository;
     private final ComicRepository comicRepository;
+    private final ComicReadingEntryRepository comicReadingEntryRepository;
     private final UserService userService;
 
     public ReadingStateService(ReadingStateRepository readingStateRepository, ComicRepository comicRepository,
-            UserService userService) {
+            ComicReadingEntryRepository comicReadingEntryRepository, UserService userService) {
         this.readingStateRepository = readingStateRepository;
         this.comicRepository = comicRepository;
+        this.comicReadingEntryRepository = comicReadingEntryRepository;
         this.userService = userService;
     }
 
     /**
      * @param chapters must be non-negative.
+     * @param preferredEntryId must belong to the same comic as {@code comicId}.
      */
     @Transactional
     public ReadingState create(Long userId, Long comicId, ReadingStateStatus status, int chapters,
-            @Nullable String notes) {
+            @Nullable String notes, @Nullable Long preferredEntryId) {
         User user = userService.findById(userId);
         Comic comic = comicRepository.findById(comicId).orElseThrow(() -> new ComicNotFoundException(comicId));
 
@@ -50,6 +57,7 @@ public class ReadingStateService {
         readingState.setStatus(status);
         readingState.setChapters(chapters);
         readingState.setNotes(notes);
+        readingState.setPreferredEntry(resolvePreferredEntry(comic, preferredEntryId));
 
         return readingStateRepository.save(readingState);
     }
@@ -66,18 +74,20 @@ public class ReadingStateService {
     }
 
     /**
-     * Replaces the full mutable state of an existing {@link ReadingState} in one call — the caller
-     * sends the complete new state (status, chapters and notes) rather than incremental deltas.
+     * Replaces the full mutable state of an existing {@link ReadingState} in one call.
+     * The caller sends the complete new state rather than incremental deltas.
      *
      * @param chapters must be non-negative.
+     * @param preferredEntryId must belong to the same comic as the tracked {@code comicId}.
      */
     @Transactional
     public ReadingState update(Long userId, Long comicId, ReadingStateStatus status, int chapters,
-            @Nullable String notes) {
+            @Nullable String notes, @Nullable Long preferredEntryId) {
         ReadingState readingState = findExisting(userId, comicId);
         readingState.setStatus(status);
         readingState.setChapters(chapters);
         readingState.setNotes(notes);
+        readingState.setPreferredEntry(resolvePreferredEntryForUpdate(readingState, preferredEntryId));
 
         return readingStateRepository.save(readingState);
     }
@@ -93,6 +103,35 @@ public class ReadingStateService {
 
         return readingStateRepository.findByUserAndComic(user, comic)
                 .orElseThrow(() -> new ReadingStateNotFoundException(userId, comicId));
+    }
+
+    /**
+     * Leaves an unchanged {@code preferredEntryId} as-is instead of re-validating it, so a
+     * {@code readingState.preferredEntry} that has since become invalid doesn't block unrelated
+     * edits to the same {@link ReadingState} as long as the caller keeps it unchanged.
+     */
+    private @Nullable ComicReadingEntry resolvePreferredEntryForUpdate(ReadingState readingState,
+            @Nullable Long preferredEntryId) {
+        ComicReadingEntry current = readingState.getPreferredEntry();
+        if (preferredEntryId != null && current != null && preferredEntryId.equals(current.getId())) {
+            return current;
+        }
+
+        return resolvePreferredEntry(readingState.getComic(), preferredEntryId);
+    }
+
+    private @Nullable ComicReadingEntry resolvePreferredEntry(Comic comic, @Nullable Long preferredEntryId) {
+        if (preferredEntryId == null) {
+            return null;
+        }
+
+        ComicReadingEntry entry = comicReadingEntryRepository.findById(preferredEntryId)
+                .orElseThrow(() -> new ComicReadingEntryNotFoundException(preferredEntryId));
+        if (!entry.getComic().getId().equals(comic.getId()) || entry.isRejected()) {
+            throw new InvalidPreferredReadingEntryException(preferredEntryId, comic.getId());
+        }
+
+        return entry;
     }
 
 }

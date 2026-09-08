@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.github.kio7po.comic_tracker.domain.entities.Comic;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicRepository;
 
+// TODO: Considerar si tiene sentido que siga existiendo
 @Service
 public class ComicService {
 
