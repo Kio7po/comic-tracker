@@ -15,7 +15,7 @@ function Home() {
   function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = keywords.trim();
-    navigate(trimmed ? `/catalog?keywords=${encodeURIComponent(trimmed)}` : '/catalog');
+    void navigate(trimmed ? `/catalog?keywords=${encodeURIComponent(trimmed)}` : '/catalog');
   }
 
   const cards = [
