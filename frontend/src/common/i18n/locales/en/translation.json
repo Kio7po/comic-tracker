@@ -9,7 +9,6 @@
     }
   },
   "nav": {
-    "home": "Home",
     "browse": "Browse",
     "login": "Log in",
     "logout": "Log out",
@@ -52,6 +51,39 @@
   },
   "footer": {
     "tagline": "Comic Tracker — a TFG project (UDC)"
+  },
+  "home": {
+    "title": "Find where to read your next comic",
+    "subtitle": "Browse the catalog, find sites to read each title, and keep track of how far you've read.",
+    "searchPlaceholder": "Search by title...",
+    "searchButton": "Search",
+    "browse": {
+      "title": "Browse the catalog",
+      "description": "Explore a huge catalog of manga, manhwa, manhua and more."
+    },
+    "library": {
+      "title": "Track your reading",
+      "description": "Keep a personal library with your progress, notes and preferred reading source."
+    },
+    "contribute": {
+      "title": "Suggest a source",
+      "description": "Know a place to read a title that's missing? Suggest it for the community to review."
+    },
+    "howTitle": "How it works",
+    "steps": [
+      {
+        "title": "Look a comic up",
+        "description": "Every entry merges metadata from several sources into one page."
+      },
+      {
+        "title": "Pick where to read",
+        "description": "Compare community-reviewed reading sources by language and status."
+      },
+      {
+        "title": "Track your progress",
+        "description": "Log the chapter you're on, and pick up where you left off."
+      }
+    ]
   },
   "catalog": {
     "title": "Browse",

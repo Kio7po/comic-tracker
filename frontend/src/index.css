@@ -88,6 +88,11 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.902 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+    /* Manganamao/MnM logo marks (ManganamaoLogo.tsx, MnM.svg) - colors as drawn in the source
+       artwork. Only --logo-primary (the navy) needs a lighter value in .dark below; the accent
+       blue is already vivid enough to read fine against both backgrounds unchanged. */
+    --logo-primary: oklch(0.26 0.123 263.2);
+    --logo-accent: oklch(0.584 0.212 258);
 }
 
 .dark {
@@ -127,6 +132,9 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+    /* Lightened from the source navy (#021b5e) - it read too dark against this theme's
+       background. --logo-accent is left unchanged, see the :root comment above. */
+    --logo-primary: oklch(0.34 0.173 263.2);
 }
 
 @layer base {
