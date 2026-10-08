@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router';
 import Layout from '@/common/components/Layout';
 import RouteErrorPage from '@/common/components/RouteErrorPage';
+import type { Comic } from '@/services/comic/types';
 import SearchPage from '@/modules/catalog/SearchPage';
 import LibraryPage from '@/modules/library/LibraryPage';
 import ComicDetailPage, { comicDetailLoader } from '@/modules/comic/ComicDetailPage';
@@ -20,7 +21,7 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <Home /> },
-      { path: 'catalog', element: <SearchPage /> },
+      { path: 'catalog', element: <SearchPage />, handle: { title: 'catalog.title' } },
       {
         path: 'library',
         element: <LibraryPage />,
@@ -30,20 +31,23 @@ export const router = createBrowserRouter([
         // every change.
         shouldRevalidate: ({ currentUrl, nextUrl }) => currentUrl.pathname !== nextUrl.pathname,
         errorElement: <RouteErrorPage />,
+        handle: { title: 'library.title' },
       },
-      { path: 'register', element: <RegisterPage /> },
-      { path: 'login', element: <LoginPage /> },
+      { path: 'register', element: <RegisterPage />, handle: { title: 'auth.register.title' } },
+      { path: 'login', element: <LoginPage />, handle: { title: 'auth.login.title' } },
       {
         path: 'comics/:slug',
         element: <ComicDetailPage />,
         loader: comicDetailLoader,
         errorElement: <RouteErrorPage />,
+        handle: { title: (data: unknown) => (data as Comic).title },
       },
       {
         path: 'moderation',
         element: <ModerationPage />,
         loader: ({ request }) => requireRole('ADMIN', request),
         errorElement: <RouteErrorPage />,
+        handle: { title: 'moderation.title' },
       },
       {
         path: 'settings',
@@ -53,10 +57,19 @@ export const router = createBrowserRouter([
         // Tabs read the resolved user via useRouteLoaderData('settings') instead of their own loader.
         loader: ({ request }) => requireAuth(request),
         errorElement: <RouteErrorPage />,
+        handle: { title: 'settings.title' },
         children: [
           { index: true, element: <SettingsIndexPage /> },
-          { path: 'profile', element: <ProfileSettingsPage /> },
-          { path: 'appearance', element: <AppearanceSettingsPage /> },
+          {
+            path: 'profile',
+            element: <ProfileSettingsPage />,
+            handle: { title: 'settings.tabs.profile' },
+          },
+          {
+            path: 'appearance',
+            element: <AppearanceSettingsPage />,
+            handle: { title: 'settings.tabs.appearance' },
+          },
         ],
       },
     ],

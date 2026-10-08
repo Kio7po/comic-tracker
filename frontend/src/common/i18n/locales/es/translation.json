@@ -9,7 +9,6 @@
     }
   },
   "nav": {
-    "home": "Inicio",
     "browse": "Buscar",
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
@@ -52,6 +51,39 @@
   },
   "footer": {
     "tagline": "Comic Tracker — un proyecto de TFG (UDC)"
+  },
+  "home": {
+    "title": "Encuentra dónde leer tu próximo cómic",
+    "subtitle": "Explora el catálogo, encuentra sitios donde leer cada título y lleva la cuenta de por dónde vas.",
+    "searchPlaceholder": "Busca por título...",
+    "searchButton": "Buscar",
+    "browse": {
+      "title": "Explorar el catálogo",
+      "description": "Explora un enorme catálogo de manga, manhwa, manhua y más."
+    },
+    "library": {
+      "title": "Sigue tu lectura",
+      "description": "Mantén una biblioteca personal con tu progreso, notas y fuente de lectura preferida."
+    },
+    "contribute": {
+      "title": "Sugiere una fuente",
+      "description": "¿Conoces un sitio donde leer un título que falta? Sugiérelo para que la comunidad lo revise."
+    },
+    "howTitle": "Cómo funciona",
+    "steps": [
+      {
+        "title": "Busca un cómic",
+        "description": "Cada ficha une metadatos de varias fuentes en una sola página."
+      },
+      {
+        "title": "Elige dónde leer",
+        "description": "Compara fuentes de lectura revisadas por la comunidad, por idioma y estado."
+      },
+      {
+        "title": "Sigue tu progreso",
+        "description": "Anota el capítulo por el que vas y retoma la lectura donde la dejaste."
+      }
+    ]
   },
   "catalog": {
     "title": "Buscar",

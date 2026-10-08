@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/common/components/AuthProvider';
 import { appendFromParam } from '@/common/lib/authRedirect';
 import { buttonVariants } from '@/common/components/ui/button';
+import ManganamaoLogo from '@/common/components/ManganamaoLogo';
 import UserDropdownMenu from './UserDropdownMenu';
 
 const navLinkClass =
@@ -14,14 +15,11 @@ function Header() {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 flex items-center gap-6 border-b border-border bg-background px-6 py-4">
-      <Link to="/" className="font-semibold text-foreground">
-        Comic Tracker
+    <header className="sticky top-0 z-50 flex items-center gap-4 border-b border-border bg-background px-5 py-4">
+      <Link to="/">
+        <ManganamaoLogo className="h-10 w-auto" />
       </Link>
       <nav className="flex gap-4">
-        <Link to="/" className={navLinkClass}>
-          {t('nav.home')}
-        </Link>
         <Link to="/catalog" className={navLinkClass}>
           {t('nav.browse')}
         </Link>
