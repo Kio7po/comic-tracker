@@ -1,13 +1,23 @@
-import { Link, useLocation } from "react-router";
+import { Link, NavLink, useLocation } from "react-router";
 import { useTranslation } from 'react-i18next';
+import { BookOpen, Library } from 'lucide-react';
 import { useAuth } from '@/common/components/AuthProvider';
 import { appendFromParam } from '@/common/lib/authRedirect';
 import { buttonVariants } from '@/common/components/ui/button';
+import { cn } from '@/common/lib/utils';
 import ManganamaoLogo from '@/common/components/ManganamaoLogo';
 import UserDropdownMenu from './UserDropdownMenu';
 
-const navLinkClass =
-  "relative text-muted-foreground after:absolute after:-bottom-4 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:bg-foreground after:transition-transform after:duration-100 hover:text-foreground hover:after:scale-x-100";
+// Same active-state colors as BottomNavBar's tabs (bg-primary/10 text-primary, with a lighter
+// blue swap in dark mode), so "currently selected" reads the same way in both layouts.
+function navLinkClass(isActive: boolean) {
+  return cn(
+    'flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors',
+    isActive
+      ? 'bg-primary/10 font-medium text-primary dark:bg-blue-300/20 dark:text-foreground'
+      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+  );
+}
 
 function Header() {
   const { t } = useTranslation();
@@ -19,15 +29,17 @@ function Header() {
       <Link to="/">
         <ManganamaoLogo className="h-10 w-auto" />
       </Link>
-      <nav className="flex gap-4">
-        <Link to="/catalog" className={navLinkClass}>
-          {t('nav.browse')}
-        </Link>
+      <nav className="hidden gap-3 sm:ml-3 sm:flex">
         {user && (
-          <Link to="/library" className={navLinkClass}>
+          <NavLink to="/library" className={({ isActive }) => navLinkClass(isActive)}>
+            <Library className="size-4" />
             {t('nav.library')}
-          </Link>
+          </NavLink>
         )}
+        <NavLink to="/catalog" className={({ isActive }) => navLinkClass(isActive)}>
+          <BookOpen className="size-4" />
+          {t('nav.browse')}
+        </NavLink>
       </nav>
       {!isLoading &&
         (user ? (

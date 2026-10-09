@@ -15,7 +15,8 @@
     "loggedInAs": "Sesión iniciada como",
     "moderation": "Moderación",
     "library": "Biblioteca",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "mainNavigation": "Navegación principal"
   },
   "library": {
     "title": "Biblioteca",

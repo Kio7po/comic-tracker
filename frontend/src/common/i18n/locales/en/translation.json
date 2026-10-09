@@ -15,7 +15,8 @@
     "loggedInAs": "Logged in as",
     "moderation": "Moderation",
     "library": "Library",
-    "settings": "Settings"
+    "settings": "Settings",
+    "mainNavigation": "Main navigation"
   },
   "library": {
     "title": "Library",
