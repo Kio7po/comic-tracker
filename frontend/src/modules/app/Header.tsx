@@ -9,10 +9,17 @@ import ManganamaoLogo from '@/common/components/ManganamaoLogo';
 import UserDropdownMenu from './UserDropdownMenu';
 
 // Same active-state colors as BottomNavBar's tabs (bg-primary/10 text-primary, with a lighter
-// blue swap in dark mode), so "currently selected" reads the same way in both layouts.
-function navLinkClass(isActive: boolean) {
+// blue swap in dark mode), so "currently selected" reads the same way in both layouts. All tabs
+// are always shown (even ones that require a session - the route itself redirects to login), so
+// a visibly dimmed tone when logged out is the only hint of which ones will ask for a session,
+// instead of hiding them until the user already has an account.
+function navLinkClass(isActive: boolean, isDimmed = false) {
+  const base = 'flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors';
+  if (isDimmed) {
+    return cn(base, 'text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground');
+  }
   return cn(
-    'flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors',
+    base,
     isActive
       ? 'bg-primary/10 font-medium text-primary dark:bg-blue-300/20 dark:text-foreground'
       : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -30,12 +37,10 @@ function Header() {
         <ManganamaoLogo className="h-10 w-auto" />
       </Link>
       <nav className="hidden gap-3 sm:ml-3 sm:flex">
-        {user && (
-          <NavLink to="/library" className={({ isActive }) => navLinkClass(isActive)}>
-            <Library className="size-4" />
-            {t('nav.library')}
-          </NavLink>
-        )}
+        <NavLink to="/library" className={({ isActive }) => navLinkClass(isActive, !user)}>
+          <Library className="size-4" />
+          {t('nav.library')}
+        </NavLink>
         <NavLink to="/catalog" className={({ isActive }) => navLinkClass(isActive)}>
           <BookOpen className="size-4" />
           {t('nav.browse')}
