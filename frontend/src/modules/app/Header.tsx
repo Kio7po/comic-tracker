@@ -6,7 +6,7 @@ import { appendFromParam } from '@/common/lib/authRedirect';
 import { buttonVariants } from '@/common/components/ui/button';
 import { cn } from '@/common/lib/utils';
 import ManganamaoLogo from '@/common/components/ManganamaoLogo';
-import UserDropdownMenu from './UserDropdownMenu';
+import UserMenu from './UserMenu';
 
 // Same active-state colors as BottomNavBar's tabs (bg-primary/10 text-primary, with a lighter
 // blue swap in dark mode), so "currently selected" reads the same way in both layouts. All tabs
@@ -32,7 +32,7 @@ function Header() {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 flex items-center gap-4 border-b border-border bg-background px-5 py-4">
+    <header className="sticky top-0 z-50 flex items-center gap-4 border-b border-border bg-background px-5 py-2 sm:py-4">
       <Link to="/">
         <ManganamaoLogo className="h-10 w-auto" />
       </Link>
@@ -48,7 +48,7 @@ function Header() {
       </nav>
       {!isLoading &&
         (user ? (
-          <UserDropdownMenu user={user} />
+          <UserMenu user={user} />
         ) : (
           <Link
             to={appendFromParam('/login', location.pathname + location.search)}

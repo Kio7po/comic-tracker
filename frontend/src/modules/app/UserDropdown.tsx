@@ -1,7 +1,5 @@
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { LogOut, Settings, ShieldCheck } from 'lucide-react';
-import { useAuth } from '@/common/components/AuthProvider';
 import { displayNameInitials } from '@/common/lib/displayNameInitials';
 import { Avatar, AvatarFallback, AvatarImage } from '@/common/components/ui/avatar';
 import {
@@ -13,17 +11,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/common/components/ui/dropdown-menu';
+import type { UserMenuItem } from './UserMenu';
 import type { UserResponse } from '@/services/user/types';
 
-function UserDropdownMenu({ user }: Readonly<{ user: UserResponse }>) {
+function UserDropdown({ user, items }: Readonly<{ user: UserResponse; items: UserMenuItem[] }>) {
   const { t } = useTranslation();
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-
-  async function handleLogout() {
-    await logout();
-    navigate('/');
-  }
 
   return (
     <DropdownMenu>
@@ -32,7 +24,7 @@ function UserDropdownMenu({ user }: Readonly<{ user: UserResponse }>) {
           <AvatarImage src={user.pictureUrl ?? undefined} alt="" />
           <AvatarFallback>{displayNameInitials(user.displayName)}</AvatarFallback>
         </Avatar>
-        <span className="hidden text-sm font-medium text-foreground sm:inline">{user.displayName}</span>
+        <span className="text-sm font-medium text-foreground">{user.displayName}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>
@@ -40,24 +32,30 @@ function UserDropdownMenu({ user }: Readonly<{ user: UserResponse }>) {
             {t('nav.loggedInAs')} <span className="font-semibold text-foreground">{user.displayName}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem render={<Link to="/settings" />}>
-            <Settings />
-            {t('nav.settings')}
-          </DropdownMenuItem>
-          {user.role === 'ADMIN' && (
-            <DropdownMenuItem render={<Link to="/moderation" />}>
-              <ShieldCheck />
-              {t('nav.moderation')}
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem variant="destructive" onClick={handleLogout}>
-            <LogOut />
-            {t('nav.logout')}
-          </DropdownMenuItem>
+          {items.map((item) => {
+            if (item.kind === 'link') {
+              return (
+                <DropdownMenuItem key={item.labelKey} render={<Link to={item.to} />}>
+                  <item.icon />
+                  {t(item.labelKey)}
+                </DropdownMenuItem>
+              );
+            }
+            return (
+              <DropdownMenuItem
+                key={item.labelKey}
+                variant={item.destructive ? 'destructive' : undefined}
+                onClick={item.onClick}
+              >
+                <item.icon />
+                {t(item.labelKey)}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-export default UserDropdownMenu;
+export default UserDropdown;
