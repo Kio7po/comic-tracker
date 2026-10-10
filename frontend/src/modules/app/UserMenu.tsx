@@ -24,7 +24,7 @@ function UserMenu({ user }: Readonly<{ user: UserResponse }>) {
 
   async function handleLogout() {
     await logout();
-    navigate('/');
+    void navigate('/');
   }
 
   const items: UserMenuItem[] = [

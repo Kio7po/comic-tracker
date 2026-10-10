@@ -81,7 +81,7 @@ function LoginPage() {
         password: form.password,
         rememberMe: form.rememberMe,
       });
-      navigate(from ?? '/', { replace: true });
+      void navigate(from ?? '/', { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.type === ProblemType.INVALID_CREDENTIALS) {
         setFormError(t('auth.login.errors.invalidCredentials'));
