@@ -49,20 +49,27 @@
 }
 
 :root {
-    /* Unlike .dark below, --background here is its own tier, one step *under* --card/--popover
-       (reuses --sidebar's existing 0.965 rather than a new number) - the page itself reads as
-       very slightly darker than the surfaces sitting on it (Header/BottomNavBar use bg-card,
-       not bg-background, precisely so they pick up this lighter tier instead of blending into
-       the page). Below that: (1) --card, --popover - the elevated-surface tier; (2) --sidebar,
-       same tier as --background now; (3) --secondary, --muted, --accent, --sidebar-accent - a
-       further step below; (4) --border, --input, --sidebar-border - the lowest step. Pure white
-       (1.0) reads as stark/glaring next to colorful cover art, so this tier starts a bit below
-       max brightness instead of at it - keep every tier's relative spacing when adjusting any of
+    /* Same tiering as .dark below, shifted down instead of up: (1) --background, --card,
+       --popover - the base surface tier, all equal; (2) --sidebar, a step below (1);
+       (3) --secondary, --muted, --accent, --sidebar-accent - a further step below; (4)
+       --border, --input, --sidebar-border - the lowest step. Pure white (1.0) reads as
+       stark/glaring next to colorful cover art, so this tier starts a bit below max
+       brightness instead of at it - keep every tier's relative spacing when adjusting any of
        them. Every neutral below carries a very small chroma at hue 264 (--primary's own hue)
        instead of pure grayscale (chroma 0) - a barely-there blue tint instead of flat gray/
        white. --chart-*, --secondary* (already has its own tiny tint) and the alpha-based
-       whites in .dark's --border/--input/--sidebar-border are left pure grayscale on purpose. */
-    --background: oklch(0.965 0.005 264);
+       whites in .dark's --border/--input/--sidebar-border are left pure grayscale on purpose.
+       Tried --background as its own, slightly darker tier so Header/BottomNavBar (then on
+       bg-card) would read distinct from the page - reverted: most of the shared UI kit
+       (Input/Textarea/Select/Combobox/InputGroup, the outline Button) uses bg-transparent or
+       bg-background on purpose, to blend into whatever page they sit on rather than the card
+       tier specifically, since most of them live directly on the page, not inside a Card. That
+       made them all read darker right along with the page everywhere in the app, not just
+       Header/BottomNavBar. Those components already carry the exact same problem's fix for
+       .dark (dark:bg-input/30, decoupling them from --background there) - applying that same
+       treatment to light mode too is the path to revisit if this is wanted again, rather than
+       re-splitting --background, which affects far more than just these two components. */
+    --background: oklch(0.98 0.005 264);
     --foreground: oklch(0.145 0.005 264);
     --card: oklch(0.98 0.005 264);
     --card-foreground: oklch(0.145 0.005 264);
