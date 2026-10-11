@@ -49,45 +49,51 @@
 }
 
 :root {
-    /* Same tiering as .dark below, shifted down instead of up: (1) --background, --card,
-       --popover - the base surface tier, all equal; (2) --sidebar, a step below (1);
-       (3) --secondary, --muted, --accent, --sidebar-accent - a further step below; (4)
-       --border, --input, --sidebar-border - the lowest step. Pure white (1.0) reads as
-       stark/glaring next to colorful cover art, so this tier starts a bit below max
-       brightness instead of at it - keep every tier's relative spacing when adjusting any of
-       them. */
-    --background: oklch(0.98 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(0.98 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(0.98 0 0);
-    --popover-foreground: oklch(0.145 0 0);
+    /* Unlike .dark below, --background here is its own tier, one step *under* --card/--popover
+       (reuses --sidebar's existing 0.965 rather than a new number) - the page itself reads as
+       very slightly darker than the surfaces sitting on it (Header/BottomNavBar use bg-card,
+       not bg-background, precisely so they pick up this lighter tier instead of blending into
+       the page). Below that: (1) --card, --popover - the elevated-surface tier; (2) --sidebar,
+       same tier as --background now; (3) --secondary, --muted, --accent, --sidebar-accent - a
+       further step below; (4) --border, --input, --sidebar-border - the lowest step. Pure white
+       (1.0) reads as stark/glaring next to colorful cover art, so this tier starts a bit below
+       max brightness instead of at it - keep every tier's relative spacing when adjusting any of
+       them. Every neutral below carries a very small chroma at hue 264 (--primary's own hue)
+       instead of pure grayscale (chroma 0) - a barely-there blue tint instead of flat gray/
+       white. --chart-*, --secondary* (already has its own tiny tint) and the alpha-based
+       whites in .dark's --border/--input/--sidebar-border are left pure grayscale on purpose. */
+    --background: oklch(0.965 0.005 264);
+    --foreground: oklch(0.145 0.005 264);
+    --card: oklch(0.98 0.005 264);
+    --card-foreground: oklch(0.145 0.005 264);
+    --popover: oklch(0.98 0.005 264);
+    --popover-foreground: oklch(0.145 0.005 264);
     --primary: oklch(0.488 0.243 264.376);
     --primary-foreground: oklch(0.97 0.014 254.604);
     --secondary: oklch(0.947 0.001 286.375);
     --secondary-foreground: oklch(0.21 0.006 285.885);
-    --muted: oklch(0.95 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.95 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.95 0.005 264);
+    --muted-foreground: oklch(0.556 0.005 264);
+    --accent: oklch(0.95 0.005 264);
+    --accent-foreground: oklch(0.205 0.005 264);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.902 0 0);
-    --input: oklch(0.902 0 0);
-    --ring: oklch(0.708 0 0);
+    --border: oklch(0.902 0.005 264);
+    --input: oklch(0.902 0.005 264);
+    --ring: oklch(0.708 0.005 264);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
     --radius: 0.45rem;
-    --sidebar: oklch(0.965 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar: oklch(0.965 0.005 264);
+    --sidebar-foreground: oklch(0.145 0.005 264);
     --sidebar-primary: oklch(0.546 0.245 262.881);
     --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-    --sidebar-accent: oklch(0.95 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.902 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar-accent: oklch(0.95 0.005 264);
+    --sidebar-accent-foreground: oklch(0.205 0.005 264);
+    --sidebar-border: oklch(0.902 0.005 264);
+    --sidebar-ring: oklch(0.708 0.005 264);
     /* Manganamao/MnM logo marks (ManganamaoLogo.tsx, MnM.svg) - colors as drawn in the source
        artwork. Only --logo-primary (the navy) needs a lighter value in .dark below; the accent
        blue is already vivid enough to read fine against both backgrounds unchanged. */
@@ -101,37 +107,37 @@
        --sidebar-accent - the "muted/interactive surface" tier, a step above (1). Originally
        (and still here) every variable within a tier shares the same lightness - keep both
        tiers' relative spacing above --background when adjusting any of them. */
-    --background: oklch(0.22 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.27 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.27 0 0);
-    --popover-foreground: oklch(0.985 0 0);
+    --background: oklch(0.22 0.005 264);
+    --foreground: oklch(0.985 0.005 264);
+    --card: oklch(0.27 0.005 264);
+    --card-foreground: oklch(0.985 0.005 264);
+    --popover: oklch(0.27 0.005 264);
+    --popover-foreground: oklch(0.985 0.005 264);
     --primary: oklch(0.424 0.199 265.638);
     --primary-foreground: oklch(0.97 0.014 254.604);
     --secondary: oklch(0.32 0.006 286.033);
     --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.32 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.32 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.32 0.005 264);
+    --muted-foreground: oklch(0.708 0.005 264);
+    --accent: oklch(0.32 0.005 264);
+    --accent-foreground: oklch(0.985 0.005 264);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --ring: oklch(0.556 0.005 264);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.27 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar: oklch(0.27 0.005 264);
+    --sidebar-foreground: oklch(0.985 0.005 264);
     --sidebar-primary: oklch(0.623 0.214 259.815);
     --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-    --sidebar-accent: oklch(0.32 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.32 0.005 264);
+    --sidebar-accent-foreground: oklch(0.985 0.005 264);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: oklch(0.556 0.005 264);
     /* Lightened from the source navy (#021b5e) - it read too dark against this theme's
        background. --logo-accent is left unchanged, see the :root comment above. */
     --logo-primary: oklch(0.34 0.173 263.2);

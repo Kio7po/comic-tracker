@@ -51,7 +51,7 @@ function BottomNavBar() {
   return (
     <nav
       aria-label={t('nav.mainNavigation')}
-      className="fixed inset-x-0 bottom-0 z-50 flex h-16 items-stretch border-t border-border bg-background pb-[env(safe-area-inset-bottom)] sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 flex h-16 items-stretch border-t border-border bg-card pb-[env(safe-area-inset-bottom)] sm:hidden"
     >
       {tabs.map(({ to, icon: Icon, labelKey, requiresAuth }) => {
         const isDimmed = requiresAuth && !user;

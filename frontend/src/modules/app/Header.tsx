@@ -32,7 +32,7 @@ function Header() {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 flex items-center gap-4 border-b border-border bg-background px-5 py-2 sm:py-4">
+    <header className="sticky top-0 z-50 flex items-center gap-4 border-b border-border bg-card px-5 py-2 sm:py-4">
       <Link to="/">
         <ManganamaoLogo className="h-10 w-auto" />
       </Link>
