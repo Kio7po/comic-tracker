@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Activity, BookOpen, Layers, ShieldAlert } from 'lucide-react';
+import { Activity, BookOpen, Layers } from 'lucide-react';
 import { Card, CardContent } from '@/common/components/ui/card';
 import type { Comic } from '@/services/comic/types';
 import ReadingStateButton from './ReadingStateButton';
@@ -24,7 +24,7 @@ function ComicCoverPanel({ comic }: Readonly<ComicCoverPanelProps>) {
       </Card>
       <ReadingStateButton comic={comic} />
       <Card className="mt-4">
-        <CardContent className="grid grid-cols-4 gap-4 text-sm sm:flex sm:flex-col sm:gap-3">
+        <CardContent className="grid grid-cols-3 gap-4 text-sm sm:flex sm:flex-col sm:gap-3">
           <div className="flex flex-col items-center gap-1 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
             <span className="flex items-center gap-1 text-xs text-muted-foreground sm:gap-1.5 sm:text-sm">
               <BookOpen className="size-3.5 sm:size-4" />
@@ -50,7 +50,9 @@ function ComicCoverPanel({ comic }: Readonly<ComicCoverPanelProps>) {
             </span>
             <span className="font-medium text-foreground">{comic.chapters ?? t('detail.unknown')}</span>
           </div>
-          <div className="flex flex-col items-center gap-1 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+          {/* NSFW never actually has data yet (no active ComicMetadataProvider sets it) -
+              commented out instead of removed so it's trivial to bring back once one does. */}
+          {/* <div className="flex flex-col items-center gap-1 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
             <span className="flex items-center gap-1 text-xs text-muted-foreground sm:gap-1.5 sm:text-sm">
               <ShieldAlert className="size-3.5 sm:size-4" />
               {t('catalog.filters.nsfw')}
@@ -58,7 +60,7 @@ function ComicCoverPanel({ comic }: Readonly<ComicCoverPanelProps>) {
             <span className="font-medium text-foreground">
               {comic.nsfw ? t(`catalog.nsfw.${comic.nsfw}`) : t('detail.unknown')}
             </span>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
     </div>
