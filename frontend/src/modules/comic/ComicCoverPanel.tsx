@@ -13,7 +13,9 @@ function ComicCoverPanel({ comic }: Readonly<ComicCoverPanelProps>) {
 
   return (
     <div className="w-full shrink-0 lg:w-64">
-      <Card size="sm" className="py-0">
+      {/* Hidden on mobile - ComicDetailPage shows a small thumbnail next to the title there
+          instead, so the full-size cover isn't repeated and doesn't eat the whole screen. */}
+      <Card size="sm" className="hidden py-0 lg:block">
         {comic.coverUrl ? (
           <img src={comic.coverUrl} alt="" className="aspect-2/3 w-full object-cover" />
         ) : (
@@ -35,7 +37,7 @@ function ComicCoverPanel({ comic }: Readonly<ComicCoverPanelProps>) {
           <div className="flex flex-col items-center gap-1 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
             <span className="flex items-center gap-1 text-xs text-muted-foreground sm:gap-1.5 sm:text-sm">
               <Activity className="size-3.5 sm:size-4" />
-              {t('catalog.filters.status')}
+              {t('detail.publicationStatus')}
             </span>
             <span className="font-medium text-foreground">
               {comic.status ? t(`catalog.status.${comic.status}`) : t('detail.unknown')}

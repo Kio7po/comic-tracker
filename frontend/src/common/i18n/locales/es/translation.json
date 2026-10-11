@@ -275,7 +275,9 @@
     "authors": "Autores",
     "startDate": "Fecha de inicio",
     "tags": "Etiquetas",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "viewCover": "Ver portada",
+    "publicationStatus": "Estado"
   },
   "errors": {
     "oops": "¡Vaya!",

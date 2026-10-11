@@ -56,6 +56,7 @@ interface LibraryComicCardProps {
   onRemoved: (comicSlug: string) => void;
 }
 
+// TODO: Refactorizar este componente
 function LibraryComicCard({ entry, onUpdated, onRemoved }: Readonly<LibraryComicCardProps>) {
   const { t } = useTranslation();
   const { comic, readingState } = entry;
@@ -85,6 +86,7 @@ function LibraryComicCard({ entry, onUpdated, onRemoved }: Readonly<LibraryComic
       } catch (error) {
         // AbortError: the user dismissed the native share sheet - not a real failure.
         if (error instanceof DOMException && error.name === 'AbortError') return;
+        console.error(error);
         toast.add({ title: t('errors.actionFailed'), type: 'error' });
       }
       return;
@@ -93,7 +95,8 @@ function LibraryComicCard({ entry, onUpdated, onRemoved }: Readonly<LibraryComic
     try {
       await navigator.clipboard.writeText(url);
       toast.add({ title: t('library.actions.shareSuccess'), type: 'success' });
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.add({ title: t('errors.actionFailed'), type: 'error' });
     }
   }

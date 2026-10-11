@@ -275,7 +275,9 @@
     "authors": "Authors",
     "startDate": "Start date",
     "tags": "Tags",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "viewCover": "View cover",
+    "publicationStatus": "Status"
   },
   "errors": {
     "oops": "Oops!",
