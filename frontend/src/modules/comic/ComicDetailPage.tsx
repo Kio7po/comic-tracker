@@ -2,8 +2,10 @@ import { useLoaderData } from 'react-router';
 import type { LoaderFunctionArgs } from 'react-router';
 import { getBySlug } from '@/services/comic/api/comic';
 import { ApiError } from '@/common/api/ApiError';
+import PageContainer from '@/common/components/PageContainer';
 import ComicCoverPanel from './ComicCoverPanel';
 import ComicHeader from './ComicHeader';
+import ComicMobileHeader from './ComicMobileHeader';
 import ComicSynopsis from './ComicSynopsis';
 import ComicReadingSources from './ComicReadingSources';
 import ComicSidebarInfo from './ComicSidebarInfo';
@@ -24,11 +26,14 @@ function ComicDetailPage() {
   const comic = useLoaderData<typeof comicDetailLoader>();
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
+    <PageContainer className="max-w-7xl">
+      <ComicMobileHeader comic={comic} />
       <div className="flex flex-col gap-8 lg:flex-row">
         <ComicCoverPanel comic={comic} />
         <div className="flex min-w-0 flex-1 flex-col gap-6">
-          <ComicHeader comic={comic} />
+          <div className="hidden lg:block">
+            <ComicHeader comic={comic} />
+          </div>
           <div className="flex flex-col gap-6 lg:flex-row">
             <div className="flex min-w-0 flex-1 flex-col gap-6">
               <ComicSynopsis synopsis={comic.synopsis} />
@@ -38,7 +43,7 @@ function ComicDetailPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

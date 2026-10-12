@@ -8,6 +8,8 @@ import type { ReadingState, ReadingStateStatus, ReadingStateWithComic } from '@/
 import type { SortDirection } from '@/common/api/SortDirection';
 import { matchesSearch } from '@/common/lib/matchesSearch';
 import { MOBILE_QUERY, useMediaQuery } from '@/common/hooks/useMediaQuery';
+import PageContainer from '@/common/components/PageContainer';
+import PageTitle from '@/common/components/PageTitle';
 import SearchBar from '@/common/components/SearchBar';
 import { Button } from '@/common/components/ui/button';
 import {
@@ -226,7 +228,7 @@ function LibraryPage() {
     if (isMobile) {
       return (
         <Drawer>
-          <DrawerTrigger render={<Button type="button" variant="outline" className="mt-3" />}>
+          <DrawerTrigger render={<Button type="button" variant="outline" className="shrink-0" />}>
             <SlidersHorizontal className="size-4" />
             {t('library.filters.trigger')}
           </DrawerTrigger>
@@ -292,17 +294,20 @@ function LibraryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
-      <h1 className="mb-4 text-2xl font-semibold text-foreground">{t('library.title')}</h1>
-      <SearchBar
-        value={query}
-        onChange={handleQueryChange}
-        placeholder={t('library.searchPlaceholder')}
-        debounceMs={SEARCH_DEBOUNCE_MS}
-      />
-      {renderFilters()}
+    <PageContainer className="max-w-7xl">
+      <PageTitle className="mb-2 sm:mb-4">{t('library.title')}</PageTitle>
+      <div className="flex items-center gap-2 sm:block">
+        <SearchBar
+          value={query}
+          onChange={handleQueryChange}
+          placeholder={t('library.searchPlaceholder')}
+          debounceMs={SEARCH_DEBOUNCE_MS}
+          className="flex-1"
+        />
+        {renderFilters()}
+      </div>
       {renderEntries()}
-    </div>
+    </PageContainer>
   );
 }
 

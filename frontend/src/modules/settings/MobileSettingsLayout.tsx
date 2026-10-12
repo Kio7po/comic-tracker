@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link, Outlet, useLocation } from 'react-router';
 import { ChevronLeft } from 'lucide-react';
+import PageContainer from '@/common/components/PageContainer';
+import PageTitle from '@/common/components/PageTitle';
 
 function MobileSettingsLayout() {
   const { t } = useTranslation();
@@ -8,9 +10,9 @@ function MobileSettingsLayout() {
   const isIndexRoute = location.pathname === '/settings';
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <PageContainer className="max-w-4xl">
       {isIndexRoute ? (
-        <h1 className="mb-6 text-2xl font-semibold text-foreground">{t('settings.title')}</h1>
+        <PageTitle className="mb-3">{t('settings.title')}</PageTitle>
       ) : (
         <Link
           to="/settings"
@@ -21,7 +23,7 @@ function MobileSettingsLayout() {
         </Link>
       )}
       <Outlet />
-    </div>
+    </PageContainer>
   );
 }
 

@@ -73,7 +73,7 @@ function ReadingStateButton({ comic }: Readonly<ReadingStateButtonProps>) {
 
   async function handleAdd() {
     if (!user) {
-      navigate(appendFromParam('/login', location.pathname + location.search));
+      void navigate(appendFromParam('/login', location.pathname + location.search));
       return;
     }
 

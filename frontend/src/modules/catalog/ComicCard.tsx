@@ -23,7 +23,7 @@ function ComicCard({ comic }: Readonly<ComicCardProps>) {
     setHasError(false);
     try {
       const importedComic = await importComic(comic.sourceSlug, comic.externalId);
-      navigate(`/comics/${importedComic.slug}`);
+      void navigate(`/comics/${importedComic.slug}`);
     } catch {
       setHasError(true);
       setIsImporting(false);

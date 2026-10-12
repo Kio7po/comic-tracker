@@ -12,6 +12,8 @@ import type {
   NsfwRating,
 } from '@/services/comic/types';
 import { MOBILE_QUERY, useMediaQuery } from '@/common/hooks/useMediaQuery';
+import PageTitle from '@/common/components/PageTitle';
+import PageContainer from '@/common/components/PageContainer';
 import SearchBar from '@/common/components/SearchBar';
 import { Button } from '@/common/components/ui/button';
 import {
@@ -193,7 +195,7 @@ function SearchPage() {
     if (isMobile) {
       return (
         <Drawer>
-          <DrawerTrigger render={<Button type="button" variant="outline" className="mt-3" />}>
+          <DrawerTrigger render={<Button type="button" variant="outline" className="shrink-0" />}>
             <SlidersHorizontal className="size-4" />
             {t('catalog.filters.trigger')}
           </DrawerTrigger>
@@ -218,10 +220,17 @@ function SearchPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
-      <h1 className="mb-4 text-2xl font-semibold text-foreground">{t('catalog.title')}</h1>
-      <SearchBar value={keywords} onChange={handleKeywordsChange} placeholder={t('catalog.searchPlaceholder')} />
-      {renderFilters()}
+    <PageContainer className="max-w-7xl">
+      <PageTitle className="mb-2 sm:mb-4">{t('catalog.title')}</PageTitle>
+      <div className="flex items-center gap-2 sm:block">
+        <SearchBar
+          value={keywords}
+          onChange={handleKeywordsChange}
+          placeholder={t('catalog.searchPlaceholder')}
+          className="flex-1"
+        />
+        {renderFilters()}
+      </div>
       <SearchPagination
         page={page}
         onPageChange={handlePageChange}
@@ -236,7 +245,7 @@ function SearchPage() {
         totalPages={totalPages}
         existMoreItems={existMoreItems}
       />
-    </div>
+    </PageContainer>
   );
 }
 

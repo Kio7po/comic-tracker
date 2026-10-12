@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
+import { cn } from '@/common/lib/utils';
 import { Input } from '@/common/components/ui/input';
 
 const DEFAULT_DEBOUNCE_MS = 400;
@@ -9,6 +10,7 @@ interface SearchBarProps {
   onChange: (value: string) => void;
   placeholder: string;
   debounceMs?: number;
+  className?: string;
 }
 
 function SearchBar({
@@ -16,6 +18,7 @@ function SearchBar({
   onChange,
   placeholder,
   debounceMs = DEFAULT_DEBOUNCE_MS,
+  className,
 }: Readonly<SearchBarProps>) {
   const [inputValue, setInputValue] = useState(value);
   const [previousValue, setPreviousValue] = useState(value);
@@ -44,7 +47,7 @@ function SearchBar({
   }
 
   return (
-    <div className="relative">
+    <div className={cn('relative', className)}>
       <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="search"
