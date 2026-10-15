@@ -53,15 +53,15 @@ Razón: se prioriza mantener cada commit atómico y la trazabilidad de qué rama
 ### 3.1. Formato
 
 ```
-tipo(TFG-XX): descripción breve en presente #comando-opcional
+tipo(TFG-XX): descripción breve de los cambios #comando-opcional
 ```
 
 Ejemplos:
 
 ```
-feat(TFG-12): añadir endpoint de búsqueda por título
-fix(TFG-15): corregir orden de prioridad en fusión de metadatos #done
-chore(TFG-20): actualizar dependencias de Spring Boot
+feat(TFG-12): añadido endpoint de búsqueda por título
+fix(TFG-15): corregido orden de prioridad en fusión de metadatos #done
+chore(TFG-20): actualizadas dependencias de Spring Boot
 ```
 
 - La clave de Jira aparece una única vez, como scope de Conventional Commits.
