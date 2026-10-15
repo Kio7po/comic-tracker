@@ -14,6 +14,7 @@ import ProfileSettingsPage from '@/modules/settings/ProfileSettingsPage';
 import AppearanceSettingsPage from '@/modules/settings/AppearanceSettingsPage';
 import { requireAuth, requireRole } from './routeGuards';
 import Home from './Home';
+import PreferencesPage from '@/modules/preferences/PreferencesPage';
 
 export const router = createBrowserRouter([
   {
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
         errorElement: <RouteErrorPage />,
         handle: { title: 'library.title' },
       },
+      { path: 'preferences', element: <PreferencesPage />, handle: { title: 'preferences.title' } },
       { path: 'register', element: <RegisterPage />, handle: { title: 'auth.register.title' } },
       { path: 'login', element: <LoginPage />, handle: { title: 'auth.login.title' } },
       {

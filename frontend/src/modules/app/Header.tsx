@@ -6,6 +6,8 @@ import { appendFromParam } from '@/common/lib/authRedirect';
 import { buttonVariants } from '@/common/components/ui/button';
 import { cn } from '@/common/lib/utils';
 import ManganamaoLogo from '@/common/components/ManganamaoLogo';
+import PreferencesButton from '@/modules/preferences/PreferencesButton';
+import PreferencesDialog from '@/modules/preferences/PreferencesDialog';
 import UserMenu from './UserMenu';
 
 // Same active-state colors as BottomNavBar's tabs (bg-primary/10 text-primary, with a lighter
@@ -54,12 +56,16 @@ function Header() {
           (user ? (
             <UserMenu user={user} />
           ) : (
-            <Link
-              to={appendFromParam('/login', location.pathname + location.search)}
-              className={buttonVariants({ size: 'sm', className: 'ml-auto' })}
-            >
-              {t('nav.login')}
-            </Link>
+            <div className="ml-auto flex items-center gap-2">
+              <PreferencesButton />
+              <Link
+                to={appendFromParam('/login', location.pathname + location.search)}
+                className={buttonVariants({ size: 'sm' })}
+              >
+                {t('nav.login')}
+              </Link>
+              <PreferencesDialog />
+            </div>
           ))}
       </div>
     </header>
