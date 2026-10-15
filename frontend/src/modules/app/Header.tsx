@@ -6,6 +6,8 @@ import { appendFromParam } from '@/common/lib/authRedirect';
 import { buttonVariants } from '@/common/components/ui/button';
 import { cn } from '@/common/lib/utils';
 import ManganamaoLogo from '@/common/components/ManganamaoLogo';
+import PreferencesButton from '@/modules/preferences/PreferencesButton';
+import PreferencesDialog from '@/modules/preferences/PreferencesDialog';
 import UserMenu from './UserMenu';
 
 // Same active-state colors as BottomNavBar's tabs (bg-primary/10 text-primary, with a lighter
@@ -32,31 +34,40 @@ function Header() {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 flex items-center gap-4 border-b border-border bg-card px-5 py-2 sm:py-4">
-      <Link to="/">
-        <ManganamaoLogo className="h-10 w-auto" />
-      </Link>
-      <nav className="hidden gap-3 sm:ml-3 sm:flex">
-        <NavLink to="/library" className={({ isActive }) => navLinkClass(isActive, !user)}>
-          <Library className="size-4" />
-          {t('nav.library')}
-        </NavLink>
-        <NavLink to="/catalog" className={({ isActive }) => navLinkClass(isActive)}>
-          <BookOpen className="size-4" />
-          {t('nav.browse')}
-        </NavLink>
-      </nav>
-      {!isLoading &&
-        (user ? (
-          <UserMenu user={user} />
-        ) : (
-          <Link
-            to={appendFromParam('/login', location.pathname + location.search)}
-            className={buttonVariants({ size: 'sm', className: 'ml-auto' })}
-          >
-            {t('nav.login')}
-          </Link>
-        ))}
+    <header className="sticky top-0 z-50 border-b border-border bg-card">
+      {/* max-w-7xl matches the widest page container (Library/Catalog/ComicDetail) - on a wide
+          viewport the header's content stops short of the edges instead of spanning full width,
+          same as the page content it sits above. */}
+      <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-5 py-2 sm:py-4">
+        <Link to="/">
+          <ManganamaoLogo className="h-10 w-auto" />
+        </Link>
+        <nav className="hidden gap-3 sm:ml-3 sm:flex">
+          <NavLink to="/library" className={({ isActive }) => navLinkClass(isActive, !user)}>
+            <Library className="size-4" />
+            {t('nav.library')}
+          </NavLink>
+          <NavLink to="/catalog" className={({ isActive }) => navLinkClass(isActive)}>
+            <BookOpen className="size-4" />
+            {t('nav.browse')}
+          </NavLink>
+        </nav>
+        {!isLoading &&
+          (user ? (
+            <UserMenu user={user} />
+          ) : (
+            <div className="ml-auto flex items-center gap-2">
+              <PreferencesButton />
+              <Link
+                to={appendFromParam('/login', location.pathname + location.search)}
+                className={buttonVariants({ size: 'sm' })}
+              >
+                {t('nav.login')}
+              </Link>
+              <PreferencesDialog />
+            </div>
+          ))}
+      </div>
     </header>
   );
 }

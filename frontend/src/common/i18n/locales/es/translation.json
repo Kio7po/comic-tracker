@@ -18,6 +18,10 @@
     "settings": "Ajustes",
     "mainNavigation": "Navegación principal"
   },
+  "preferences": {
+    "title": "Preferencias",
+    "description": "Tema e idioma de este dispositivo."
+  },
   "library": {
     "title": "Biblioteca",
     "empty": "Todavía no hay nada aquí.",
@@ -328,7 +332,10 @@
       "light": "Claro",
       "dark": "Oscuro",
       "system": "Sistema",
-      "systemDescription": "\"Sistema\" sigue el ajuste de tu dispositivo y cambia automáticamente si este cambia."
+      "systemDescription": "\"Sistema\" sigue el ajuste de tu dispositivo y cambia automáticamente si este cambia.",
+      "language": "Idioma",
+      "languageAuto": "Automático",
+      "languageDescription": "\"Automático\" usa el idioma de tu navegador."
     },
     "profile": {
       "displayName": "Nombre visible",

@@ -18,6 +18,10 @@
     "settings": "Settings",
     "mainNavigation": "Main navigation"
   },
+  "preferences": {
+    "title": "Preferences",
+    "description": "Theme and language for this device."
+  },
   "library": {
     "title": "Library",
     "empty": "Nothing here yet.",
@@ -328,7 +332,10 @@
       "light": "Light",
       "dark": "Dark",
       "system": "System",
-      "systemDescription": "\"System\" follows your device's setting and switches automatically if it changes."
+      "systemDescription": "\"System\" follows your device's setting and switches automatically if it changes.",
+      "language": "Language",
+      "languageAuto": "Automatic",
+      "languageDescription": "\"Automatic\" uses your browser's language."
     },
     "profile": {
       "displayName": "Display name",
