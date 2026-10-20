@@ -16,7 +16,16 @@
     "moderation": "Moderation",
     "library": "Library",
     "settings": "Settings",
-    "mainNavigation": "Main navigation"
+    "mainNavigation": "Main navigation",
+    "skipToContent": "Skip to content"
+  },
+  "offline": {
+    "message": "You're offline. Some features won't be available."
+  },
+  "pwa": {
+    "updateAvailable": "A new version is available",
+    "updateDescription": "Reload to get the latest changes.",
+    "reload": "Reload"
   },
   "preferences": {
     "title": "Preferences",

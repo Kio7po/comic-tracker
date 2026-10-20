@@ -3,7 +3,11 @@ import Header from '@/modules/app/Header';
 import Footer from '@/modules/app/Footer';
 import BottomNavBar from '@/modules/app/BottomNavBar';
 import useDocumentTitle from '@/common/hooks/useDocumentTitle';
+import OfflineBanner from '@/common/components/OfflineBanner';
+import SkipLink from '@/common/components/SkipLink';
 import { TooltipProvider } from '@/common/components/ui/tooltip';
+
+const MAIN_CONTENT_ID = 'main-content';
 
 function Layout() {
   useDocumentTitle();
@@ -14,8 +18,13 @@ function Layout() {
           inset, on mobile only, so it doesn't end up covering the page's trailing content
           (including Footer) the way a fixed-position element otherwise would. */}
       <div className="flex min-h-svh flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0">
+        <SkipLink targetId={MAIN_CONTENT_ID} />
         <Header/>
-        <main className="flex-1">
+        {/* Below the Header on mobile, where a strip above it would push the app-like top bar down;
+            from sm up it moves above it (order-first), and stays last-in-DOM so screen readers
+            read it right after the header either way. */}
+        <OfflineBanner className="sm:order-first" />
+        <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1">
           <Outlet />
         </main>
         <Footer/>

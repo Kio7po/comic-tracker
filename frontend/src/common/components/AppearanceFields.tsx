@@ -7,12 +7,23 @@ import { ButtonGroup } from '@/common/components/ui/button-group';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/common/components/ui/field';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/common/components/ui/select';
 import { SUPPORTED_LANGUAGES, getStoredLanguage, setLanguage, type LanguagePreference } from '@/common/i18n';
+import { languageName } from '@/common/lib/languageName';
 
 const THEME_OPTIONS: { value: Theme; icon: typeof Sun; labelKey: string }[] = [
   { value: 'light', icon: Sun, labelKey: 'settings.appearance.light' },
   { value: 'dark', icon: Moon, labelKey: 'settings.appearance.dark' },
   { value: 'system', icon: Monitor, labelKey: 'settings.appearance.system' },
 ];
+
+// Each language is named in itself (not in the current UI language) so it stays findable if the
+// user lands on a language they can't read. Built once at module level: it only depends on the
+// constant list of supported languages, so there's no reason to rebuild it on every render. That
+// also means one Intl.DisplayNames per entry (languageName builds its own), which can't be shared
+// anyway since each name uses a different locale.
+const LANGUAGE_OPTIONS: { value: LanguagePreference; label: string }[] = SUPPORTED_LANGUAGES.map((value) => ({
+  value,
+  label: languageName(value, value),
+}));
 
 // Theme and language pickers. These are device-level preferences (not tied to the account), so the
 // same fields are rendered wherever they're reachable: the settings tab, and the logged-out
@@ -22,16 +33,8 @@ function AppearanceFields() {
   const { theme, setTheme } = useTheme();
   const [preference, setPreference] = useState<LanguagePreference>(() => getStoredLanguage() ?? 'auto');
 
-  // Each language is named in itself (not in the current UI language) so it stays findable
-  // if the user lands on a language they can't read.
-  // Intl lowercases language names in some locales ("español"), so the first letter is
-  // capitalized to keep the list consistent.
-  const languages: { value: LanguagePreference; label: string }[] = SUPPORTED_LANGUAGES.map((value) => {
-    const name = new Intl.DisplayNames([value], { type: 'language' }).of(value) ?? value;
-    return { value, label: name.charAt(0).toLocaleUpperCase(value) + name.slice(1) };
-  });
   // Unlike the language names, 'auto' is translated.
-  const options = [{ value: 'auto' as const, label: t('settings.appearance.languageAuto') }, ...languages];
+  const options = [{ value: 'auto' as const, label: t('settings.appearance.languageAuto') }, ...LANGUAGE_OPTIONS];
 
   function handleLanguageChange(value: LanguagePreference) {
     setPreference(value);
