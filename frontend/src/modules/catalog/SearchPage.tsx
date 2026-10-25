@@ -204,7 +204,7 @@ function SearchPage() {
               <DrawerTitle>{t('catalog.filters.trigger')}</DrawerTitle>
             </DrawerHeader>
             <div className="overflow-y-auto px-4 pb-4">
-              <SearchFilters {...filtersProps} alignSelectWithTrigger={false} />
+              <SearchFilters {...filtersProps} />
             </div>
             <DrawerFooter>
               <DrawerClose render={<Button type="button" size="lg" variant="outline" />}>

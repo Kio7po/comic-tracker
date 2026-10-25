@@ -16,7 +16,16 @@
     "moderation": "Moderación",
     "library": "Biblioteca",
     "settings": "Ajustes",
-    "mainNavigation": "Navegación principal"
+    "mainNavigation": "Navegación principal",
+    "skipToContent": "Saltar al contenido"
+  },
+  "offline": {
+    "message": "Estás sin conexión. Algunas funciones no estarán disponibles."
+  },
+  "pwa": {
+    "updateAvailable": "Hay una nueva versión disponible",
+    "updateDescription": "Recarga para obtener los últimos cambios.",
+    "reload": "Recargar"
   },
   "preferences": {
     "title": "Preferencias",

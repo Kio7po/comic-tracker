@@ -17,20 +17,33 @@ function isDark(theme: Theme): boolean {
   return theme === 'dark' || (theme === 'system' && window.matchMedia(DARK_MEDIA_QUERY).matches);
 }
 
+// Toggles the `dark` class and recolors the browser UI (<meta name="theme-color">, whose
+// per-theme values live in its data-light/data-dark attributes in index.html).
+function applyTheme(theme: Theme) {
+  const dark = isDark(theme);
+  document.documentElement.classList.toggle('dark', dark);
+
+  const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  const color = dark ? themeColor?.dataset.dark : themeColor?.dataset.light;
+  if (themeColor && color) {
+    themeColor.content = color;
+  }
+}
+
 function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [theme, setTheme] = useLocalStorage<Theme>(THEME_STORAGE_KEY, 'system');
 
   // useLayoutEffect (not useEffect) so the class lands before the browser's first paint,
   // avoiding a flash of the wrong theme on load.
   useLayoutEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark(theme));
+    applyTheme(theme);
 
     if (theme !== 'system') {
       return;
     }
     // "system" needs to keep following the OS preference live while the app stays open
     const mediaQueryList = window.matchMedia(DARK_MEDIA_QUERY);
-    const listener = () => document.documentElement.classList.toggle('dark', isDark(theme));
+    const listener = () => applyTheme(theme);
     mediaQueryList.addEventListener('change', listener);
     return () => mediaQueryList.removeEventListener('change', listener);
   }, [theme]);
