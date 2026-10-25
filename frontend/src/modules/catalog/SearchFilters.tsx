@@ -54,9 +54,6 @@ interface SearchFiltersProps {
   onDirectionChange: (value: SortDirection) => void;
   isAtDefault: boolean;
   onReset: () => void;
-  // Base UI's Select has a real bug combining this with a modal focus trap,
-  // callers rendering these Selects inside a Drawer/Dialog must pass false.
-  alignSelectWithTrigger?: boolean;
 }
 
 function SearchFilters({
@@ -74,7 +71,6 @@ function SearchFilters({
   onDirectionChange,
   isAtDefault,
   onReset,
-  alignSelectWithTrigger = true,
 }: Readonly<SearchFiltersProps>) {
   const { t } = useTranslation();
 
@@ -113,7 +109,7 @@ function SearchFilters({
         <SelectTrigger className="w-full sm:w-fit">
           <SelectValue/>
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
+        <SelectContent>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.type')}</SelectLabel>
             {mediaTypes.map((item) => (
@@ -132,7 +128,7 @@ function SearchFilters({
         <SelectTrigger className="w-full sm:w-fit">
           <SelectValue/>
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
+        <SelectContent>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.status')}</SelectLabel>
             {statuses.map((item) => (
@@ -151,7 +147,7 @@ function SearchFilters({
         <SelectTrigger className="w-full sm:w-fit">
           <SelectValue/>
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
+        <SelectContent>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.nsfw')}</SelectLabel>
             {nsfwRatings.map((item) => (
@@ -171,7 +167,6 @@ function SearchFilters({
         direction={direction}
         onDirectionChange={onDirectionChange}
         directionDisabled={sortBy === 'RELEVANCE'}
-        alignSelectWithTrigger={alignSelectWithTrigger}
       />
       <Separator orientation="vertical" />
       <Select
@@ -182,7 +177,7 @@ function SearchFilters({
         <SelectTrigger className="w-full sm:w-fit">
           <SelectValue/>
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
+        <SelectContent>
           <SelectGroup>
             <SelectLabel>{t('catalog.filters.limit')}</SelectLabel>
             {limitOptions.map((item) => (

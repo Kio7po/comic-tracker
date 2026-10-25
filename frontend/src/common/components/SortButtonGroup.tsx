@@ -23,9 +23,6 @@ interface SortButtonGroupProps<T extends string> {
   // Some sort fields have no direction semantics (e.g. catalog search's RELEVANCE) - the toggle
   // stays mounted but disabled rather than unmounting, so the ButtonGroup's width doesn't change.
   directionDisabled?: boolean;
-  // Base UI's Select has a real bug combining this with a modal focus trap,
-  // callers rendering this inside a Drawer/Dialog must pass false.
-  alignSelectWithTrigger?: boolean;
   className?: string;
 }
 
@@ -36,7 +33,6 @@ function SortButtonGroup<T extends string>({
   direction,
   onDirectionChange,
   directionDisabled = false,
-  alignSelectWithTrigger = true,
   className,
 }: Readonly<SortButtonGroupProps<T>>) {
   const { t } = useTranslation();
@@ -48,7 +44,7 @@ function SortButtonGroup<T extends string>({
         <SelectTrigger className="flex-1 sm:w-fit sm:flex-none">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={alignSelectWithTrigger}>
+        <SelectContent>
           <SelectGroup>
             <SelectLabel>{t('common.sort.by')}</SelectLabel>
             {items.map((item) => (

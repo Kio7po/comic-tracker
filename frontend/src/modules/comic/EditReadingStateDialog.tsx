@@ -241,7 +241,7 @@ function EditReadingStateDialog({
             <SelectTrigger id={statusId} className="w-full">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent alignItemWithTrigger={!isMobile}>
+            <SelectContent>
               <SelectGroup>
                 {statusOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
@@ -335,7 +335,7 @@ function EditReadingStateDialog({
                 }}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent alignItemWithTrigger={!isMobile}>
+            <SelectContent>
               <SelectGroup>
                 <SelectItem value={NO_PREFERRED_ENTRY}>{t('detail.readingState.preferredEntryNone')}</SelectItem>
                 {selectableEntries.map((entry) => (

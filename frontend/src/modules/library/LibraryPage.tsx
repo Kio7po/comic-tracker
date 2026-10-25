@@ -237,7 +237,7 @@ function LibraryPage() {
               <DrawerTitle>{t('library.filters.trigger')}</DrawerTitle>
             </DrawerHeader>
             <div className="overflow-y-auto px-4 pb-4">
-              <LibraryFilters {...filtersProps} alignSelectWithTrigger={false} />
+              <LibraryFilters {...filtersProps} />
             </div>
             <DrawerFooter>
               <DrawerClose render={<Button type="button" size="lg" variant="outline" />}>
