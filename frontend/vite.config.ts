@@ -31,7 +31,7 @@ export default defineConfig({
         display: 'standalone',
         // A manifest holds a single value, so the light theme's --card (same hex as the light
         // data-light in index.html). The <meta name="theme-color"> there overrides it at runtime.
-        theme_color: '#f7f8fc',
+        theme_color: '#101214',
         // Android's navigation bar can't be drawn under by an installed PWA (safe-area-inset-bottom
         // is 0) and takes its color from here, a single static value that can't follow the
         // in-app theme. So a neutral dark grey (oklch(0.18 0.005 264), a step below the dark
@@ -40,6 +40,7 @@ export default defineConfig({
         // It's also the splash screen's background.
         background_color: '#101214',
         icons: [
+          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
