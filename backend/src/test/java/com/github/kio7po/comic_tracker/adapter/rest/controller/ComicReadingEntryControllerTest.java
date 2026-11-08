@@ -33,6 +33,7 @@ import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntrySortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
@@ -229,6 +230,22 @@ class ComicReadingEntryControllerTest {
                         """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type").value(ProblemType.DUPLICATE_READING_ENTRY));
+    }
+
+    @Test
+    void submitReturnsBadRequestWhenTheReadingSourceHasNoComicAtTheUrl() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(comicReadingEntryService.submit(any(), any(), any(), any(), any()))
+                .thenThrow(new ComicNotFoundInReadingSourceException("https://mangadex.org/title/123"));
+
+        mockMvc.perform(post("/api/comics/{slug}/reading-entries", SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"sourceId":2,"url":"https://mangadex.org/title/123","locale":"es-ES"}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(ProblemType.COMIC_NOT_FOUND_IN_READING_SOURCE));
     }
 
     @Test

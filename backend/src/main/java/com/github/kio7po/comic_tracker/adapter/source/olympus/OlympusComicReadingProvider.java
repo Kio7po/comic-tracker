@@ -1,10 +1,14 @@
 package com.github.kio7po.comic_tracker.adapter.source.olympus;
 
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -25,8 +29,10 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
     private static final String SERIES_PATH_PREFIX = "/series/comic-";
     private static final String TYPE_COMIC = "comic";
 
+    private final AtomicReference<SeriesListSnapshot> seriesList = new AtomicReference<>();
     private final RestClient restClient;
     private final String baseUrl;
+    private final Duration seriesListTtl;
     private final String panelBaseUrl;
     private final String host;
     private final RateLimiterExecutor baseLimiter;
@@ -34,9 +40,11 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
 
     public OlympusComicReadingProvider(RestClient.Builder restClientBuilder,
             @Value("${olympus.base-url:https://olympusxyz.com}") String baseUrl,
+            @Value("${olympus.series-list-ttl:10m}") Duration seriesListTtl,
             RateLimiterRegistry rateLimiterRegistry) {
         this.restClient = restClientBuilder.build();
         this.baseUrl = baseUrl;
+        this.seriesListTtl = seriesListTtl;
         this.panelBaseUrl = baseUrl.replace("https://", "https://panel.");
         this.host = URI.create(baseUrl).getHost().toLowerCase(Locale.ROOT);
         this.baseLimiter = new RateLimiterExecutor(rateLimiterRegistry.rateLimiter("olympus-base"));
@@ -54,8 +62,8 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
     }
 
     @Override
-    public Optional<ComicReadingSourceDetails> fetch(String url) {
-        Optional<String> slug = extractSlug(url);
+    public Optional<ComicReadingSourceDetails> fetch(String url, @Nullable String externalId) {
+        Optional<String> slug = resolveSlug(url, externalId);
         if (slug.isEmpty()) {
             return Optional.empty();
         }
@@ -64,23 +72,53 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
             return Optional.empty();
         }
         OlympusChapterListResponseDto chapters = fetchChapters(slug.get());
-        return Optional.of(OlympusComicReadingMapper.toDetails(manga, chapters));
+        return Optional.of(OlympusComicReadingMapper.toDetails(manga, chapters, baseUrl));
     }
 
     @Override
     public List<ComicReadingSearchResult> search(String keywords) {
+        return listSeries().stream()
+                .filter(dto -> matchesKeywords(dto, keywords))
+                .map(dto -> OlympusComicReadingMapper.toSearchResult(dto, baseUrl))
+                .toList();
+    }
+
+    // The slug is the only thing the detail endpoint accepts, but it changes periodically; the id
+    // doesn't. The id can only be turned back into the current slug through the full series list.
+    private Optional<String> resolveSlug(String url, @Nullable String externalId) {
+        if (externalId != null) {
+            Optional<String> slug = listSeries().stream()
+                    .filter(dto -> TYPE_COMIC.equals(dto.type()))
+                    .filter(dto -> externalId.equals(OlympusComicReadingMapper.externalId(dto)))
+                    .map(OlympusMangaDto::slug)
+                    .findFirst();
+            if (slug.isPresent()) {
+                return slug;
+            }
+        }
+        return extractSlug(url);
+    }
+
+    // No synchronization: this runs on virtual threads (see ComicReadingEntryService), so at worst two
+    // concurrent callers both fetch the list once and the later write wins, which is harmless.
+    private List<OlympusMangaDto> listSeries() {
+        Instant now = Instant.now();
+        SeriesListSnapshot cached = seriesList.get();
+        if (cached != null && now.isBefore(cached.fetchedAt().plus(seriesListTtl))) {
+            return cached.series();
+        }
         URI uri = UriComponentsBuilder.fromUriString(baseUrl).path("/api/series/list").build().toUri();
         OlympusMangaListResponseDto response = baseLimiter.execute(() -> restClient.get()
                 .uri(uri)
                 .retrieve()
                 .body(OlympusMangaListResponseDto.class));
-        if (response == null || response.data() == null) {
-            return List.of();
-        }
-        return response.data().stream()
-                .filter(dto -> matchesKeywords(dto, keywords))
-                .map(dto -> OlympusComicReadingMapper.toSearchResult(dto, baseUrl))
-                .toList();
+        List<OlympusMangaDto> series = response == null || response.data() == null ? List.of()
+                : List.copyOf(response.data());
+        seriesList.set(new SeriesListSnapshot(now, series));
+        return series;
+    }
+
+    private record SeriesListSnapshot(Instant fetchedAt, List<OlympusMangaDto> series) {
     }
 
     private static boolean matchesKeywords(OlympusMangaDto dto, String keywords) {

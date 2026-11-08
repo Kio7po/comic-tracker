@@ -37,6 +37,9 @@ olympus:
   # default value, not needed, but scanlation sites like this one change domain
   # fairly often (to dodge blocking), so this is the first thing to override if it goes stale.
   base-url: https://olympusxyz.com
+  # default value, not needed. How long the full series list is reused before being fetched again:
+  # it's the only way to turn a series id back into its current slug, and it also backs the search.
+  series-list-ttl: 10m
 
 comic:
   metadata:

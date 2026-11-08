@@ -14,6 +14,7 @@ import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFou
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.EmailAlreadyExistsException;
@@ -87,6 +88,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateComicReadingEntryException.class)
     public ProblemDetail handleDuplicateComicReadingEntry(DuplicateComicReadingEntryException ex) {
         return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.DUPLICATE_READING_ENTRY);
+    }
+
+    @ExceptionHandler(ComicNotFoundInReadingSourceException.class)
+    public ProblemDetail handleComicNotFoundInReadingSource(ComicNotFoundInReadingSourceException ex) {
+        return problem(HttpStatus.BAD_REQUEST, ex.getMessage(), ProblemType.COMIC_NOT_FOUND_IN_READING_SOURCE);
     }
 
     @ExceptionHandler(ComicReadingEntryAlreadyReviewedException.class)

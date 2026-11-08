@@ -13,17 +13,23 @@ final class OlympusComicReadingMapper {
     }
 
     static ComicReadingSearchResult toSearchResult(OlympusMangaDto dto, String baseUrl) {
-        return new ComicReadingSearchResult(dto.name(), mangaUrl(baseUrl, dto.slug()));
+        return new ComicReadingSearchResult(externalId(dto), dto.name(), mangaUrl(baseUrl, dto.slug()));
+    }
+
+    static String externalId(OlympusMangaDto dto) {
+        return dto.id() == null ? null : dto.id().toString();
     }
 
     static String mangaUrl(String baseUrl, String slug) {
         return "%s/series/comic-%s".formatted(baseUrl, slug);
     }
 
-    static ComicReadingSourceDetails toDetails(OlympusMangaDto manga, OlympusChapterListResponseDto chapters) {
+    static ComicReadingSourceDetails toDetails(OlympusMangaDto manga, OlympusChapterListResponseDto chapters,
+            String baseUrl) {
         Integer availableChapters = chapters == null || chapters.meta() == null ? null : chapters.meta().total();
         Instant latestChapterAt = latestChapterAt(chapters == null ? null : chapters.data());
-        return new ComicReadingSourceDetails(manga.name(), availableChapters, latestChapterAt);
+        return new ComicReadingSourceDetails(externalId(manga), mangaUrl(baseUrl, manga.slug()), manga.name(),
+                availableChapters, latestChapterAt);
     }
 
     private static Instant latestChapterAt(List<OlympusChapterDto> chapterList) {

@@ -3,8 +3,10 @@ package com.github.kio7po.comic_tracker.domain.service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -28,6 +30,7 @@ import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntrySortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
@@ -119,18 +122,42 @@ public class ComicReadingEntryService {
 
     private ComicReadingEntry createEntry(Comic comic, ComicReadingSource source, String url, String locale,
             User contributor) {
-        if (comicReadingEntryRepository.findByComicAndSourceAndUrl(comic, source, url).isPresent()) {
-            throw new DuplicateComicReadingEntryException(comic.getId(), source.getId(), url);
+        FetchOutcome outcome = fetchOutcome(url, null);
+        // Only a provider that answered and found nothing rejects the submission. With no provider for the
+        // site, or one that failed, the entry is saved unhydrated: an outage must not block contributions.
+        if (!outcome.failed() && outcome.details().isEmpty() && readingProviderRegistry.supports(url)) {
+            throw new ComicNotFoundInReadingSourceException(url);
+        }
+
+        Optional<ComicReadingSourceDetails> details = outcome.details();
+        String canonicalUrl = details.map(ComicReadingSourceDetails::url).orElse(url);
+        if (alreadyExists(comic, source, canonicalUrl, details)) {
+            throw new DuplicateComicReadingEntryException(comic.getId(), source.getId(), canonicalUrl);
         }
 
         ComicReadingEntry entry = new ComicReadingEntry();
         entry.setComic(comic);
         entry.setSource(source);
-        entry.setUrl(url);
+        entry.setUrl(canonicalUrl);
         entry.setLocale(locale);
         entry.setContributedBy(contributor);
+        details.ifPresent(fetched -> {
+            copyHydratedFields(entry, fetched);
+            entry.setLastFetchedAt(Instant.now());
+        });
 
         return comicReadingEntryRepository.save(entry);
+    }
+
+    // The URL alone isn't enough: the same work can be reachable through more than one URL, which only
+    // shows once the provider has said what work it is.
+    private boolean alreadyExists(Comic comic, ComicReadingSource source, String url,
+            Optional<ComicReadingSourceDetails> details) {
+        return comicReadingEntryRepository.findByComicAndSourceAndUrl(comic, source, url).isPresent()
+                || details.map(ComicReadingSourceDetails::externalId)
+                        .filter(externalId -> comicReadingEntryRepository
+                                .existsByComicAndSourceAndExternalId(comic, source, externalId))
+                        .isPresent();
     }
 
     public List<ComicReadingEntry> findByComic(Long comicId, @Nullable ComicReadingEntryStatus status) {
@@ -156,7 +183,8 @@ public class ComicReadingEntryService {
         }
 
         List<Callable<FetchOutcome>> tasks = stale.stream()
-                .<Callable<FetchOutcome>>map(entry -> () -> fetchOutcome(entry.getUrl())).toList();
+                .<Callable<FetchOutcome>>map(entry -> () -> fetchOutcome(entry.getUrl(), entry.getExternalId()))
+                .toList();
 
         List<Future<FetchOutcome>> futures;
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -169,8 +197,9 @@ public class ComicReadingEntryService {
         // invokeAll returns futures in the same order as the submitted tasks, so index-pairing
         // them back with `stale` is safe.
         List<ComicReadingEntry> updated = new ArrayList<>(stale.size());
+        Set<UrlKey> claimedUrls = new HashSet<>();
         for (int i = 0; i < stale.size(); i++) {
-            updated.add(applyOutcome(stale.get(i), awaitOutcome(futures.get(i)), now));
+            updated.add(applyOutcome(stale.get(i), awaitOutcome(futures.get(i)), now, claimedUrls));
         }
         comicReadingEntryRepository.saveAll(updated);
     }
@@ -180,9 +209,9 @@ public class ComicReadingEntryService {
                 && (entry.getLastFetchedAt() == null || now.isAfter(entry.getLastFetchedAt().plus(ttl)));
     }
 
-    private FetchOutcome fetchOutcome(String url) {
+    private FetchOutcome fetchOutcome(String url, @Nullable String externalId) {
         try {
-            return new FetchOutcome(readingProviderRegistry.fetch(url), false);
+            return new FetchOutcome(readingProviderRegistry.fetch(url, externalId), false);
         } catch (RuntimeException e) {
             // TODO: logs
             return new FetchOutcome(Optional.empty(), true);
@@ -202,20 +231,50 @@ public class ComicReadingEntryService {
         }
     }
 
-    private ComicReadingEntry applyOutcome(ComicReadingEntry entry, FetchOutcome outcome, Instant now) {
+    private ComicReadingEntry applyOutcome(ComicReadingEntry entry, FetchOutcome outcome, Instant now,
+            Set<UrlKey> claimedUrls) {
         if (outcome.failed()) {
             entry.setLastFetchedAt(now.minus(ttl).plus(retryBackoff));
         } else {
-            outcome.details().ifPresent(details -> applyFetchedDetails(entry, details));
+            outcome.details().ifPresent(details -> applyFetchedDetails(entry, details, claimedUrls));
             entry.setLastFetchedAt(now);
         }
         return entry;
     }
 
-    private void applyFetchedDetails(ComicReadingEntry entry, ComicReadingSourceDetails details) {
+    private void applyFetchedDetails(ComicReadingEntry entry, ComicReadingSourceDetails details,
+            Set<UrlKey> claimedUrls) {
+        copyHydratedFields(entry, details);
+        if (canMoveToUrl(entry, details.url(), claimedUrls)) {
+            entry.setUrl(details.url());
+        }
+    }
+
+    // (comic, source, url) is unique. If another entry already holds the URL this one would move to (or
+    // an earlier entry of this same batch is moving to it), keep the old URL instead: it still resolves
+    // through externalId, whereas a violation would make saveAll fail for every entry of the comic.
+    private boolean canMoveToUrl(ComicReadingEntry entry, String newUrl, Set<UrlKey> claimedUrls) {
+        if (newUrl.equals(entry.getUrl())) {
+            return false;
+        }
+        UrlKey key = new UrlKey(entry.getSource().getId(), newUrl);
+        boolean taken = claimedUrls.contains(key) || comicReadingEntryRepository
+                .findByComicAndSourceAndUrl(entry.getComic(), entry.getSource(), newUrl).isPresent();
+        if (taken) {
+            return false;
+        }
+        claimedUrls.add(key);
+        return true;
+    }
+
+    private void copyHydratedFields(ComicReadingEntry entry, ComicReadingSourceDetails details) {
+        entry.setExternalId(details.externalId());
         entry.setTitle(details.title());
         entry.setAvailableChapters(details.availableChapters());
         entry.setLatestChapterAt(details.latestChapterAt());
+    }
+
+    private record UrlKey(Long sourceId, String url) {
     }
 
     private record FetchOutcome(Optional<ComicReadingSourceDetails> details, boolean failed) {

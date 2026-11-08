@@ -31,6 +31,7 @@ import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntrySortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
@@ -136,6 +137,120 @@ class ComicReadingEntryServiceTest {
     }
 
     @Test
+    void submitStoresTheCanonicalUrlAndHydratesTheEntryFromTheProvider() {
+        // Propósito: al enviar una entry de un sitio con provider, la entry se guarda ya hidratada y con
+        // la URL canónica del provider en lugar de la que pegó el usuario.
+        //
+        // Flujo: el usuario envía una URL; el registro (simulado) responde con otra URL canónica y los
+        // datos de la obra. La entry guardada tiene la URL canónica, el externalId, el título, los
+        // capítulos, la fecha del último y lastFetchedAt rellenado (para no refrescarla enseguida).
+        String canonicalUrl = "https://example.com/berserk-canonical";
+        Comic comic = new Comic();
+        ComicReadingSource source = new ComicReadingSource();
+        ComicReadingSourceDetails details = new ComicReadingSourceDetails("42", canonicalUrl, "Berserk", 374,
+                Instant.parse("2024-06-01T10:00:00Z"));
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.fetch(URL, null)).thenReturn(Optional.of(details));
+        when(comicReadingEntryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ComicReadingEntry result = comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, USER_ID);
+
+        assertThat(result.getUrl()).isEqualTo(canonicalUrl);
+        assertThat(result.getExternalId()).isEqualTo("42");
+        assertThat(result.getTitle()).isEqualTo("Berserk");
+        assertThat(result.getAvailableChapters()).isEqualTo(374);
+        assertThat(result.getLatestChapterAt()).isEqualTo(Instant.parse("2024-06-01T10:00:00Z"));
+        assertThat(result.getLastFetchedAt()).isNotNull();
+    }
+
+    @Test
+    void submitThrowsWhenAnotherEntryAlreadyHasTheSameExternalId() {
+        // Propósito: un envío se rechaza como duplicado aunque su URL sea distinta, porque dos URLs
+        // pueden apuntar a la misma obra y eso solo lo revela el provider, a través del externalId.
+        //
+        // Flujo: la URL canónica ("berserk-new") no existe todavía, pero el repositorio indica que ya
+        // hay una entry de ese cómic y fuente con externalId "42". Se lanza la excepción de duplicado
+        // y no se guarda nada.
+        Comic comic = new Comic();
+        ComicReadingSource source = new ComicReadingSource();
+        ComicReadingSourceDetails details = new ComicReadingSourceDetails("42", "https://example.com/berserk-new",
+                "Berserk", 374, null);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.fetch(URL, null)).thenReturn(Optional.of(details));
+        when(comicReadingEntryRepository.existsByComicAndSourceAndExternalId(comic, source, "42")).thenReturn(true);
+
+        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, USER_ID))
+                .isInstanceOf(DuplicateComicReadingEntryException.class);
+
+        verify(comicReadingEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void submitThrowsWhenTheProviderSupportsTheSiteButFindsNoComicAtTheUrl() {
+        // Propósito: es el único caso en que un provider rechaza un envío: el provider funciona,
+        // soporta el sitio y responde que en esa URL no hay ninguna obra.
+        //
+        // Flujo: fetch devuelve vacío (el provider respondió y no encontró nada) y supports(URL) es
+        // true (hay provider para el sitio). Esa combinación significa "la obra no existe": se lanza
+        // ComicNotFoundInReadingSourceException con la URL y no se guarda nada.
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(new ComicReadingSource()));
+        when(readingProviderRegistry.fetch(URL, null)).thenReturn(Optional.empty());
+        when(readingProviderRegistry.supports(URL)).thenReturn(true);
+
+        assertThatThrownBy(() -> comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, USER_ID))
+                .isInstanceOf(ComicNotFoundInReadingSourceException.class)
+                .extracting(exception -> ((ComicNotFoundInReadingSourceException) exception).getUrl())
+                .isEqualTo(URL);
+
+        verify(comicReadingEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void submitSavesTheEntryUnhydratedWhenNoProviderSupportsTheSite() {
+        // Propósito: un resultado vacío por sí solo no significa "la obra no existe": también ocurre
+        // cuando no hay ningún provider para el sitio. En ese caso la entry se guarda tal cual, sin
+        // hidratar.
+        //
+        // Flujo: fetch devuelve vacío y supports(URL) es false (ningún provider soporta el sitio). No
+        // se rechaza: la entry se guarda con la URL original y sin externalId.
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(new ComicReadingSource()));
+        when(readingProviderRegistry.fetch(URL, null)).thenReturn(Optional.empty());
+        when(readingProviderRegistry.supports(URL)).thenReturn(false);
+        when(comicReadingEntryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ComicReadingEntry result = comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, USER_ID);
+
+        assertThat(result.getUrl()).isEqualTo(URL);
+        assertThat(result.getExternalId()).isNull();
+        assertThat(result.getLastFetchedAt()).isNull();
+    }
+
+    @Test
+    void submitSavesTheEntryUnhydratedWhenTheProviderFails() {
+        // Propósito: una caída o un error del provider no es una respuesta sobre la obra: no bloquea la
+        // aportación ni se confunde con "la obra no existe".
+        //
+        // Flujo: fetch lanza una excepción y la entry se guarda sin hidratar. Como el provider falló,
+        // ni siquiera se consulta supports(): es lo que se verifica al final del test.
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(new ComicReadingSource()));
+        when(readingProviderRegistry.fetch(URL, null)).thenThrow(new RuntimeException("site is down"));
+        when(comicReadingEntryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ComicReadingEntry result = comicReadingEntryService.submit(COMIC_ID, SOURCE_ID, URL, LOCALE, USER_ID);
+
+        assertThat(result.getUrl()).isEqualTo(URL);
+        assertThat(result.getExternalId()).isNull();
+        assertThat(result.getTitle()).isNull();
+        assertThat(result.getLastFetchedAt()).isNull();
+        verify(readingProviderRegistry, never()).supports(any());
+    }
+
+    @Test
     void submitWithNewSourceThrowsWhenComicDoesNotExist() {
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.empty());
 
@@ -230,15 +345,16 @@ class ComicReadingEntryServiceTest {
         ComicReadingEntry entry = new ComicReadingEntry();
         entry.setUrl(URL);
         entry.setStatus(ComicReadingEntryStatus.APPROVED);
-        ComicReadingSourceDetails details = new ComicReadingSourceDetails("Berserk", 374,
+        ComicReadingSourceDetails details = new ComicReadingSourceDetails("42", URL, "Berserk", 374,
                 Instant.parse("2024-06-01T10:00:00Z"));
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
         when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
-        when(readingProviderRegistry.fetch(URL)).thenReturn(Optional.of(details));
+        when(readingProviderRegistry.fetch(URL, null)).thenReturn(Optional.of(details));
         when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         comicReadingEntryService.findByComic(COMIC_ID, null);
 
+        assertThat(entry.getExternalId()).isEqualTo("42");
         assertThat(entry.getTitle()).isEqualTo("Berserk");
         assertThat(entry.getAvailableChapters()).isEqualTo(374);
         assertThat(entry.getLatestChapterAt()).isEqualTo(Instant.parse("2024-06-01T10:00:00Z"));
@@ -252,10 +368,10 @@ class ComicReadingEntryServiceTest {
         ComicReadingEntry entry = new ComicReadingEntry();
         entry.setUrl(URL);
         entry.setStatus(ComicReadingEntryStatus.PENDING);
-        ComicReadingSourceDetails details = new ComicReadingSourceDetails("Berserk", 374, null);
+        ComicReadingSourceDetails details = new ComicReadingSourceDetails("42", URL, "Berserk", 374, null);
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
         when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
-        when(readingProviderRegistry.fetch(URL)).thenReturn(Optional.of(details));
+        when(readingProviderRegistry.fetch(URL, null)).thenReturn(Optional.of(details));
         when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         comicReadingEntryService.findByComic(COMIC_ID, null);
@@ -274,7 +390,7 @@ class ComicReadingEntryServiceTest {
 
         comicReadingEntryService.findByComic(COMIC_ID, null);
 
-        verify(readingProviderRegistry, never()).fetch(any());
+        verify(readingProviderRegistry, never()).fetch(any(), any());
         verify(comicReadingEntryRepository, never()).saveAll(any());
     }
 
@@ -290,7 +406,7 @@ class ComicReadingEntryServiceTest {
 
         comicReadingEntryService.findByComic(COMIC_ID, null);
 
-        verify(readingProviderRegistry, never()).fetch(any());
+        verify(readingProviderRegistry, never()).fetch(any(), any());
         verify(comicReadingEntryRepository, never()).saveAll(any());
     }
 
@@ -302,7 +418,7 @@ class ComicReadingEntryServiceTest {
         entry.setStatus(ComicReadingEntryStatus.APPROVED);
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
         when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
-        when(readingProviderRegistry.fetch(URL)).thenThrow(new RuntimeException("site is down"));
+        when(readingProviderRegistry.fetch(URL, null)).thenThrow(new RuntimeException("site is down"));
         when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         comicReadingEntryService.findByComic(COMIC_ID, null);
@@ -323,16 +439,131 @@ class ComicReadingEntryServiceTest {
         succeedingEntry.setStatus(ComicReadingEntryStatus.APPROVED);
         when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
         when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(failingEntry, succeedingEntry));
-        when(readingProviderRegistry.fetch("https://example.com/failing"))
+        when(readingProviderRegistry.fetch("https://example.com/failing", null))
                 .thenThrow(new RuntimeException("site is down"));
-        when(readingProviderRegistry.fetch("https://example.com/succeeding"))
-                .thenReturn(Optional.of(new ComicReadingSourceDetails("One Piece", 1000, null)));
+        when(readingProviderRegistry.fetch("https://example.com/succeeding", null)).thenReturn(Optional
+                .of(new ComicReadingSourceDetails("7", "https://example.com/succeeding", "One Piece", 1000, null)));
         when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         comicReadingEntryService.findByComic(COMIC_ID, null);
 
         assertThat(failingEntry.getTitle()).isNull();
         assertThat(succeedingEntry.getTitle()).isEqualTo("One Piece");
+    }
+
+    @Test
+    void findByComicPassesTheStoredExternalIdToTheRegistry() {
+        Comic comic = new Comic();
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setUrl(URL);
+        entry.setExternalId("42");
+        entry.setStatus(ComicReadingEntryStatus.APPROVED);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
+        when(readingProviderRegistry.fetch(URL, "42"))
+                .thenReturn(Optional.of(new ComicReadingSourceDetails("42", URL, "Berserk", 374, null)));
+        when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        verify(readingProviderRegistry).fetch(URL, "42");
+    }
+
+    @Test
+    void findByComicMovesTheEntryToTheUrlTheProviderReturns() {
+        // Propósito: cuando el sitio cambia la ruta de una obra, la entry pasa sola a la URL nueva al
+        // refrescarse; para eso existe el externalId.
+        //
+        // Flujo: una entry caducada con URL antigua. El provider devuelve la misma obra con una URL
+        // nueva y el repositorio indica que nadie más tiene esa URL: la entry adopta la URL nueva y
+        // guarda el externalId.
+        String movedUrl = "https://example.com/berserk-renamed";
+        Comic comic = new Comic();
+        ComicReadingSource source = new ComicReadingSource();
+        source.setId(SOURCE_ID);
+        ComicReadingEntry entry = staleEntry(comic, source, URL);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
+        when(readingProviderRegistry.fetch(URL, null))
+                .thenReturn(Optional.of(new ComicReadingSourceDetails("42", movedUrl, "Berserk", 374, null)));
+        when(comicReadingEntryRepository.findByComicAndSourceAndUrl(comic, source, movedUrl))
+                .thenReturn(Optional.empty());
+        when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        assertThat(entry.getUrl()).isEqualTo(movedUrl);
+        assertThat(entry.getExternalId()).isEqualTo("42");
+    }
+
+    @Test
+    void findByComicKeepsTheOldUrlWhenAnotherEntryAlreadyHoldsTheNewOne() {
+        // Propósito: la restricción de unicidad (cómic, fuente, URL) impide que dos entries tengan la
+        // misma URL. Si otra entry ya tiene la URL nueva, mover esta haría fallar el guardado de todo
+        // el lote, así que conserva la antigua.
+        //
+        // Flujo: una entry caducada con URL antigua; el provider devuelve una URL nueva, pero el
+        // repositorio indica que YA existe otra entry con esa URL. La entry conserva la URL antigua
+        // (sigue funcionando por el externalId). El resto sí se actualiza (externalId, título): solo
+        // se omite el cambio de URL.
+        String movedUrl = "https://example.com/berserk-renamed";
+        Comic comic = new Comic();
+        ComicReadingSource source = new ComicReadingSource();
+        source.setId(SOURCE_ID);
+        ComicReadingEntry entry = staleEntry(comic, source, URL);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(entry));
+        when(readingProviderRegistry.fetch(URL, null))
+                .thenReturn(Optional.of(new ComicReadingSourceDetails("42", movedUrl, "Berserk", 374, null)));
+        when(comicReadingEntryRepository.findByComicAndSourceAndUrl(comic, source, movedUrl))
+                .thenReturn(Optional.of(new ComicReadingEntry()));
+        when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        assertThat(entry.getUrl()).isEqualTo(URL);
+        assertThat(entry.getExternalId()).isEqualTo("42");
+        assertThat(entry.getTitle()).isEqualTo("Berserk");
+    }
+
+    @Test
+    void findByComicDoesNotMoveTwoEntriesOfTheSameBatchToTheSameUrl() {
+        // Propósito: dos entries que se refrescan en la misma lectura no pueden acabar con la misma URL,
+        // aunque el repositorio no pueda detectarlo porque ninguna de las dos se ha guardado aún.
+        //
+        // Flujo: dos entries caducadas (URLs antiguas distintas) del mismo cómic y fuente; el provider
+        // devuelve la misma URL nueva para las dos. Se procesan en orden: la primera se la queda y la
+        // segunda ve que ya está reclamada y conserva la suya.
+        String firstUrl = "https://example.com/berserk-old-1";
+        String secondUrl = "https://example.com/berserk-old-2";
+        String movedUrl = "https://example.com/berserk-renamed";
+        Comic comic = new Comic();
+        ComicReadingSource source = new ComicReadingSource();
+        source.setId(SOURCE_ID);
+        ComicReadingEntry first = staleEntry(comic, source, firstUrl);
+        ComicReadingEntry second = staleEntry(comic, source, secondUrl);
+        ComicReadingSourceDetails details = new ComicReadingSourceDetails("42", movedUrl, "Berserk", 374, null);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingEntryRepository.findByComic(comic)).thenReturn(List.of(first, second));
+        when(readingProviderRegistry.fetch(firstUrl, null)).thenReturn(Optional.of(details));
+        when(readingProviderRegistry.fetch(secondUrl, null)).thenReturn(Optional.of(details));
+        when(comicReadingEntryRepository.findByComicAndSourceAndUrl(comic, source, movedUrl))
+                .thenReturn(Optional.empty());
+        when(comicReadingEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        comicReadingEntryService.findByComic(COMIC_ID, null);
+
+        assertThat(first.getUrl()).isEqualTo(movedUrl);
+        assertThat(second.getUrl()).isEqualTo(secondUrl);
+    }
+
+    private static ComicReadingEntry staleEntry(Comic comic, ComicReadingSource source, String url) {
+        ComicReadingEntry entry = new ComicReadingEntry();
+        entry.setComic(comic);
+        entry.setSource(source);
+        entry.setUrl(url);
+        entry.setStatus(ComicReadingEntryStatus.APPROVED);
+        return entry;
     }
 
     @Test

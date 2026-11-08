@@ -25,8 +25,11 @@ public class ComicReadingEntry {
     private Long id;
     @Column(nullable = false, length = 255)
     private String url;
-    // title/availableChapters/latestChapterAt/lastFetchedAt: hidratados por el ComicReadingProvider,
-    // null si aún no se ha hidratado o no hay adaptador.
+    // Los campos de aquí hasta lastFetchedAt los hidrata el ComicReadingProvider; son null si aún no se
+    // ha hidratado o no hay adaptador. externalId identifica la obra en su sitio de lectura y su formato
+    // depende del adaptador.
+    @Column(length = 255)
+    private String externalId;
     @Column(length = 255)
     private String title;
     private Integer availableChapters;
@@ -73,6 +76,14 @@ public class ComicReadingEntry {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public String getExternalId() {
+        return externalId;
+    }
+
+    public void setExternalId(String externalId) {
+        this.externalId = externalId;
     }
 
     public String getTitle() {

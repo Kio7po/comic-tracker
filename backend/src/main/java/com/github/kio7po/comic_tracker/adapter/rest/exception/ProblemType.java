@@ -25,6 +25,7 @@ public final class ProblemType {
     public static final String READING_STATE_NOT_FOUND = "urn:problem-type:reading-state-not-found";
     public static final String READING_STATE_ALREADY_EXISTS = "urn:problem-type:reading-state-already-exists";
     public static final String INVALID_PREFERRED_READING_ENTRY = "urn:problem-type:invalid-preferred-reading-entry";
+    public static final String COMIC_NOT_FOUND_IN_READING_SOURCE = "urn:problem-type:comic-not-found-in-reading-source";
 
     private ProblemType() {
     }
