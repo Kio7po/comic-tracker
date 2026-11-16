@@ -3,17 +3,29 @@ package com.github.kio7po.comic_tracker.domain.port.source;
 import java.util.List;
 import java.util.Optional;
 
-import org.jspecify.annotations.Nullable;
-
 public interface ComicReadingProvider {
+
+    /**
+     * Stable identifier of this provider, persisted in the source and entry references.
+     */
+    String key();
+
+    /**
+     * @param url must already be a well-formed URL.
+     * @throws RuntimeException if it can't tell, e.g. the service it relies on is unreachable.
+     */
     boolean supports(String url);
 
     /**
-     * @param url must already be a well-formed URL, and {@link #supports(String)} must return true for it.
-     * @param externalId the work's identifier as returned by a previous {@link #fetch} or {@link #search}
-     *                   of this same provider, or null when none is known.
+     * The sites this provider can serve.
      */
-    Optional<ComicReadingSourceDetails> fetch(String url, @Nullable String externalId);
+    List<ComicReadingSourceDescriptor> discoverSources();
 
-    List<ComicReadingSearchResult> search(String keywords);
+    /**
+     * @return empty only when the site answered that the work doesn't exist.
+     * @throws RuntimeException if it couldn't find out.
+     */
+    Optional<ComicReadingEntryDetails> fetch(ComicReadingSourceTarget source, ComicReadingEntryTarget entry);
+
+    List<ComicReadingSearchResult> search(ComicReadingSourceTarget source, String keywords);
 }

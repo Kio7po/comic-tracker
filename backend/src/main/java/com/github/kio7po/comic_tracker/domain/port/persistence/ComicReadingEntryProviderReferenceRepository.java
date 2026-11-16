@@ -12,4 +12,5 @@ public interface ComicReadingEntryProviderReferenceRepository {
     boolean existsByEntryComicAndEntrySourceAndProviderKeyAndExternalId(Comic comic, ComicReadingSource source,
             String providerKey, String externalId);
     ComicReadingEntryProviderReference save(ComicReadingEntryProviderReference reference);
+    List<ComicReadingEntryProviderReference> saveAll(List<ComicReadingEntryProviderReference> references);
 }

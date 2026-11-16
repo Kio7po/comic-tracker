@@ -19,13 +19,20 @@ import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 
 import com.github.kio7po.comic_tracker.adapter.common.RateLimiterExecutor;
 import com.github.kio7po.comic_tracker.domain.common.TextSearch;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryTarget;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingProvider;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
-import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDetails;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceTarget;
 
 @Component
 public class OlympusComicReadingProvider implements ComicReadingProvider {
 
+    static final String KEY = "olympus";
+    // Olympus es un único sitio, así que su identificador es fijo; así sigue siendo el mismo si cambia de dominio.
+    static final String SOURCE_EXTERNAL_ID = "olympus";
+    private static final String SOURCE_NAME = "Olympus Scanlation";
     private static final String SERIES_PATH_PREFIX = "/series/comic-";
     private static final String TYPE_COMIC = "comic";
 
@@ -52,6 +59,11 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
     }
 
     @Override
+    public String key() {
+        return KEY;
+    }
+
+    @Override
     public boolean supports(String url) {
         try {
             String urlHost = URI.create(url).getHost();
@@ -62,8 +74,13 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
     }
 
     @Override
-    public Optional<ComicReadingSourceDetails> fetch(String url, @Nullable String externalId) {
-        Optional<String> slug = resolveSlug(url, externalId);
+    public List<ComicReadingSourceDescriptor> discoverSources() {
+        return List.of(new ComicReadingSourceDescriptor(SOURCE_EXTERNAL_ID, SOURCE_NAME, baseUrl));
+    }
+
+    @Override
+    public Optional<ComicReadingEntryDetails> fetch(ComicReadingSourceTarget source, ComicReadingEntryTarget entry) {
+        Optional<String> slug = resolveSlug(entry.url(), entry.externalId());
         if (slug.isEmpty()) {
             return Optional.empty();
         }
@@ -76,7 +93,7 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
     }
 
     @Override
-    public List<ComicReadingSearchResult> search(String keywords) {
+    public List<ComicReadingSearchResult> search(ComicReadingSourceTarget source, String keywords) {
         return listSeries().stream()
                 .filter(dto -> matchesKeywords(dto, keywords))
                 .map(dto -> OlympusComicReadingMapper.toSearchResult(dto, baseUrl))
@@ -85,7 +102,7 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
 
     // The slug is the only thing the detail endpoint accepts, but it changes periodically; the id
     // doesn't. The id can only be turned back into the current slug through the full series list.
-    private Optional<String> resolveSlug(String url, @Nullable String externalId) {
+    private Optional<String> resolveSlug(@Nullable String url, @Nullable String externalId) {
         if (externalId != null) {
             Optional<String> slug = listSeries().stream()
                     .filter(dto -> TYPE_COMIC.equals(dto.type()))
@@ -96,7 +113,7 @@ public class OlympusComicReadingProvider implements ComicReadingProvider {
                 return slug;
             }
         }
-        return extractSlug(url);
+        return url == null ? Optional.empty() : extractSlug(url);
     }
 
     // No synchronization: this runs on virtual threads (see ComicReadingEntryService), so at worst two

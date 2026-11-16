@@ -30,14 +30,19 @@ import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryTarget;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
-import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDetails;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceTarget;
 
 class OlympusComicReadingProviderTest {
 
     private static final String BASE_URL = "https://olympusxyz.com";
     private static final String PANEL_BASE_URL = "https://panel.olympusxyz.com";
     private static final Duration SERIES_LIST_TTL = Duration.ofMinutes(10);
+    // Olympus sirve un único sitio, así que no usa la fuente que recibe: todos los tests le pasan la misma.
+    private static final ComicReadingSourceTarget SOURCE = new ComicReadingSourceTarget(BASE_URL, null);
 
     private MockRestServiceServer server;
     private OlympusComicReadingProvider provider;
@@ -48,6 +53,15 @@ class OlympusComicReadingProviderTest {
         server = MockRestServiceServer.bindTo(builder).build();
         provider = new OlympusComicReadingProvider(builder, BASE_URL, SERIES_LIST_TTL,
                 RateLimiterRegistry.ofDefaults());
+    }
+
+    private static Optional<ComicReadingEntryDetails> fetch(OlympusComicReadingProvider provider, String url,
+            String externalId) {
+        return provider.fetch(SOURCE, new ComicReadingEntryTarget(url, externalId));
+    }
+
+    private static List<ComicReadingSearchResult> search(OlympusComicReadingProvider provider, String keywords) {
+        return provider.search(SOURCE, keywords);
     }
 
     private static String mangaDetailJson(String name) {
@@ -84,6 +98,17 @@ class OlympusComicReadingProviderTest {
     }
 
     @Test
+    void key_isOlympus() {
+        assertThat(provider.key()).isEqualTo("olympus");
+    }
+
+    @Test
+    void discoverSources_returnsTheConfiguredSiteWithAFixedIdentifier() {
+        assertThat(provider.discoverSources())
+                .containsExactly(new ComicReadingSourceDescriptor("olympus", "Olympus Scanlation", BASE_URL));
+    }
+
+    @Test
     void supports_trueForAUrlOnTheConfiguredHost() {
         assertThat(provider.supports("https://olympusxyz.com/series/comic-berserk")).isTrue();
     }
@@ -112,7 +137,7 @@ class OlympusComicReadingProviderTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(chaptersJson(374, "2024-06-01T10:00:00.000000Z"), MediaType.APPLICATION_JSON));
 
-        provider.fetch("https://olympusxyz.com/series/comic-berserk", null);
+        fetch(provider, "https://olympusxyz.com/series/comic-berserk", null);
 
         server.verify();
     }
@@ -124,7 +149,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(PANEL_BASE_URL + "/api/series/berserk/chapters?page=1&direction=desc&type=comic"))
                 .andRespond(withSuccess(chaptersJson(374, "2024-06-01T10:00:00.000000Z"), MediaType.APPLICATION_JSON));
 
-        Optional<ComicReadingSourceDetails> result = provider.fetch("https://olympusxyz.com/series/comic-berserk", null);
+        Optional<ComicReadingEntryDetails> result = fetch(provider, "https://olympusxyz.com/series/comic-berserk", null);
 
         assertThat(result).isPresent();
         assertThat(result.get().title()).isEqualTo("Berserk");
@@ -137,14 +162,14 @@ class OlympusComicReadingProviderTest {
         // Propósito: la URL que devuelve el provider es la canónica que él construye, no la que pegó el
         // usuario. Aquí se pega una URL con un segmento de más ("/some-extra-segment"), que debe
         // desaparecer en la URL devuelta. El id sale del detalle ("id": 42 en el JSON de prueba).
-        
+
         server.expect(requestTo(BASE_URL + "/api/series/berserk?type=comic"))
                 .andRespond(withSuccess(mangaDetailJson("Berserk"), MediaType.APPLICATION_JSON));
         server.expect(requestTo(PANEL_BASE_URL + "/api/series/berserk/chapters?page=1&direction=desc&type=comic"))
                 .andRespond(withSuccess(chaptersJson(1, "2024-06-01T10:00:00.000000Z"), MediaType.APPLICATION_JSON));
 
-        Optional<ComicReadingSourceDetails> result = provider
-                .fetch("https://olympusxyz.com/series/comic-berserk/some-extra-segment", null);
+        Optional<ComicReadingEntryDetails> result = fetch(provider,
+                "https://olympusxyz.com/series/comic-berserk/some-extra-segment", null);
 
         assertThat(result).isPresent();
         assertThat(result.get().externalId()).isEqualTo("42");
@@ -168,8 +193,8 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(PANEL_BASE_URL + "/api/series/one-piece/chapters?page=1&direction=desc&type=comic"))
                 .andRespond(withSuccess(chaptersJson(1, "2024-06-01T10:00:00.000000Z"), MediaType.APPLICATION_JSON));
 
-        Optional<ComicReadingSourceDetails> result = provider
-                .fetch("https://olympusxyz.com/series/comic-an-old-slug", "3");
+        Optional<ComicReadingEntryDetails> result = fetch(provider,
+                "https://olympusxyz.com/series/comic-an-old-slug", "3");
 
         assertThat(result).isPresent();
         server.verify();
@@ -190,10 +215,48 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(PANEL_BASE_URL + "/api/series/berserk/chapters?page=1&direction=desc&type=comic"))
                 .andRespond(withSuccess(chaptersJson(1, "2024-06-01T10:00:00.000000Z"), MediaType.APPLICATION_JSON));
 
-        Optional<ComicReadingSourceDetails> result = provider
-                .fetch("https://olympusxyz.com/series/comic-berserk", "999");
+        Optional<ComicReadingEntryDetails> result = fetch(provider,
+                "https://olympusxyz.com/series/comic-berserk", "999");
 
         assertThat(result).isPresent();
+        server.verify();
+    }
+
+    @Test
+    void fetch_resolvesTheWorkFromTheExternalIdAloneWhenThereIsNoUrl() {
+        // Propósito: se puede pedir una obra solo por su id, sin URL; es el caso de una obra elegida en una
+        // búsqueda, donde el sitio no da la dirección hasta que se hidrata.
+        //
+        // Flujo (el servidor simulado exige las peticiones en este orden):
+        //  1. fetch con url = null y el externalId "3".
+        //  2. El provider pide la lista de series y busca el id 3: "One Piece", slug "one-piece".
+        //  3. Con ese slug pide el detalle y los capítulos.
+        server.expect(requestTo(BASE_URL + "/api/series/list"))
+                .andRespond(withSuccess(seriesListJson(), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(BASE_URL + "/api/series/one-piece?type=comic"))
+                .andRespond(withSuccess(mangaDetailJson("One Piece"), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(PANEL_BASE_URL + "/api/series/one-piece/chapters?page=1&direction=desc&type=comic"))
+                .andRespond(withSuccess(chaptersJson(1, "2024-06-01T10:00:00.000000Z"), MediaType.APPLICATION_JSON));
+
+        Optional<ComicReadingEntryDetails> result = fetch(provider, null, "3");
+
+        assertThat(result).isPresent();
+        server.verify();
+    }
+
+    @Test
+    void fetch_returnsEmptyWhenThereIsNoUrlAndTheExternalIdIsNotInTheSeriesList() {
+        // Propósito: sin URL a la que recurrir, un id que ya no está en la lista de series significa que
+        // la obra no se puede localizar, y el resultado es vacío sin pedir ningún detalle.
+        //
+        // Flujo: fetch con url = null y el externalId "999". El provider pide la lista, no encuentra el id
+        // y termina; no se declara ninguna otra petición, así que pedir el detalle haría fallar el test.
+        server.expect(requestTo(BASE_URL + "/api/series/list"))
+                .andRespond(withSuccess(seriesListJson(), MediaType.APPLICATION_JSON));
+
+        Optional<ComicReadingEntryDetails> result = fetch(provider, null, "999");
+
+        assertThat(result).isEmpty();
         server.verify();
     }
 
@@ -213,7 +276,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(PANEL_BASE_URL + "/api/series/berserk/chapters?page=1&direction=desc&type=comic"))
                 .andRespond(withSuccess(chaptersJson(1, "2024-06-01T10:00:00.000000Z"), MediaType.APPLICATION_JSON));
 
-        provider.fetch("https://olympusxyz.com/series/comic-berserk", "2");
+        fetch(provider, "https://olympusxyz.com/series/comic-berserk", "2");
 
         server.verify();
     }
@@ -225,7 +288,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(PANEL_BASE_URL + "/api/series/berserk/chapters?page=1&direction=desc&type=comic"))
                 .andRespond(withSuccess(chaptersJson(1, "2024-06-01T10:00:00.000000Z"), MediaType.APPLICATION_JSON));
 
-        provider.fetch("https://olympusxyz.com/series/comic-berserk/some-extra-segment", null);
+        fetch(provider, "https://olympusxyz.com/series/comic-berserk/some-extra-segment", null);
 
         server.verify();
     }
@@ -234,7 +297,7 @@ class OlympusComicReadingProviderTest {
     void fetch_returnsEmptyWithoutCallingTheApiWhenTheUrlHasNoRecognizableSlug() {
         // No server.expect(...) set up on purpose: the request must never reach the network -
         // MockRestServiceServer fails the test itself if it does.
-        Optional<ComicReadingSourceDetails> result = provider.fetch("https://olympusxyz.com/other/path", null);
+        Optional<ComicReadingEntryDetails> result = fetch(provider, "https://olympusxyz.com/other/path", null);
 
         assertThat(result).isEmpty();
         server.verify();
@@ -245,7 +308,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(BASE_URL + "/api/series/berserk?type=comic"))
                 .andRespond(withResourceNotFound());
 
-        Optional<ComicReadingSourceDetails> result = provider.fetch("https://olympusxyz.com/series/comic-berserk", null);
+        Optional<ComicReadingEntryDetails> result = fetch(provider, "https://olympusxyz.com/series/comic-berserk", null);
 
         assertThat(result).isEmpty();
         server.verify();
@@ -256,7 +319,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(BASE_URL + "/api/series/berserk?type=comic"))
                 .andRespond(withServerError());
 
-        assertThatThrownBy(() -> provider.fetch("https://olympusxyz.com/series/comic-berserk", null))
+        assertThatThrownBy(() -> fetch(provider, "https://olympusxyz.com/series/comic-berserk", null))
                 .isInstanceOf(HttpServerErrorException.class);
     }
 
@@ -267,7 +330,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(PANEL_BASE_URL + "/api/series/berserk/chapters?page=1&direction=desc&type=comic"))
                 .andRespond(withSuccess(chaptersJson(0), MediaType.APPLICATION_JSON));
 
-        Optional<ComicReadingSourceDetails> result = provider.fetch("https://olympusxyz.com/series/comic-berserk", null);
+        Optional<ComicReadingEntryDetails> result = fetch(provider, "https://olympusxyz.com/series/comic-berserk", null);
 
         assertThat(result).isPresent();
         assertThat(result.get().availableChapters()).isZero();
@@ -280,7 +343,7 @@ class OlympusComicReadingProviderTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(seriesListJson(), MediaType.APPLICATION_JSON));
 
-        provider.search("berserk");
+        search(provider, "berserk");
 
         server.verify();
     }
@@ -290,7 +353,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(BASE_URL + "/api/series/list"))
                 .andRespond(withSuccess(seriesListJson(), MediaType.APPLICATION_JSON));
 
-        List<ComicReadingSearchResult> results = provider.search("SWORD");
+        List<ComicReadingSearchResult> results = search(provider, "SWORD");
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0).title()).isEqualTo("The Sword King");
@@ -304,7 +367,7 @@ class OlympusComicReadingProviderTest {
 
         // Reversed compared to the actual title ("The Sword King"), and skipping "the" entirely -
         // every word still has to match, but not in order or exhaustively.
-        List<ComicReadingSearchResult> results = provider.search("king sword");
+        List<ComicReadingSearchResult> results = search(provider, "king sword");
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0).title()).isEqualTo("The Sword King");
@@ -315,7 +378,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(BASE_URL + "/api/series/list"))
                 .andRespond(withSuccess(seriesListJson(), MediaType.APPLICATION_JSON));
 
-        List<ComicReadingSearchResult> results = provider.search("sword lord");
+        List<ComicReadingSearchResult> results = search(provider, "sword lord");
 
         assertThat(results).isEmpty();
     }
@@ -325,7 +388,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(BASE_URL + "/api/series/list"))
                 .andRespond(withSuccess("{\"data\":null}", MediaType.APPLICATION_JSON));
 
-        List<ComicReadingSearchResult> results = provider.search("berserk");
+        List<ComicReadingSearchResult> results = search(provider, "berserk");
 
         assertThat(results).isEmpty();
     }
@@ -335,7 +398,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(BASE_URL + "/api/series/list"))
                 .andRespond(withServerError());
 
-        assertThatThrownBy(() -> provider.search("berserk"))
+        assertThatThrownBy(() -> search(provider, "berserk"))
                 .isInstanceOf(HttpServerErrorException.class);
     }
 
@@ -344,7 +407,7 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(BASE_URL + "/api/series/list"))
                 .andRespond(withSuccess(seriesListJson(), MediaType.APPLICATION_JSON));
 
-        List<ComicReadingSearchResult> results = provider.search("sword");
+        List<ComicReadingSearchResult> results = search(provider, "sword");
 
         assertThat(results).extracting(ComicReadingSearchResult::externalId).containsExactly("1");
     }
@@ -363,8 +426,8 @@ class OlympusComicReadingProviderTest {
         server.expect(requestTo(BASE_URL + "/api/series/list"))
                 .andRespond(withSuccess(seriesListJson(), MediaType.APPLICATION_JSON));
 
-        provider.search("sword");
-        List<ComicReadingSearchResult> second = provider.search("piece");
+        search(provider, "sword");
+        List<ComicReadingSearchResult> second = search(provider, "piece");
 
         assertThat(second).extracting(ComicReadingSearchResult::title).containsExactly("One Piece");
         server.verify();
@@ -385,8 +448,8 @@ class OlympusComicReadingProviderTest {
         expiringServer.expect(ExpectedCount.twice(), requestTo(BASE_URL + "/api/series/list"))
                 .andRespond(withSuccess(seriesListJson(), MediaType.APPLICATION_JSON));
 
-        expiringProvider.search("sword");
-        expiringProvider.search("sword");
+        search(expiringProvider, "sword");
+        search(expiringProvider, "sword");
 
         expiringServer.verify();
     }
@@ -414,7 +477,7 @@ class OlympusComicReadingProviderTest {
         OlympusComicReadingProvider limitedProvider = new OlympusComicReadingProvider(builder, BASE_URL,
                 SERIES_LIST_TTL, registry);
 
-        assertThatThrownBy(() -> limitedProvider.search("sword"))
+        assertThatThrownBy(() -> search(limitedProvider, "sword"))
                 .isInstanceOf(RequestNotPermitted.class)
                 .extracting(exception -> ((RequestNotPermitted) exception).getCausingRateLimiterName())
                 .isEqualTo("olympus-base");
@@ -471,9 +534,9 @@ class OlympusComicReadingProviderTest {
                     .andRespond(withSuccess(mangaDetailJson("Berserk"), MediaType.APPLICATION_JSON));
         }
 
-        limitedProvider.fetch("https://olympusxyz.com/series/comic-berserk", null);
+        fetch(limitedProvider, "https://olympusxyz.com/series/comic-berserk", null);
 
-        assertThatThrownBy(() -> limitedProvider.fetch("https://olympusxyz.com/series/comic-berserk", null))
+        assertThatThrownBy(() -> fetch(limitedProvider, "https://olympusxyz.com/series/comic-berserk", null))
                 .isInstanceOf(RequestNotPermitted.class)
                 .extracting(exception -> ((RequestNotPermitted) exception).getCausingRateLimiterName())
                 .isEqualTo(exhaustedLimiterName);

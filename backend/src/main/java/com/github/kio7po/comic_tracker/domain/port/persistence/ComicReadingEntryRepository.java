@@ -14,7 +14,6 @@ import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 public interface ComicReadingEntryRepository {
     Optional<ComicReadingEntry> findById(Long id);
     Optional<ComicReadingEntry> findByComicAndSourceAndUrl(Comic comic, ComicReadingSource source, String url);
-    boolean existsByComicAndSourceAndExternalId(Comic comic, ComicReadingSource source, String externalId);
     List<ComicReadingEntry> findByComic(Comic comic);
     List<ComicReadingEntry> findByComicAndStatus(Comic comic, ComicReadingEntryStatus status);
     List<ComicReadingEntry> findBySourceAndStatus(ComicReadingSource source, ComicReadingEntryStatus status);
