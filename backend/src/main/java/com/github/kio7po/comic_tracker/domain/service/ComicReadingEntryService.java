@@ -126,6 +126,9 @@ public class ComicReadingEntryService {
 
     private ComicReadingEntry createEntry(Comic comic, ComicReadingSource source, String url, String locale,
             User contributor) {
+        // TODO: submit y submitWithNewSource llaman aquí al provider (red) con la transacción abierta, así que
+        // retienen una conexión de BD mientras esperan al sitio externo. Aceptado de momento: reordenar qué va
+        // dentro y fuera de la transacción es costoso, porque el resultado alimenta decisiones que ya leen de BD.
         Optional<FetchedEntry> fetched = hydratedOrRejected(
                 readingProviderRegistry.fetch(source, new ComicReadingEntryTarget(url, null)), url);
 

@@ -11,29 +11,34 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceResponseDto;
-import com.github.kio7po.comic_tracker.adapter.rest.mapper.ComicReadingEntryMapper;
+import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceSyncResponseDto;
+import com.github.kio7po.comic_tracker.adapter.rest.mapper.ComicReadingSourceMapper;
 import com.github.kio7po.comic_tracker.adapter.rest.security.CurrentUser;
 import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceService;
+import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceSyncService;
 
 @RestController
 @RequestMapping("/api")
 public class ComicReadingSourceController {
 
     private final ComicReadingSourceService comicReadingSourceService;
+    private final ComicReadingSourceSyncService comicReadingSourceSyncService;
 
-    public ComicReadingSourceController(ComicReadingSourceService comicReadingSourceService) {
+    public ComicReadingSourceController(ComicReadingSourceService comicReadingSourceService,
+            ComicReadingSourceSyncService comicReadingSourceSyncService) {
         this.comicReadingSourceService = comicReadingSourceService;
+        this.comicReadingSourceSyncService = comicReadingSourceSyncService;
     }
 
     @GetMapping("/reading-sources")
     public List<ComicReadingSourceResponseDto> findByStatusIn(@RequestParam List<ComicReadingSourceStatus> statuses,
             @RequestParam(defaultValue = "NAME") ComicReadingSourceSortField sortBy,
             @RequestParam(defaultValue = "ASC") SortDirection direction) {
-        return ComicReadingEntryMapper
-                .toSourceResponseDtoList(comicReadingSourceService.findByStatusIn(statuses, sortBy, direction));
+        return ComicReadingSourceMapper
+                .toResponseDtoList(comicReadingSourceService.findByStatusIn(statuses, sortBy, direction));
     }
 
     @GetMapping("/moderation/reading-sources")
@@ -41,18 +46,23 @@ public class ComicReadingSourceController {
             @RequestParam List<ComicReadingSourceStatus> statuses,
             @RequestParam(defaultValue = "NAME") ComicReadingSourceSortField sortBy,
             @RequestParam(defaultValue = "ASC") SortDirection direction) {
-        return ComicReadingEntryMapper
-                .toSourceModerationResponseDtoList(comicReadingSourceService.findByStatusIn(statuses, sortBy, direction));
+        return ComicReadingSourceMapper
+                .toModerationResponseDtoList(comicReadingSourceService.findByStatusIn(statuses, sortBy, direction));
+    }
+
+    @PostMapping("/moderation/reading-sources/sync")
+    public ComicReadingSourceSyncResponseDto sync(@CurrentUser Long adminId) {
+        return ComicReadingSourceMapper.toSyncResponseDto(comicReadingSourceSyncService.sync(adminId));
     }
 
     @PostMapping("/reading-sources/{id}/approve")
     public ComicReadingSourceResponseDto approve(@PathVariable Long id, @CurrentUser Long reviewerId) {
-        return ComicReadingEntryMapper.toSourceResponseDto(comicReadingSourceService.approve(id, reviewerId));
+        return ComicReadingSourceMapper.toResponseDto(comicReadingSourceService.approve(id, reviewerId));
     }
 
     @PostMapping("/reading-sources/{id}/reject")
     public ComicReadingSourceResponseDto reject(@PathVariable Long id, @CurrentUser Long reviewerId) {
-        return ComicReadingEntryMapper.toSourceResponseDto(comicReadingSourceService.reject(id, reviewerId));
+        return ComicReadingSourceMapper.toResponseDto(comicReadingSourceService.reject(id, reviewerId));
     }
 
 }

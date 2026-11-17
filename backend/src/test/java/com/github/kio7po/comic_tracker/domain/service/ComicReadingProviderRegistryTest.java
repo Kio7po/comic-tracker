@@ -30,6 +30,7 @@ import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetai
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryTarget;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingProvider;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceTarget;
 
 @ExtendWith(MockitoExtension.class)
@@ -421,6 +422,33 @@ class ComicReadingProviderRegistryTest {
                 .isInstanceOf(ComicReadingSourceNotSupportedException.class)
                 .extracting(exception -> ((ComicReadingSourceNotSupportedException) exception).getSourceId())
                 .isEqualTo(1L);
+    }
+
+    @Test
+    void discoverAll_returnsTheSourcesOfEveryProviderInOrder() {
+        ComicReadingSourceDescriptor firstSource = new ComicReadingSourceDescriptor("a", "A", "https://a.com");
+        ComicReadingSourceDescriptor secondSource = new ComicReadingSourceDescriptor("b", "B", "https://b.com");
+        when(first.discoverSources()).thenReturn(List.of(firstSource));
+        when(second.discoverSources()).thenReturn(List.of(secondSource));
+
+        assertThat(registry.discoverAll()).containsExactly(
+                new DiscoveryOutcome.Discovered("first", List.of(firstSource)),
+                new DiscoveryOutcome.Discovered("second", List.of(secondSource)));
+    }
+
+    @Test
+    void discoverAll_reportsAFailingProviderWithoutLosingTheOthers() {
+        // Propósito: un provider que no puede listar sus sitios no impide conocer los de los demás.
+        // Flujo:
+        // 1. El primer provider lanza al listar sus sitios y el segundo responde con uno.
+        // 2. discoverAll devuelve un Failed con la clave y la causa del primero y un Discovered del segundo.
+        ComicReadingSourceDescriptor secondSource = new ComicReadingSourceDescriptor("b", "B", "https://b.com");
+        IllegalStateException cause = new IllegalStateException("down");
+        when(first.discoverSources()).thenThrow(cause);
+        when(second.discoverSources()).thenReturn(List.of(secondSource));
+
+        assertThat(registry.discoverAll()).containsExactly(new DiscoveryOutcome.Failed("first", cause),
+                new DiscoveryOutcome.Discovered("second", List.of(secondSource)));
     }
 
 }

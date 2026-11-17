@@ -90,6 +90,13 @@ public class ComicReadingProviderRegistry {
     }
 
     /**
+     * @return one outcome per provider, in provider order.
+     */
+    public List<DiscoveryOutcome> discoverAll() {
+        return providers.stream().map(this::discover).toList();
+    }
+
+    /**
      * @throws ComicReadingSourceNotSupportedException if no provider serves the source.
      */
     public List<ComicReadingSearchResult> search(ComicReadingSource source, String keywords) {
@@ -97,6 +104,14 @@ public class ComicReadingProviderRegistry {
                 .orElseThrow(() -> new ComicReadingSourceNotSupportedException(source.getId()));
         return chosen.provider()
                 .search(new ComicReadingSourceTarget(source.getUrl(), chosen.sourceExternalId()), keywords);
+    }
+
+    private DiscoveryOutcome discover(ComicReadingProvider provider) {
+        try {
+            return new DiscoveryOutcome.Discovered(provider.key(), provider.discoverSources());
+        } catch (RuntimeException e) {
+            return new DiscoveryOutcome.Failed(provider.key(), e);
+        }
     }
 
     // Elige el provider y construye los targets ya, en el hilo llamante; lo que se devuelve es solo la
