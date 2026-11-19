@@ -16,4 +16,5 @@ export const ProblemType = {
   READING_ENTRY_NOT_FOUND: 'urn:problem-type:reading-entry-not-found',
   READING_STATE_NOT_FOUND: 'urn:problem-type:reading-state-not-found',
   READING_STATE_ALREADY_EXISTS: 'urn:problem-type:reading-state-already-exists',
+  DATA_INTEGRITY_CONFLICT: 'urn:problem-type:data-integrity-conflict',
 } as const;

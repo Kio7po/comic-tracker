@@ -193,7 +193,11 @@ function SuggestReadingSourceDialog({ comicSlug, onEntrySubmitted }: Readonly<Su
       onEntrySubmitted?.(response);
       setIsSuccess(true);
     } catch (error) {
-      if (error instanceof ApiError && error.type === ProblemType.DUPLICATE_READING_ENTRY) {
+      // DATA_INTEGRITY_CONFLICT: dos envíos iguales a la vez, el segundo lo rechaza la base de datos en lugar del servicio.
+      if (
+        error instanceof ApiError &&
+        (error.type === ProblemType.DUPLICATE_READING_ENTRY || error.type === ProblemType.DATA_INTEGRITY_CONFLICT)
+      ) {
         setFormErrors((previous) => ({ ...previous, url: 'detail.suggestSource.errors.duplicateEntry' }));
       } else if (error instanceof ApiError && error.type === ProblemType.DUPLICATE_READING_SOURCE) {
         setFormErrors((previous) => ({ ...previous, sourceUrl: 'detail.suggestSource.errors.duplicateSource' }));
