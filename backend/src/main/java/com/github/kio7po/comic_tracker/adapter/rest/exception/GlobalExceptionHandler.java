@@ -2,6 +2,7 @@ package com.github.kio7po.comic_tracker.adapter.rest.exception;
 
 import java.net.URI;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -123,6 +124,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidPreferredReadingEntryException.class)
     public ProblemDetail handleInvalidPreferredReadingEntry(InvalidPreferredReadingEntryException ex) {
         return problem(HttpStatus.BAD_REQUEST, ex.getMessage(), ProblemType.INVALID_PREFERRED_READING_ENTRY);
+    }
+
+    // Red de seguridad para las carreras entre la comprobación del servicio y el insert: dos peticiones idénticas
+    // pasan a la vez la comprobación y la restricción de la base de datos rechaza la segunda. El detalle es fijo a
+    // propósito: el mensaje de la excepción trae nombres de restricciones y valores de la base de datos.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        return problem(HttpStatus.CONFLICT, "The request conflicts with data that already exists",
+                ProblemType.DATA_INTEGRITY_CONFLICT);
     }
 
     private static ProblemDetail problem(HttpStatus status, String detail, String type) {
