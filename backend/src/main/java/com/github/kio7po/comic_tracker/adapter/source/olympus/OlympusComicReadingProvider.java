@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -26,7 +27,9 @@ import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResu
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceTarget;
 
+// Provider written for one specific site: it has to come before the generic one (the last in the order).
 @Component
+@Order(1)
 public class OlympusComicReadingProvider implements ComicReadingProvider {
 
     static final String KEY = "olympus";

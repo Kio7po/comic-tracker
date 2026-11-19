@@ -33,6 +33,17 @@ scalar:
   enabled: true
   path: /scalar
 
+tenrai:
+  api:
+    # default value, not needed. Public mirror of the Jikan API (MyAnimeList).
+    base-url: https://api.tenrai.org/v1
+
+suwayomi:
+  # default value, not needed. Where the Suwayomi server runs.
+  base-url: http://localhost:4567
+  # default value, not needed. How long the list of Suwayomi sources is reused before being fetched again.
+  sources-ttl: 10m
+
 olympus:
   # default value, not needed, but scanlation sites like this one change domain
   # fairly often (to dodge blocking), so this is the first thing to override if it goes stale.
@@ -84,4 +95,13 @@ resilience4j:
       olympus-panel:
         limit-for-period: 1
         limit-refresh-period: 500ms
+        timeout-duration: 2s
+    configs:
+      # Template for the per-source limiters of SuwayomiComicReadingProvider (named suwayomi-<source id>, created at
+      # runtime as sources show up). There is no documented cap: this is a conservative courtesy limit for the remote
+      # site behind each source, 1 request every 2s, applied only to the calls that actually reach it. The window is
+      # already scaled down (not e.g. 30 per minute) because of fixed-window boundary-burst.
+      suwayomi:
+        limit-for-period: 1
+        limit-refresh-period: 2s
         timeout-duration: 2s
