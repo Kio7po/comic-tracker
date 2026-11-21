@@ -158,7 +158,7 @@ public class ComicReadingEntryService {
     // con uno que falló, la entry se guarda sin hidratar: una caída no debe bloquear las contribuciones.
     private Optional<FetchedEntry> hydratedOrRejected(FetchOutcome outcome, String url) {
         return switch (outcome) {
-            case FetchOutcome.Found found -> Optional.of(found.entry());
+            case FetchOutcome.Found(FetchedEntry found) -> Optional.of(found);
             case FetchOutcome.NotFound notFound -> throw new ComicNotFoundInReadingSourceException(url);
             // TODO: logs
             case FetchOutcome.Failed failed -> Optional.empty();
@@ -232,8 +232,8 @@ public class ComicReadingEntryService {
     private ComicReadingEntry applyOutcome(ComicReadingEntry entry, FetchOutcome outcome, Instant now,
             Set<UrlKey> claimedUrls) {
         switch (outcome) {
-            case FetchOutcome.Found found -> {
-                applyFetchedDetails(entry, found.entry().details(), claimedUrls);
+            case FetchOutcome.Found(FetchedEntry found) -> {
+                applyFetchedDetails(entry, found.details(), claimedUrls);
                 entry.setLastFetchedAt(now);
             }
             // Sin datos nuevos (la obra ya no existe, o ningún provider sirve la fuente): se conservan los

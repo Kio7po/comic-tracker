@@ -122,7 +122,7 @@ public class ComicReadingProviderRegistry {
         try {
             Optional<ProviderChosenForSource> chosen = chooseProviderFor(source, sourceExternalIdByProviderKey);
             if (chosen.isEmpty()) {
-                return () -> new FetchOutcome.NotSupported();
+                return FetchOutcome.NotSupported::new;
             }
             ComicReadingProvider provider = chosen.get().provider();
             ComicReadingSourceTarget sourceTarget = new ComicReadingSourceTarget(source.getUrl(),
