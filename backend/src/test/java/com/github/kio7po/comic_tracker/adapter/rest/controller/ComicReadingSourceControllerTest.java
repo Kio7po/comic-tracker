@@ -26,7 +26,14 @@ import com.github.kio7po.comic_tracker.domain.entities.User;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceService;
+import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceSyncReport;
+import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceSyncReport.SkipReason;
+import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceSyncReport.SkippedSource;
+import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceSyncReport.SyncedSource;
+import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceSyncService;
+import com.github.kio7po.comic_tracker.domain.service.DiscoveryOutcome;
 
 // Imports the real SecurityConfig so this test reflects actual authorization behavior
 // (GET public, approve/reject ADMIN-only) instead of drifting from it silently if those rules ever change.
@@ -43,6 +50,8 @@ class ComicReadingSourceControllerTest {
 
     @MockitoBean
     private ComicReadingSourceService comicReadingSourceService;
+    @MockitoBean
+    private ComicReadingSourceSyncService comicReadingSourceSyncService;
 
     private static ComicReadingSource source(Long id, String name, ComicReadingSourceStatus status) {
         ComicReadingSource source = new ComicReadingSource();
@@ -126,6 +135,42 @@ class ComicReadingSourceControllerTest {
                 .andExpect(jsonPath("$[0].source.id").value(1))
                 .andExpect(jsonPath("$[0].source.name").value("MangaDex"))
                 .andExpect(jsonPath("$[0].contributedBy.username").value("contributoruser"));
+    }
+
+    @Test
+    void syncRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/moderation/reading-sources/sync"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void syncReturnsForbiddenForNonAdminUser() throws Exception {
+        mockMvc.perform(post("/api/moderation/reading-sources/sync")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void syncReturnsTheReportMappedToDtoForAdminUser() throws Exception {
+        ComicReadingSource created = source(SOURCE_ID, "MangaDex", ComicReadingSourceStatus.APPROVED);
+        ComicReadingSourceDescriptor skipped = new ComicReadingSourceDescriptor("9", "Broken", "");
+        when(comicReadingSourceSyncService.sync(USER_ID)).thenReturn(new ComicReadingSourceSyncReport(
+                List.of(new SyncedSource("suwayomi", created)), List.of(), List.of(),
+                List.of(new SkippedSource("suwayomi", skipped, SkipReason.NO_URL)),
+                List.of(new DiscoveryOutcome.Failed("olympus", new IllegalStateException("down")))));
+
+        mockMvc.perform(post("/api/moderation/reading-sources/sync")
+                .with(jwt().jwt(builder -> builder.subject("1"))
+                        .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created[0].providerKey").value("suwayomi"))
+                .andExpect(jsonPath("$.created[0].source.name").value("MangaDex"))
+                .andExpect(jsonPath("$.linked").isEmpty())
+                .andExpect(jsonPath("$.updated").isEmpty())
+                .andExpect(jsonPath("$.skipped[0].externalId").value("9"))
+                .andExpect(jsonPath("$.skipped[0].reason").value("NO_URL"))
+                .andExpect(jsonPath("$.failedProviders[0].providerKey").value("olympus"))
+                .andExpect(jsonPath("$.failedProviders[0].message").value("down"));
     }
 
     @Test

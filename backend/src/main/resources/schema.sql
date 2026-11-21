@@ -20,6 +20,8 @@ CREATE SEQUENCE IF NOT EXISTS comic_metadata_source_seq START WITH 1 INCREMENT B
 CREATE SEQUENCE IF NOT EXISTS comic_metadata_entry_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_reading_source_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS comic_reading_entry_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS comic_reading_source_provider_reference_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS comic_reading_entry_provider_reference_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS app_user_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS refresh_token_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS reading_state_seq START WITH 1 INCREMENT BY 50;
@@ -138,7 +140,8 @@ CREATE TABLE IF NOT EXISTS comic_reading_source (
 
 -- Propuesta de un usuario de que un cómic está disponible en un sitio de lectura concreto.
 -- title/available_chapters/latest_chapter_at quedan NULL hasta que el ComicReadingProvider los
--- hidrata (o permanecen NULL si no hay adaptador para la fuente).
+-- hidrata (o permanecen NULL si no hay adaptador para la fuente). El identificador de la obra en
+-- cada provider vive en comic_reading_entry_provider_reference.
 CREATE TABLE IF NOT EXISTS comic_reading_entry (
     id                BIGINT NOT NULL PRIMARY KEY,
     url               VARCHAR(255) NOT NULL,
@@ -156,6 +159,30 @@ CREATE TABLE IF NOT EXISTS comic_reading_entry (
     reviewed_at       TIMESTAMPTZ,
     reviewed_by_id    BIGINT REFERENCES app_user (id),
     UNIQUE (comic_id, source_id, url)
+);
+
+-- Cómo conoce un ComicReadingProvider a un sitio de lectura. Un sitio puede tener varias
+-- referencias, una por provider que lo conozca (p. ej. el adaptador dedicado y una extensión de
+-- Suwayomi). provider_key identifica al provider; external_id es opaco para el dominio: solo lo
+-- interpreta el provider que lo emitió. Un external_id pertenece a un único sitio.
+CREATE TABLE IF NOT EXISTS comic_reading_source_provider_reference (
+    id           BIGINT NOT NULL PRIMARY KEY,
+    source_id    BIGINT NOT NULL REFERENCES comic_reading_source (id),
+    provider_key VARCHAR(64) NOT NULL,
+    external_id  VARCHAR(255) NOT NULL,
+    UNIQUE (source_id, provider_key),
+    UNIQUE (provider_key, external_id)
+);
+
+-- Identificador de la obra de una entry según cada provider que la ha servido. Se guarda uno por
+-- provider (no uno solo) porque el de un provider no sirve a otro: pueden coincidir siendo obras
+-- distintas, y no siempre se puede volver a derivar desde la URL.
+CREATE TABLE IF NOT EXISTS comic_reading_entry_provider_reference (
+    id           BIGINT NOT NULL PRIMARY KEY,
+    entry_id     BIGINT NOT NULL REFERENCES comic_reading_entry (id),
+    provider_key VARCHAR(64) NOT NULL,
+    external_id  VARCHAR(255) NOT NULL,
+    UNIQUE (entry_id, provider_key)
 );
 
 -- ─── Seguimiento personal

@@ -1,0 +1,86 @@
+@host = http://localhost:8080
+@contentType = application/json
+
+# Flow: sync the reading sources from every provider (Olympus + Suwayomi), check what it created,
+# then submit an entry on a source the sync linked to Suwayomi so the entry gets hydrated by it.
+#
+# Needs the backend running and a Suwayomi Server on suwayomi.base-url (default http://localhost:4567)
+# with at least one extension installed. The dev database is wiped on every backend restart
+# (schema.sql starts with DROP SCHEMA), so run the sync again after restarting.
+
+### Login as the admin seeded by data.sql (the sync is ADMIN-only)
+# @name adminLogin
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "usernameOrEmail": "admin",
+  "password": "admin",
+  "rememberMe": false
+}
+
+### Sync - no Authorization header -> 401
+POST {{host}}/api/moderation/reading-sources/sync
+
+### Sync - first run: creates the sources the providers report, links the ones that already existed
+# The report has created / linked / updated / skipped (with a reason) / failedProviders.
+# A provider being down shows up in failedProviders without hiding the others.
+# @name firstSync
+POST {{host}}/api/moderation/reading-sources/sync
+Authorization: Bearer {{adminLogin.response.body.$.access_token}}
+
+### Sync - second run right after: idempotent, nothing created or linked (everything is already matched)
+POST {{host}}/api/moderation/reading-sources/sync
+Authorization: Bearer {{adminLogin.response.body.$.access_token}}
+
+### Sync - authenticated but not ADMIN -> 403
+# Register and log in as a normal user first (see auth.http), then use that token here.
+@userToken = REPLACE_ME
+POST {{host}}/api/moderation/reading-sources/sync
+Authorization: Bearer {{userToken}}
+
+### List - sources the sync created are already APPROVED (an admin installed them in the provider)
+# Look for the Suwayomi source you want and copy its id into @suwayomiBackedSourceId below.
+GET {{host}}/api/reading-sources?statuses=APPROVED&sortBy=NAME&direction=ASC
+
+### List - moderation view, adds who contributed each source (the admin that ran the sync)
+GET {{host}}/api/moderation/reading-sources?statuses=APPROVED
+Authorization: Bearer {{adminLogin.response.body.$.access_token}}
+
+### Import a comic to attach the entry to
+# @name importComic
+POST {{host}}/api/catalog/myanimelist/2
+Content-Type: {{contentType}}
+
+### Submit - an entry on a Suwayomi-backed source -> 201, hydrated by Suwayomi
+# The url must be a work Suwayomi already has stored (it can't resolve a URL it has never seen):
+# open or search it once in Suwayomi first. The trailing slash doesn't matter, the provider tries both forms.
+# A hydrated response has title, availableChapters and latestChapterAt filled in; if they are null the
+# provider failed or was rate limited (one request every 2 s per source) and it is retried on read.
+@suwayomiBackedSourceId = REPLACE_ME
+# @name submitHydrated
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminLogin.response.body.$.access_token}}
+
+{
+  "sourceId": {{suwayomiBackedSourceId}},
+  "url": "https://www.leercapitulo.co/manga/0wdem0o1jg/level-up-alone",
+  "locale": "es-ES"
+}
+
+### Submit - same entry again -> 409 (DuplicateComicReadingEntryException)
+# Sent twice at the same instant, the second can also be rejected by the database instead:
+# 409 with the data-integrity-conflict type.
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminLogin.response.body.$.access_token}}
+
+{
+  "sourceId": {{suwayomiBackedSourceId}},
+  "url": "https://www.leercapitulo.co/manga/0wdem0o1jg/level-up-alone",
+  "locale": "es-ES"
+}
+
+### List - entries of the comic; stale or unhydrated ones are refreshed through their provider on read
+GET {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries

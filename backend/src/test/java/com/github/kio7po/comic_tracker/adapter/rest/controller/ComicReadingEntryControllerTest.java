@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -33,6 +34,7 @@ import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntrySortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
@@ -229,6 +231,40 @@ class ComicReadingEntryControllerTest {
                         """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type").value(ProblemType.DUPLICATE_READING_ENTRY));
+    }
+
+    @Test
+    void submitReturnsConflictWhenTheDatabaseRejectsADuplicate() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(comicReadingEntryService.submit(any(), any(), any(), any(), any()))
+                .thenThrow(new DataIntegrityViolationException(
+                        "duplicate key value violates unique constraint \"comic_reading_entry_comic_id_source_id_url_key\""));
+
+        mockMvc.perform(post("/api/comics/{slug}/reading-entries", SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"sourceId":2,"url":"https://mangadex.org/title/123","locale":"es-ES"}
+                        """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value(ProblemType.DATA_INTEGRITY_CONFLICT))
+                .andExpect(jsonPath("$.detail").value("The request conflicts with data that already exists"));
+    }
+
+    @Test
+    void submitReturnsBadRequestWhenTheReadingSourceHasNoComicAtTheUrl() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(comicReadingEntryService.submit(any(), any(), any(), any(), any()))
+                .thenThrow(new ComicNotFoundInReadingSourceException("https://mangadex.org/title/123"));
+
+        mockMvc.perform(post("/api/comics/{slug}/reading-entries", SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"sourceId":2,"url":"https://mangadex.org/title/123","locale":"es-ES"}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(ProblemType.COMIC_NOT_FOUND_IN_READING_SOURCE));
     }
 
     @Test

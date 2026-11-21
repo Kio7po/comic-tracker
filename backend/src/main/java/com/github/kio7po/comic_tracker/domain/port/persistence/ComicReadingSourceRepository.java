@@ -12,6 +12,7 @@ public interface ComicReadingSourceRepository {
     Optional<ComicReadingSource> findById(Long id);
     Optional<ComicReadingSource> findBySlug(String slug);
     Optional<ComicReadingSource> findByUrl(String url);
+    List<ComicReadingSource> findAll();
     List<ComicReadingSource> findByStatusIn(List<ComicReadingSourceStatus> statuses,
             ComicReadingSourceSortField sortBy, SortDirection direction);
     ComicReadingSource save(ComicReadingSource source);

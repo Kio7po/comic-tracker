@@ -5,7 +5,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
-import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDetails;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 
 final class OlympusComicReadingMapper {
 
@@ -13,17 +13,23 @@ final class OlympusComicReadingMapper {
     }
 
     static ComicReadingSearchResult toSearchResult(OlympusMangaDto dto, String baseUrl) {
-        return new ComicReadingSearchResult(dto.name(), mangaUrl(baseUrl, dto.slug()));
+        return new ComicReadingSearchResult(externalId(dto), dto.name(), mangaUrl(baseUrl, dto.slug()));
+    }
+
+    static String externalId(OlympusMangaDto dto) {
+        return dto.id() == null ? null : dto.id().toString();
     }
 
     static String mangaUrl(String baseUrl, String slug) {
         return "%s/series/comic-%s".formatted(baseUrl, slug);
     }
 
-    static ComicReadingSourceDetails toDetails(OlympusMangaDto manga, OlympusChapterListResponseDto chapters) {
+    static ComicReadingEntryDetails toDetails(OlympusMangaDto manga, OlympusChapterListResponseDto chapters,
+            String baseUrl) {
         Integer availableChapters = chapters == null || chapters.meta() == null ? null : chapters.meta().total();
         Instant latestChapterAt = latestChapterAt(chapters == null ? null : chapters.data());
-        return new ComicReadingSourceDetails(manga.name(), availableChapters, latestChapterAt);
+        return new ComicReadingEntryDetails(externalId(manga), mangaUrl(baseUrl, manga.slug()), manga.name(),
+                availableChapters, latestChapterAt);
     }
 
     private static Instant latestChapterAt(List<OlympusChapterDto> chapterList) {

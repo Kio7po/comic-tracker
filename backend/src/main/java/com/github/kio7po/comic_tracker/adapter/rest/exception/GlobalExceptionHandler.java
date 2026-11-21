@@ -2,6 +2,7 @@ package com.github.kio7po.comic_tracker.adapter.rest.exception;
 
 import java.net.URI;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,6 +15,7 @@ import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFou
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.EmailAlreadyExistsException;
@@ -89,6 +91,11 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.DUPLICATE_READING_ENTRY);
     }
 
+    @ExceptionHandler(ComicNotFoundInReadingSourceException.class)
+    public ProblemDetail handleComicNotFoundInReadingSource(ComicNotFoundInReadingSourceException ex) {
+        return problem(HttpStatus.BAD_REQUEST, ex.getMessage(), ProblemType.COMIC_NOT_FOUND_IN_READING_SOURCE);
+    }
+
     @ExceptionHandler(ComicReadingEntryAlreadyReviewedException.class)
     public ProblemDetail handleComicReadingEntryAlreadyReviewed(ComicReadingEntryAlreadyReviewedException ex) {
         return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.READING_ENTRY_ALREADY_REVIEWED);
@@ -117,6 +124,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidPreferredReadingEntryException.class)
     public ProblemDetail handleInvalidPreferredReadingEntry(InvalidPreferredReadingEntryException ex) {
         return problem(HttpStatus.BAD_REQUEST, ex.getMessage(), ProblemType.INVALID_PREFERRED_READING_ENTRY);
+    }
+
+    // Red de seguridad para las carreras entre la comprobación del servicio y el insert: dos peticiones idénticas
+    // pasan a la vez la comprobación y la restricción de la base de datos rechaza la segunda. El detalle es fijo a
+    // propósito: el mensaje de la excepción trae nombres de restricciones y valores de la base de datos.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        return problem(HttpStatus.CONFLICT, "The request conflicts with data that already exists",
+                ProblemType.DATA_INTEGRITY_CONFLICT);
     }
 
     private static ProblemDetail problem(HttpStatus status, String detail, String type) {

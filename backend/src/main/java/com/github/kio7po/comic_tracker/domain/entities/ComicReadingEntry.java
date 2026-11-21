@@ -25,8 +25,8 @@ public class ComicReadingEntry {
     private Long id;
     @Column(nullable = false, length = 255)
     private String url;
-    // title/availableChapters/latestChapterAt/lastFetchedAt: hidratados por el ComicReadingProvider,
-    // null si aún no se ha hidratado o no hay adaptador.
+    // Los campos de aquí hasta lastFetchedAt los hidrata el ComicReadingProvider; son null si aún no se
+    // ha hidratado o no hay adaptador.
     @Column(length = 255)
     private String title;
     private Integer availableChapters;
