@@ -99,11 +99,12 @@ public class ComicReadingProviderRegistry {
     /**
      * @throws ComicReadingSourceNotSupportedException if no provider serves the source.
      */
-    public List<ComicReadingSearchResult> search(ComicReadingSource source, String keywords) {
+    public ComicReadingSearchListing search(ComicReadingSource source, String keywords) {
         ProviderChosenForSource chosen = chooseProviderFor(source, loadSourceExternalIds(source))
                 .orElseThrow(() -> new ComicReadingSourceNotSupportedException(source.getId()));
-        return chosen.provider()
+        List<ComicReadingSearchResult> results = chosen.provider()
                 .search(new ComicReadingSourceTarget(source.getUrl(), chosen.sourceExternalId()), keywords);
+        return new ComicReadingSearchListing(chosen.provider().key(), results);
     }
 
     private DiscoveryOutcome discover(ComicReadingProvider provider) {

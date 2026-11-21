@@ -2,6 +2,9 @@ package com.github.kio7po.comic_tracker.adapter.rest.controller;
 
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSearchListingResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceSyncResponseDto;
@@ -48,6 +52,12 @@ public class ComicReadingSourceController {
             @RequestParam(defaultValue = "ASC") SortDirection direction) {
         return ComicReadingSourceMapper
                 .toModerationResponseDtoList(comicReadingSourceService.findByStatusIn(statuses, sortBy, direction));
+    }
+
+    @GetMapping("/reading-sources/{id}/search")
+    public ComicReadingSearchListingResponseDto search(@PathVariable Long id,
+            @RequestParam @NotBlank @Size(max = 255) String keywords) {
+        return ComicReadingSourceMapper.toSearchListingResponseDto(comicReadingSourceService.search(id, keywords));
     }
 
     @PostMapping("/moderation/reading-sources/sync")

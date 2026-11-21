@@ -13,6 +13,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,9 +26,11 @@ import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntryRepository;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingSourceRepository;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 
 @ExtendWith(MockitoExtension.class)
 class ComicReadingSourceServiceTest {
@@ -40,13 +44,48 @@ class ComicReadingSourceServiceTest {
     private ComicReadingEntryRepository comicReadingEntryRepository;
     @Mock
     private UserService userService;
+    @Mock
+    private ComicReadingProviderRegistry readingProviderRegistry;
 
     private ComicReadingSourceService comicReadingSourceService;
 
     @BeforeEach
     void setUp() {
         comicReadingSourceService = new ComicReadingSourceService(comicReadingSourceRepository,
-                comicReadingEntryRepository, userService);
+                comicReadingEntryRepository, userService, readingProviderRegistry);
+    }
+
+    @Test
+    void searchReturnsTheListingOfTheRegistryForAnApprovedSource() {
+        ComicReadingSource source = new ComicReadingSource();
+        source.setStatus(ComicReadingSourceStatus.APPROVED);
+        ComicReadingSearchListing listing = new ComicReadingSearchListing("suwayomi",
+                List.of(new ComicReadingSearchResult("7", "Berserk", null)));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.search(source, "berserk")).thenReturn(listing);
+
+        assertThat(comicReadingSourceService.search(SOURCE_ID, "berserk")).isSameAs(listing);
+    }
+
+    @Test
+    void searchThrowsWhenTheSourceDoesNotExist() {
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> comicReadingSourceService.search(SOURCE_ID, "berserk"))
+                .isInstanceOf(ComicReadingSourceNotFoundException.class);
+        verify(readingProviderRegistry, never()).search(any(), any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ComicReadingSourceStatus.class, names = "APPROVED", mode = EnumSource.Mode.EXCLUDE)
+    void searchThrowsWhenTheSourceIsNotApproved(ComicReadingSourceStatus status) {
+        ComicReadingSource source = new ComicReadingSource();
+        source.setStatus(status);
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+
+        assertThatThrownBy(() -> comicReadingSourceService.search(SOURCE_ID, "berserk"))
+                .isInstanceOf(ComicReadingSourceNotApprovedException.class);
+        verify(readingProviderRegistry, never()).search(any(), any());
     }
 
     @Test

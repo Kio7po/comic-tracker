@@ -402,14 +402,15 @@ class ComicReadingProviderRegistryTest {
     }
 
     @Test
-    void search_usesTheProviderChosenForTheSource() {
+    void search_usesTheProviderChosenForTheSourceAndReportsItsKey() {
         ComicReadingSource source = source(1L, SOURCE_URL);
         ComicReadingSearchResult result = new ComicReadingSearchResult("7", "Berserk", null);
         when(sourceReferenceRepository.findBySourceIn(List.of(source)))
                 .thenReturn(List.of(sourceReference(source, "second", "s-9")));
         when(second.search(new ComicReadingSourceTarget(SOURCE_URL, "s-9"), "berserk")).thenReturn(List.of(result));
 
-        assertThat(registry.search(source, "berserk")).containsExactly(result);
+        assertThat(registry.search(source, "berserk"))
+                .isEqualTo(new ComicReadingSearchListing("second", List.of(result)));
     }
 
     @Test

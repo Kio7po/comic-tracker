@@ -2,11 +2,15 @@ package com.github.kio7po.comic_tracker.adapter.rest.mapper;
 
 import java.util.List;
 
+import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSearchListingResponseDto;
+import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSearchResultResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceSyncResponseDto;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
+import com.github.kio7po.comic_tracker.domain.service.ComicReadingSearchListing;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceSyncReport;
 import com.github.kio7po.comic_tracker.domain.service.DiscoveryOutcome;
 
@@ -32,6 +36,15 @@ public final class ComicReadingSourceMapper {
     public static ComicReadingSourceModerationResponseDto toModerationResponseDto(ComicReadingSource source) {
         return new ComicReadingSourceModerationResponseDto(toResponseDto(source),
                 UserMapper.toContributorSummaryResponseDto(source.getContributedBy()));
+    }
+
+    public static ComicReadingSearchListingResponseDto toSearchListingResponseDto(ComicReadingSearchListing listing) {
+        return new ComicReadingSearchListingResponseDto(listing.providerKey(),
+                listing.results().stream().map(ComicReadingSourceMapper::toSearchResultResponseDto).toList());
+    }
+
+    private static ComicReadingSearchResultResponseDto toSearchResultResponseDto(ComicReadingSearchResult result) {
+        return new ComicReadingSearchResultResponseDto(result.externalId(), result.title(), result.url());
     }
 
     public static ComicReadingSourceSyncResponseDto toSyncResponseDto(ComicReadingSourceSyncReport report) {

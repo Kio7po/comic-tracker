@@ -1,0 +1,52 @@
+@host = http://localhost:8080
+@contentType = application/json
+
+# Search for works inside one reading source, through whichever provider serves it.
+# The response is { providerKey, results: [{ externalId, title, url }] }: providerKey is the provider that
+# ran the search, and each externalId is only valid for it. externalId and url are null when the site
+# doesn't give them in a search listing (Suwayomi results carry no public url).
+#
+# Needs the backend running, the reading sources already synced (see sync.http) and, for Suwayomi sources,
+# a Suwayomi Server with the site's extension installed.
+
+### Login as the admin seeded by data.sql (any authenticated user can search)
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "usernameOrEmail": "admin",
+  "password": "admin",
+  "rememberMe": false
+}
+
+### List - approved sources, to pick the id to search in
+GET {{host}}/api/reading-sources?statuses=APPROVED&sortBy=NAME&direction=ASC
+
+### Search - in one source -> 200
+# Copy the id of the source to search in from the list above.
+@sourceId = REPLACE_ME
+GET {{host}}/api/reading-sources/{{sourceId}}/search?keywords=pick me up
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Search - no Authorization header -> 401
+GET {{host}}/api/reading-sources/{{sourceId}}/search?keywords=pick me up
+
+### Search - blank keywords -> 400
+GET {{host}}/api/reading-sources/{{sourceId}}/search?keywords=%20
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Search - missing keywords -> 400
+GET {{host}}/api/reading-sources/{{sourceId}}/search
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Search - unknown source -> 404 (ComicReadingSourceNotFoundException)
+GET {{host}}/api/reading-sources/999999/search?keywords=pick me up
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Search - source not approved -> 409 (ComicReadingSourceNotApprovedException)
+# Needs a PENDING source: propose one with a new source from the submit flow (see reading-entries.http),
+# then put its id here.
+@pendingSourceId = REPLACE_ME
+GET {{host}}/api/reading-sources/{{pendingSourceId}}/search?keywords=pick me up
+Authorization: Bearer {{login.response.body.$.access_token}}

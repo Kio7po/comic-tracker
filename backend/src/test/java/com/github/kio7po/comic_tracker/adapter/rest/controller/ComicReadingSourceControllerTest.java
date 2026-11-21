@@ -8,14 +8,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import com.github.kio7po.comic_tracker.adapter.rest.exception.ProblemType;
 import com.github.kio7po.comic_tracker.adapter.rest.security.JwtDecoderConfig;
@@ -26,7 +31,12 @@ import com.github.kio7po.comic_tracker.domain.entities.User;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotSupportedException;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
+import com.github.kio7po.comic_tracker.domain.service.ComicReadingSearchListing;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceService;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceSyncReport;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingSourceSyncReport.SkipReason;
@@ -105,6 +115,87 @@ class ComicReadingSourceControllerTest {
 
         mockMvc.perform(get("/api/reading-sources").param("statuses", "PENDING"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void searchRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/reading-sources/{id}/search", SOURCE_ID).param("keywords", "berserk"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void searchReturnsTheListingMappedToDto() throws Exception {
+        when(comicReadingSourceService.search(SOURCE_ID, "berserk")).thenReturn(new ComicReadingSearchListing(
+                "suwayomi", List.of(new ComicReadingSearchResult("7", "Berserk", null),
+                        new ComicReadingSearchResult(null, "Berserk Deluxe", "https://mangadex.org/title/9"))));
+
+        mockMvc.perform(get("/api/reading-sources/{id}/search", SOURCE_ID)
+                .param("keywords", "berserk")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.providerKey").value("suwayomi"))
+                .andExpect(jsonPath("$.results.length()").value(2))
+                .andExpect(jsonPath("$.results[0].externalId").value("7"))
+                .andExpect(jsonPath("$.results[0].title").value("Berserk"))
+                .andExpect(jsonPath("$.results[0].url").isEmpty())
+                .andExpect(jsonPath("$.results[1].externalId").isEmpty())
+                .andExpect(jsonPath("$.results[1].url").value("https://mangadex.org/title/9"));
+    }
+
+    private static Stream<Arguments> invalidKeywords() {
+        return Stream.of(
+                Arguments.of("missing keywords", null),
+                Arguments.of("empty keywords", ""),
+                Arguments.of("blank keywords", "   "),
+                Arguments.of("keywords over 255 characters", "a".repeat(256)));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidKeywords")
+    void searchReturnsBadRequestForInvalidKeywords(String caseName, String keywords) throws Exception {
+        MockHttpServletRequestBuilder request = get("/api/reading-sources/{id}/search", SOURCE_ID)
+                .with(jwt().jwt(builder -> builder.subject("1")));
+        if (keywords != null) {
+            request = request.param("keywords", keywords);
+        }
+
+        mockMvc.perform(request).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void searchReturnsNotFoundWhenTheSourceDoesNotExist() throws Exception {
+        when(comicReadingSourceService.search(SOURCE_ID, "berserk"))
+                .thenThrow(new ComicReadingSourceNotFoundException(SOURCE_ID));
+
+        mockMvc.perform(get("/api/reading-sources/{id}/search", SOURCE_ID)
+                .param("keywords", "berserk")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_SOURCE_NOT_FOUND));
+    }
+
+    @Test
+    void searchReturnsConflictWhenTheSourceIsNotApproved() throws Exception {
+        when(comicReadingSourceService.search(SOURCE_ID, "berserk"))
+                .thenThrow(new ComicReadingSourceNotApprovedException(SOURCE_ID, ComicReadingSourceStatus.PENDING));
+
+        mockMvc.perform(get("/api/reading-sources/{id}/search", SOURCE_ID)
+                .param("keywords", "berserk")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_SOURCE_NOT_APPROVED));
+    }
+
+    @Test
+    void searchReturnsBadRequestWhenNoProviderSupportsTheSource() throws Exception {
+        when(comicReadingSourceService.search(SOURCE_ID, "berserk"))
+                .thenThrow(new ComicReadingSourceNotSupportedException(SOURCE_ID));
+
+        mockMvc.perform(get("/api/reading-sources/{id}/search", SOURCE_ID)
+                .param("keywords", "berserk")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_SOURCE_NOT_SUPPORTED));
     }
 
     @Test

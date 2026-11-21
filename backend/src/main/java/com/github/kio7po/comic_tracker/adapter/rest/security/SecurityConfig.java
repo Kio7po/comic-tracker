@@ -33,6 +33,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/comics/*/reading-state").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/comics/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/reading-sources").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/reading-sources/*/search").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/moderation/reading-sources",
                             "/api/moderation/reading-entries").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.POST, "/api/moderation/reading-sources/sync").hasRole("ADMIN")

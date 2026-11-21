@@ -15,6 +15,7 @@ import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFou
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotSupportedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingSourceException;
@@ -99,6 +100,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ComicReadingEntryAlreadyReviewedException.class)
     public ProblemDetail handleComicReadingEntryAlreadyReviewed(ComicReadingEntryAlreadyReviewedException ex) {
         return problem(HttpStatus.CONFLICT, ex.getMessage(), ProblemType.READING_ENTRY_ALREADY_REVIEWED);
+    }
+
+    @ExceptionHandler(ComicReadingSourceNotSupportedException.class)
+    public ProblemDetail handleComicReadingSourceNotSupported(ComicReadingSourceNotSupportedException ex) {
+        return problem(HttpStatus.BAD_REQUEST, ex.getMessage(), ProblemType.READING_SOURCE_NOT_SUPPORTED);
     }
 
     @ExceptionHandler(ComicReadingSourceNotApprovedException.class)
