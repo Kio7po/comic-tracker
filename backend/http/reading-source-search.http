@@ -20,12 +20,18 @@ Content-Type: {{contentType}}
   "rememberMe": false
 }
 
+### Sync if needed
+# @name firstSync
+POST {{host}}/api/moderation/reading-sources/sync
+Authorization: Bearer {{login.response.body.$.access_token}}
+
 ### List - approved sources, to pick the id to search in
 GET {{host}}/api/reading-sources?statuses=APPROVED&sortBy=NAME&direction=ASC
 
 ### Search - in one source -> 200
 # Copy the id of the source to search in from the list above.
-@sourceId = REPLACE_ME
+@sourceId = 10
+# @name search
 GET {{host}}/api/reading-sources/{{sourceId}}/search?keywords=pick me up
 Authorization: Bearer {{login.response.body.$.access_token}}
 
@@ -50,3 +56,60 @@ Authorization: Bearer {{login.response.body.$.access_token}}
 @pendingSourceId = REPLACE_ME
 GET {{host}}/api/reading-sources/{{pendingSourceId}}/search?keywords=pick me up
 Authorization: Bearer {{login.response.body.$.access_token}}
+
+
+# ─── Create the entry from a search result: no url needed, the provider that ran the search hydrates it ───
+
+### Import a comic to attach the entry to (Pick Me Up)
+# @name importComic
+POST {{host}}/api/catalog/myanimelist/154587
+Content-Type: {{contentType}}
+
+### Create an entry from the first result of the search above -> 201, hydrated (title, chapters, url)
+# The request carries the providerKey of the search, because the externalId is only valid for that provider.
+# If the provider can't hydrate the work the entry is NOT created (502, or 400 if the work no longer exists).
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries/from-search-result
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceId": {{sourceId}},
+  "providerKey": "{{search.response.body.$.providerKey}}",
+  "externalId": "{{search.response.body.$.results[0].externalId}}",
+  "locale": "en"
+}
+
+### Create an entry from a search result - same work again -> 409 (DuplicateComicReadingEntryException)
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries/from-search-result
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceId": {{sourceId}},
+  "providerKey": "{{search.response.body.$.providerKey}}",
+  "externalId": "{{search.response.body.$.results[0].externalId}}",
+  "locale": "en"
+}
+
+### Create an entry from a search result - a providerKey that serves no such source -> 400 (reading-source-not-supported)
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries/from-search-result
+Content-Type: {{contentType}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+{
+  "sourceId": {{sourceId}},
+  "providerKey": "does-not-exist",
+  "externalId": "1",
+  "locale": "en"
+}
+
+### Create an entry from a search result - no Authorization header -> 401
+POST {{host}}/api/comics/{{importComic.response.body.$.slug}}/reading-entries/from-search-result
+Content-Type: {{contentType}}
+
+{
+  "sourceId": {{sourceId}},
+  "providerKey": "{{search.response.body.$.providerKey}}",
+  "externalId": "{{search.response.body.$.results[0].externalId}}",
+  "locale": "en"
+}

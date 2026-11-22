@@ -10,8 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -36,7 +40,9 @@ import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryAlreadyReviewedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingProviderFailedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotSupportedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingEntryService;
 import com.github.kio7po.comic_tracker.domain.service.ComicService;
@@ -265,6 +271,151 @@ class ComicReadingEntryControllerTest {
                         """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.type").value(ProblemType.COMIC_NOT_FOUND_IN_READING_SOURCE));
+    }
+
+    private static final String FROM_SEARCH_RESULT_PATH = "/api/comics/{slug}/reading-entries/from-search-result";
+    private static final String FROM_SEARCH_RESULT_BODY = """
+            {"sourceId":2,"providerKey":"suwayomi","externalId":"42","locale":"es-ES"}
+            """;
+
+    @Test
+    void submitFromSearchResultRequiresAuthentication() throws Exception {
+        mockMvc.perform(post(FROM_SEARCH_RESULT_PATH, SLUG)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(FROM_SEARCH_RESULT_BODY))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void submitFromSearchResultReturnsCreatedAndPassesTheFieldsThrough() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(comicReadingEntryService.submitFromSearchResult(COMIC_ID, SOURCE_ID, "suwayomi", "42", "es-ES",
+                USER_ID)).thenReturn(entry());
+
+        mockMvc.perform(post(FROM_SEARCH_RESULT_PATH, SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(FROM_SEARCH_RESULT_BODY))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(ENTRY_ID));
+    }
+
+    private static Stream<Arguments> invalidFromSearchResultBodies() {
+        return Stream.of(
+                Arguments.of("missing sourceId", """
+                        {"providerKey":"suwayomi","externalId":"42","locale":"es-ES"}
+                        """),
+                Arguments.of("blank providerKey", """
+                        {"sourceId":2,"providerKey":" ","externalId":"42","locale":"es-ES"}
+                        """),
+                Arguments.of("providerKey over 64 characters", """
+                        {"sourceId":2,"providerKey":"%s","externalId":"42","locale":"es-ES"}
+                        """.formatted("a".repeat(65))),
+                Arguments.of("blank externalId", """
+                        {"sourceId":2,"providerKey":"suwayomi","externalId":"","locale":"es-ES"}
+                        """),
+                Arguments.of("externalId over 255 characters", """
+                        {"sourceId":2,"providerKey":"suwayomi","externalId":"%s","locale":"es-ES"}
+                        """.formatted("a".repeat(256))),
+                Arguments.of("missing locale", """
+                        {"sourceId":2,"providerKey":"suwayomi","externalId":"42"}
+                        """),
+                Arguments.of("locale that isn't a real ISO language", """
+                        {"sourceId":2,"providerKey":"suwayomi","externalId":"42","locale":"xx"}
+                        """));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidFromSearchResultBodies")
+    void submitFromSearchResultReturnsBadRequestForAnInvalidBody(String caseName, String body) throws Exception {
+        mockMvc.perform(post(FROM_SEARCH_RESULT_PATH, SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void submitFromSearchResultReturnsNotFoundWhenComicDoesNotExist() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.empty());
+
+        mockMvc.perform(post(FROM_SEARCH_RESULT_PATH, SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(FROM_SEARCH_RESULT_BODY))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void submitFromSearchResultReturnsBadGatewayWhenTheProviderFails() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(comicReadingEntryService.submitFromSearchResult(any(), any(), any(), any(), any(), any()))
+                .thenThrow(new ComicReadingProviderFailedException(SOURCE_ID, "suwayomi",
+                        new RuntimeException("site is down")));
+
+        mockMvc.perform(post(FROM_SEARCH_RESULT_PATH, SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(FROM_SEARCH_RESULT_BODY))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_PROVIDER_FAILED));
+    }
+
+    @Test
+    void submitFromSearchResultReturnsBadRequestWhenTheProviderSaysTheComicDoesNotExist() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(comicReadingEntryService.submitFromSearchResult(any(), any(), any(), any(), any(), any()))
+                .thenThrow(new ComicNotFoundInReadingSourceException(SOURCE_ID, "42"));
+
+        mockMvc.perform(post(FROM_SEARCH_RESULT_PATH, SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(FROM_SEARCH_RESULT_BODY))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(ProblemType.COMIC_NOT_FOUND_IN_READING_SOURCE));
+    }
+
+    @Test
+    void submitFromSearchResultReturnsBadRequestWhenThatProviderDoesNotServeTheSource() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(comicReadingEntryService.submitFromSearchResult(any(), any(), any(), any(), any(), any()))
+                .thenThrow(new ComicReadingSourceNotSupportedException(SOURCE_ID));
+
+        mockMvc.perform(post(FROM_SEARCH_RESULT_PATH, SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(FROM_SEARCH_RESULT_BODY))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_SOURCE_NOT_SUPPORTED));
+    }
+
+    @Test
+    void submitFromSearchResultReturnsConflictWhenTheEntryAlreadyExists() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(comicReadingEntryService.submitFromSearchResult(any(), any(), any(), any(), any(), any()))
+                .thenThrow(new DuplicateComicReadingEntryException(COMIC_ID, SOURCE_ID,
+                        "https://mangadex.org/title/123"));
+
+        mockMvc.perform(post(FROM_SEARCH_RESULT_PATH, SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(FROM_SEARCH_RESULT_BODY))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value(ProblemType.DUPLICATE_READING_ENTRY));
+    }
+
+    @Test
+    void submitFromSearchResultReturnsConflictWhenTheSourceIsNotApproved() throws Exception {
+        when(comicService.findBySlug(SLUG)).thenReturn(Optional.of(comic()));
+        when(comicReadingEntryService.submitFromSearchResult(any(), any(), any(), any(), any(), any()))
+                .thenThrow(new ComicReadingSourceNotApprovedException(SOURCE_ID, ComicReadingSourceStatus.PENDING));
+
+        mockMvc.perform(post(FROM_SEARCH_RESULT_PATH, SLUG)
+                .with(jwt().jwt(builder -> builder.subject("1")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(FROM_SEARCH_RESULT_BODY))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_SOURCE_NOT_APPROVED));
     }
 
     @Test

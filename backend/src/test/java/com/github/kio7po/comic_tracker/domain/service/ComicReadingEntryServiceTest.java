@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -42,8 +43,10 @@ import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingProviderFailedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotSupportedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntryProviderReferenceRepository;
@@ -310,6 +313,133 @@ class ComicReadingEntryServiceTest {
         assertThat(result.getTitle()).isNull();
         assertThat(result.getLastFetchedAt()).isNull();
         verify(entryProviderReferenceRepository, never()).save(any());
+    }
+
+    private static ComicReadingSource approvedSource() {
+        ComicReadingSource source = new ComicReadingSource();
+        source.setStatus(ComicReadingSourceStatus.APPROVED);
+        return source;
+    }
+
+    @Test
+    void submitFromSearchResultCreatesTheHydratedEntryAndItsReference() {
+        // Propósito: elegir un resultado de búsqueda crea una entry ya hidratada, con la URL que dio el
+        // provider (el resultado no traía ninguna) y con la referencia al identificador que se eligió.
+        //
+        // Flujo: la fuente está aprobada; el registro (simulado) responde, para el provider y el
+        // identificador pedidos, con los datos de la obra y su URL. La entry guardada lleva esa URL, el
+        // título, el idioma elegido y lastFetchedAt, y su referencia lleva la clave del provider y el id "42".
+        String canonicalUrl = "https://example.com/berserk-canonical";
+        ComicReadingSource source = approvedSource();
+        ComicReadingEntryDetails details = details("42", canonicalUrl, "Berserk", Instant.parse("2024-06-01T10:00:00Z"));
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.fetchFromProvider(source, PROVIDER_KEY, new ComicReadingEntryTarget(null, "42")))
+                .thenReturn(found(details));
+        when(comicReadingEntryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ComicReadingEntry result = comicReadingEntryService.submitFromSearchResult(COMIC_ID, SOURCE_ID, PROVIDER_KEY,
+                "42", LOCALE, USER_ID);
+
+        assertThat(result.getUrl()).isEqualTo(canonicalUrl);
+        assertThat(result.getTitle()).isEqualTo("Berserk");
+        assertThat(result.getLocale()).isEqualTo(LOCALE);
+        assertThat(result.getLastFetchedAt()).isNotNull();
+        verify(entryProviderReferenceRepository).save(referenceCaptor.capture());
+        assertThat(referenceCaptor.getValue().getEntry()).isSameAs(result);
+        assertThat(referenceCaptor.getValue().getProviderKey()).isEqualTo(PROVIDER_KEY);
+        assertThat(referenceCaptor.getValue().getExternalId()).isEqualTo("42");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ComicReadingSourceStatus.class, names = "APPROVED", mode = EnumSource.Mode.EXCLUDE)
+    void submitFromSearchResultThrowsWhenTheSourceIsNotApproved(ComicReadingSourceStatus status) {
+        ComicReadingSource source = new ComicReadingSource();
+        source.setStatus(status);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+
+        assertThatThrownBy(() -> comicReadingEntryService.submitFromSearchResult(COMIC_ID, SOURCE_ID, PROVIDER_KEY,
+                "42", LOCALE, USER_ID)).isInstanceOf(ComicReadingSourceNotApprovedException.class);
+
+        verify(readingProviderRegistry, never()).fetchFromProvider(any(), any(), any());
+        verify(comicReadingEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void submitFromSearchResultThrowsWhenTheProviderSaysTheComicDoesNotExist() {
+        ComicReadingSource source = approvedSource();
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.fetchFromProvider(source, PROVIDER_KEY, new ComicReadingEntryTarget(null, "42")))
+                .thenReturn(new FetchOutcome.NotFound());
+
+        assertThatThrownBy(() -> comicReadingEntryService.submitFromSearchResult(COMIC_ID, SOURCE_ID, PROVIDER_KEY,
+                "42", LOCALE, USER_ID))
+                .isInstanceOfSatisfying(ComicNotFoundInReadingSourceException.class, exception -> {
+                    assertThat(exception.getSourceId()).isEqualTo(SOURCE_ID);
+                    assertThat(exception.getExternalId()).isEqualTo("42");
+                });
+
+        verify(comicReadingEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void submitFromSearchResultThrowsAndSavesNothingWhenTheProviderFails() {
+        // Propósito: a diferencia del envío por URL, aquí la hidratación es el propósito: si el provider no
+        // puede responder no se guarda una entry vacía, se devuelve un error que conserva la causa.
+        //
+        // Flujo: el registro responde Failed con una excepción. Se lanza ComicReadingProviderFailedException
+        // con la clave del provider y esa excepción como causa, y no se guarda nada.
+        ComicReadingSource source = approvedSource();
+        RuntimeException cause = new RuntimeException("site is down");
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.fetchFromProvider(source, PROVIDER_KEY, new ComicReadingEntryTarget(null, "42")))
+                .thenReturn(new FetchOutcome.Failed(cause));
+
+        assertThatThrownBy(() -> comicReadingEntryService.submitFromSearchResult(COMIC_ID, SOURCE_ID, PROVIDER_KEY,
+                "42", LOCALE, USER_ID))
+                .isInstanceOfSatisfying(ComicReadingProviderFailedException.class, exception -> {
+                    assertThat(exception.getProviderKey()).isEqualTo(PROVIDER_KEY);
+                    assertThat(exception.getSourceId()).isEqualTo(SOURCE_ID);
+                    assertThat(exception.getCause()).isSameAs(cause);
+                });
+
+        verify(comicReadingEntryRepository, never()).save(any());
+        verify(entryProviderReferenceRepository, never()).save(any());
+    }
+
+    @Test
+    void submitFromSearchResultThrowsWhenThatProviderDoesNotServeTheSource() {
+        ComicReadingSource source = approvedSource();
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(new Comic()));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.fetchFromProvider(source, PROVIDER_KEY, new ComicReadingEntryTarget(null, "42")))
+                .thenReturn(new FetchOutcome.NotSupported());
+
+        assertThatThrownBy(() -> comicReadingEntryService.submitFromSearchResult(COMIC_ID, SOURCE_ID, PROVIDER_KEY,
+                "42", LOCALE, USER_ID)).isInstanceOf(ComicReadingSourceNotSupportedException.class);
+
+        verify(comicReadingEntryRepository, never()).save(any());
+    }
+
+    @Test
+    void submitFromSearchResultThrowsWhenTheComicAlreadyHasAnEntryForThatWork() {
+        Comic comic = new Comic();
+        ComicReadingSource source = approvedSource();
+        ComicReadingEntryDetails details = details("42", URL, "Berserk", null);
+        when(comicRepository.findById(COMIC_ID)).thenReturn(Optional.of(comic));
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.fetchFromProvider(source, PROVIDER_KEY, new ComicReadingEntryTarget(null, "42")))
+                .thenReturn(found(details));
+        when(entryProviderReferenceRepository.existsByEntryComicAndEntrySourceAndProviderKeyAndExternalId(comic,
+                source, PROVIDER_KEY, "42")).thenReturn(true);
+
+        assertThatThrownBy(() -> comicReadingEntryService.submitFromSearchResult(COMIC_ID, SOURCE_ID, PROVIDER_KEY,
+                "42", LOCALE, USER_ID)).isInstanceOf(DuplicateComicReadingEntryException.class);
+
+        verify(comicReadingEntryRepository, never()).save(any());
     }
 
     @Test

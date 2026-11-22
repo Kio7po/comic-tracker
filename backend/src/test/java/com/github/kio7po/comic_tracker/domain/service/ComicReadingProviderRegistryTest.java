@@ -395,6 +395,75 @@ class ComicReadingProviderRegistryTest {
     }
 
     @Test
+    void fetchFromProvider_usesTheRequestedProviderEvenWhenAnotherOneHasPriority() {
+        // Propósito: el identificador de una obra solo vale para el provider que lo emitió, así que se pide
+        // a ese provider aunque otro tenga más prioridad sobre la fuente.
+        //
+        // Flujo: la fuente está vinculada a "first" y a "second" (gana "first" al elegir por prioridad). Se
+        // pide la obra a "second" con su identificador: se llama a "second" con la referencia que la fuente
+        // tiene en él, y a "first" no se le pide nada.
+        ComicReadingSource source = source(1L, SOURCE_URL);
+        ComicReadingEntryTarget target = new ComicReadingEntryTarget(null, "42");
+        when(sourceReferenceRepository.findBySourceAndProviderKey(source, "second"))
+                .thenReturn(Optional.of(sourceReference(source, "second", "s-9")));
+        when(second.fetch(new ComicReadingSourceTarget(SOURCE_URL, "s-9"), target))
+                .thenReturn(Optional.of(details(URL)));
+
+        FetchOutcome outcome = registry.fetchFromProvider(source, "second", target);
+
+        assertThat(outcome).isEqualTo(found("second", details(URL)));
+        verify(first, never()).fetch(any(), any());
+    }
+
+    @Test
+    void fetchFromProvider_fallsBackToTheHostWhenThatProviderHasNoReferenceForTheSource() {
+        ComicReadingSource source = source(1L, SOURCE_URL);
+        ComicReadingEntryTarget target = new ComicReadingEntryTarget(null, "42");
+        when(sourceReferenceRepository.findBySourceAndProviderKey(source, "second")).thenReturn(Optional.empty());
+        when(second.supports(SOURCE_URL)).thenReturn(true);
+        when(second.fetch(new ComicReadingSourceTarget(SOURCE_URL, null), target))
+                .thenReturn(Optional.of(details(URL)));
+
+        assertThat(registry.fetchFromProvider(source, "second", target)).isEqualTo(found("second", details(URL)));
+    }
+
+    @Test
+    void fetchFromProvider_returnsNotSupportedWhenThatProviderDoesNotServeTheSource() {
+        ComicReadingSource source = source(1L, SOURCE_URL);
+        when(sourceReferenceRepository.findBySourceAndProviderKey(source, "second")).thenReturn(Optional.empty());
+        when(second.supports(SOURCE_URL)).thenReturn(false);
+
+        FetchOutcome outcome = registry.fetchFromProvider(source, "second", new ComicReadingEntryTarget(null, "42"));
+
+        assertThat(outcome).isEqualTo(new FetchOutcome.NotSupported());
+        verify(first, never()).fetch(any(), any());
+    }
+
+    @Test
+    void fetchFromProvider_returnsNotSupportedWhenNoProviderHasThatKey() {
+        ComicReadingSource source = source(1L, SOURCE_URL);
+        when(sourceReferenceRepository.findBySourceAndProviderKey(source, "unknown")).thenReturn(Optional.empty());
+
+        FetchOutcome outcome = registry.fetchFromProvider(source, "unknown", new ComicReadingEntryTarget(null, "42"));
+
+        assertThat(outcome).isEqualTo(new FetchOutcome.NotSupported());
+        verify(first, never()).fetch(any(), any());
+        verify(second, never()).fetch(any(), any());
+    }
+
+    @Test
+    void fetchFromProvider_returnsFailedWhenTheProviderThrows() {
+        ComicReadingSource source = source(1L, SOURCE_URL);
+        ComicReadingEntryTarget target = new ComicReadingEntryTarget(null, "42");
+        when(sourceReferenceRepository.findBySourceAndProviderKey(source, "second"))
+                .thenReturn(Optional.of(sourceReference(source, "second", "s-9")));
+        when(second.fetch(new ComicReadingSourceTarget(SOURCE_URL, "s-9"), target))
+                .thenThrow(new IllegalStateException("site is down"));
+
+        assertThat(registry.fetchFromProvider(source, "second", target)).isInstanceOf(FetchOutcome.Failed.class);
+    }
+
+    @Test
     void fetchAll_returnsNothingWithoutQueryingWhenThereAreNoEntries() {
         assertThat(registry.fetchAll(List.of())).isEmpty();
 

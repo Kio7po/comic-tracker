@@ -32,8 +32,10 @@ import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingEntryNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingProviderFailedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotSupportedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingEntryException;
 import com.github.kio7po.comic_tracker.domain.exceptions.DuplicateComicReadingSourceException;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntryProviderReferenceRepository;
@@ -106,6 +108,36 @@ public class ComicReadingEntryService {
         return createEntry(comic, source, UrlNormalizer.normalize(url), locale, contributor);
     }
 
+    /**
+     * Creates the entry for a work picked from the search results of a source. The work is requested by its
+     * external id from the provider that ran the search, since that id is only valid for it, and the entry is
+     * only created if that provider hydrates it.
+     *
+     * @param locale must already be a well-formed BCP 47 tag.
+     * @throws ComicReadingSourceNotApprovedException if the source isn't approved.
+     * @throws ComicReadingSourceNotSupportedException if that provider doesn't serve the source.
+     * @throws ComicNotFoundInReadingSourceException if the provider answered that the work doesn't exist.
+     * @throws ComicReadingProviderFailedException if the provider couldn't answer.
+     * @throws DuplicateComicReadingEntryException if the comic already has an entry for that work in the source.
+     */
+    @Transactional
+    public ComicReadingEntry submitFromSearchResult(Long comicId, Long sourceId, String providerKey,
+            String externalId, String locale, Long contributorId) {
+        Comic comic = comicRepository.findById(comicId).orElseThrow(() -> new ComicNotFoundException(comicId));
+        ComicReadingSource source = comicReadingSourceRepository.findById(sourceId)
+                .orElseThrow(() -> new ComicReadingSourceNotFoundException(sourceId));
+        if (source.getStatus() != ComicReadingSourceStatus.APPROVED) {
+            throw new ComicReadingSourceNotApprovedException(sourceId, source.getStatus());
+        }
+        User contributor = userService.findById(contributorId);
+
+        // Igual que en createEntry, el provider se llama con la transacción abierta (ver el TODO de allí).
+        FetchedEntry fetched = hydratedOrFailed(readingProviderRegistry.fetchFromProvider(source, providerKey,
+                new ComicReadingEntryTarget(null, externalId)), sourceId, providerKey, externalId);
+
+        return saveEntry(comic, source, fetched.details().url(), locale, contributor, Optional.of(fetched));
+    }
+
     private ComicReadingSource createSource(String name, String url, User contributor) {
         comicReadingSourceRepository.findByUrl(url).ifPresent(existing -> {
             throw new DuplicateComicReadingSourceException(url, existing.getId());
@@ -132,6 +164,11 @@ public class ComicReadingEntryService {
         Optional<FetchedEntry> fetched = hydratedOrRejected(
                 readingProviderRegistry.fetch(source, new ComicReadingEntryTarget(url, null)), url);
 
+        return saveEntry(comic, source, url, locale, contributor, fetched);
+    }
+
+    private ComicReadingEntry saveEntry(Comic comic, ComicReadingSource source, String url, String locale,
+            User contributor, Optional<FetchedEntry> fetched) {
         Optional<ComicReadingEntryDetails> details = fetched.map(FetchedEntry::details);
         String canonicalUrl = details.map(ComicReadingEntryDetails::url).orElse(url);
         if (alreadyExists(comic, source, canonicalUrl, fetched)) {
@@ -163,6 +200,20 @@ public class ComicReadingEntryService {
             // TODO: logs
             case FetchOutcome.Failed failed -> Optional.empty();
             case FetchOutcome.NotSupported notSupported -> Optional.empty();
+        };
+    }
+
+    // A diferencia de hydratedOrRejected, aquí la hidratación es el propósito del envío: sin ella no hay entry,
+    // así que cualquier respuesta que no sea Found es un error.
+    private FetchedEntry hydratedOrFailed(FetchOutcome outcome, Long sourceId, String providerKey,
+            String externalId) {
+        return switch (outcome) {
+            case FetchOutcome.Found(FetchedEntry found) -> found;
+            case FetchOutcome.NotFound notFound ->
+                throw new ComicNotFoundInReadingSourceException(sourceId, externalId);
+            case FetchOutcome.Failed(Exception cause) ->
+                throw new ComicReadingProviderFailedException(sourceId, providerKey, cause);
+            case FetchOutcome.NotSupported notSupported -> throw new ComicReadingSourceNotSupportedException(sourceId);
         };
     }
 

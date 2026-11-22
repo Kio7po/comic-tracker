@@ -50,6 +50,23 @@ public class ComicReadingProviderRegistry {
         return prepareFetch(source, loadSourceExternalIds(source), provider -> target).get();
     }
 
+    /**
+     * For a work that has no {@link ComicReadingEntry} yet and whose id belongs to a given provider, because it
+     * came from that provider's own search. That id means nothing to any other provider, so the provider isn't
+     * chosen here: it's the one asked for, as long as it still serves the source.
+     *
+     * @return {@link FetchOutcome.NotSupported} if no provider has that key or it doesn't serve the source.
+     */
+    public FetchOutcome fetchFromProvider(ComicReadingSource source, String providerKey,
+            ComicReadingEntryTarget target) {
+        // Se lee antes de prepareFetch: un fallo de la BD no es un fallo del provider y no debe volverse Failed.
+        Optional<String> sourceExternalId = sourceProviderReferenceRepository
+                .findBySourceAndProviderKey(source, providerKey)
+                .map(ComicReadingSourceProviderReference::getExternalId);
+        return prepareFetch(source, () -> chooseProviderWithKey(source, providerKey, sourceExternalId.orElse(null)),
+                provider -> target).get();
+    }
+
     public FetchOutcome fetch(ComicReadingEntry entry) {
         return fetchAll(List.of(entry)).getFirst();
     }
@@ -120,8 +137,15 @@ public class ComicReadingProviderRegistry {
     private Supplier<FetchOutcome> prepareFetch(ComicReadingSource source,
             Map<String, String> sourceExternalIdByProviderKey,
             Function<ComicReadingProvider, ComicReadingEntryTarget> buildEntryTarget) {
+        return prepareFetch(source, () -> chooseProviderFor(source, sourceExternalIdByProviderKey),
+                buildEntryTarget);
+    }
+
+    private Supplier<FetchOutcome> prepareFetch(ComicReadingSource source,
+            Supplier<Optional<ProviderChosenForSource>> chooseProvider,
+            Function<ComicReadingProvider, ComicReadingEntryTarget> buildEntryTarget) {
         try {
-            Optional<ProviderChosenForSource> chosen = chooseProviderFor(source, sourceExternalIdByProviderKey);
+            Optional<ProviderChosenForSource> chosen = chooseProvider.get();
             if (chosen.isEmpty()) {
                 return FetchOutcome.NotSupported::new;
             }
@@ -149,6 +173,19 @@ public class ComicReadingProviderRegistry {
             if (provider.supports(source.getUrl())) {
                 return Optional.of(new ProviderChosenForSource(provider, null));
             }
+        }
+        return Optional.empty();
+    }
+
+    // Los mismos dos criterios que chooseProviderFor (referencia de la fuente y, si no hay, el host), pero
+    // restringidos al provider pedido. Si no hay ningún provider con esa clave, tampoco hay elección.
+    private Optional<ProviderChosenForSource> chooseProviderWithKey(ComicReadingSource source, String providerKey,
+            @Nullable String sourceExternalId) {
+        Optional<ComicReadingProvider> provider = providers.stream()
+                .filter(candidate -> candidate.key().equals(providerKey))
+                .findFirst();
+        if (provider.isPresent() && (sourceExternalId != null || provider.get().supports(source.getUrl()))) {
+            return Optional.of(new ProviderChosenForSource(provider.get(), sourceExternalId));
         }
         return Optional.empty();
     }

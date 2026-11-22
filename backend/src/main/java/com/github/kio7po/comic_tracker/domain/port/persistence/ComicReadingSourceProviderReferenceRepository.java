@@ -8,6 +8,9 @@ import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSourceProvide
 
 public interface ComicReadingSourceProviderReferenceRepository {
     List<ComicReadingSourceProviderReference> findBySourceIn(List<ComicReadingSource> sources);
+    Optional<ComicReadingSourceProviderReference> findBySourceAndProviderKey(ComicReadingSource source,
+            String providerKey);
+
     List<ComicReadingSourceProviderReference> findByProviderKey(String providerKey);
     Optional<ComicReadingSourceProviderReference> findByProviderKeyAndExternalId(String providerKey,
             String externalId);

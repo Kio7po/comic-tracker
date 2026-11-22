@@ -23,6 +23,7 @@ public final class ProblemType {
     public static final String READING_SOURCE_NOT_APPROVED = "urn:problem-type:reading-source-not-approved";
     public static final String READING_SOURCE_ALREADY_REVIEWED = "urn:problem-type:reading-source-already-reviewed";
     public static final String READING_SOURCE_NOT_SUPPORTED = "urn:problem-type:reading-source-not-supported";
+    public static final String READING_PROVIDER_FAILED = "urn:problem-type:reading-provider-failed";
     public static final String READING_STATE_NOT_FOUND = "urn:problem-type:reading-state-not-found";
     public static final String READING_STATE_ALREADY_EXISTS = "urn:problem-type:reading-state-already-exists";
     public static final String INVALID_PREFERRED_READING_ENTRY = "urn:problem-type:invalid-preferred-reading-entry";

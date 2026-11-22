@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntryFromSearchResultRequestDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntryModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntryRequestDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingEntryResponseDto;
@@ -58,6 +59,17 @@ public class ComicReadingEntryController {
             @Valid @RequestBody ComicReadingEntryRequestDto request, @CurrentUser Long contributorId) {
         return comicService.findBySlug(slug)
                 .map(comic -> submit(comic, request, contributorId))
+                .map(entry -> ResponseEntity.status(HttpStatus.CREATED).body(ComicReadingEntryMapper.toResponseDto(entry)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/comics/{slug}/reading-entries/from-search-result")
+    public ResponseEntity<ComicReadingEntryResponseDto> submitFromSearchResult(@PathVariable String slug,
+            @Valid @RequestBody ComicReadingEntryFromSearchResultRequestDto request,
+            @CurrentUser Long contributorId) {
+        return comicService.findBySlug(slug)
+                .map(comic -> comicReadingEntryService.submitFromSearchResult(comic.getId(), request.sourceId(),
+                        request.providerKey(), request.externalId(), request.locale(), contributorId))
                 .map(entry -> ResponseEntity.status(HttpStatus.CREATED).body(ComicReadingEntryMapper.toResponseDto(entry)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
