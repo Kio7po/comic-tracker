@@ -72,8 +72,9 @@ class SuwayomiGraphQlClientTest {
         SuwayomiSearchPageDto page = client.searchSourceMangas("5621901596522308538", "solo leveling");
 
         assertThat(page.hasNextPage()).isTrue();
-        assertThat(page.mangas()).containsExactly(new SuwayomiMangaDto(1, "Level Up Alone", null),
-                new SuwayomiMangaDto(2, "Solo Leveling", "https://www.leercapitulo.co/manga/x/"));
+        assertThat(page.mangas()).containsExactly(
+                new SuwayomiMangaDto(1, "Level Up Alone", null, null, null, null),
+                new SuwayomiMangaDto(2, "Solo Leveling", "https://www.leercapitulo.co/manga/x/", null, null, null));
         server.verify();
     }
 
@@ -91,7 +92,8 @@ class SuwayomiGraphQlClientTest {
         Optional<SuwayomiMangaDto> manga = client.findStoredManga("5621901596522308538",
                 "https://www.leercapitulo.co/manga/x/");
 
-        assertThat(manga).contains(new SuwayomiMangaDto(2, "Solo Leveling", "https://www.leercapitulo.co/manga/x/"));
+        assertThat(manga).contains(
+                new SuwayomiMangaDto(2, "Solo Leveling", "https://www.leercapitulo.co/manga/x/", null, null, null));
     }
 
     @Test
@@ -109,15 +111,16 @@ class SuwayomiGraphQlClientTest {
                 .andExpect(jsonPath("$.variables.id").value(2))
                 .andRespond(withSuccess("""
                         { "data": { "fetchMangaAndChapters": {
-                          "manga": { "id": 2, "title": "Solo Leveling", "realUrl": "https://www.leercapitulo.co/manga/x/" },
+                          "manga": { "id": 2, "title": "Solo Leveling", "realUrl": "https://www.leercapitulo.co/manga/x/",
+                                     "author": "Chugong", "description": "A hunter story", "status": "ONGOING" },
                           "chapters": [ { "uploadDate": "1700000000000" }, { "uploadDate": "0" } ]
                         } } }
                         """, MediaType.APPLICATION_JSON));
 
         SuwayomiMangaWithChaptersDto result = client.fetchMangaAndChapters(2);
 
-        assertThat(result.manga()).isEqualTo(
-                new SuwayomiMangaDto(2, "Solo Leveling", "https://www.leercapitulo.co/manga/x/"));
+        assertThat(result.manga()).isEqualTo(new SuwayomiMangaDto(2, "Solo Leveling",
+                "https://www.leercapitulo.co/manga/x/", "Chugong", "A hunter story", "ONGOING"));
         assertThat(result.chapters()).containsExactly(new SuwayomiChapterDto("1700000000000"),
                 new SuwayomiChapterDto("0"));
     }

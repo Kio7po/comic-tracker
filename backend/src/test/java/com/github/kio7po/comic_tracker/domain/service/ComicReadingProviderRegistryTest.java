@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingEntry;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingEntryProviderReference;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
+import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSourceProviderReference;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotSupportedException;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntryProviderReferenceRepository;
@@ -92,7 +93,7 @@ class ComicReadingProviderRegistryTest {
     }
 
     private static ComicReadingEntryDetails details(String url) {
-        return new ComicReadingEntryDetails("42", url, "Berserk", 374, null);
+        return new ComicReadingEntryDetails("42", url, "Berserk", 374, null, null, null, null);
     }
 
     private static FetchOutcome found(String providerKey, ComicReadingEntryDetails details) {
@@ -392,6 +393,32 @@ class ComicReadingProviderRegistryTest {
 
         assertThat(outcomes).containsExactly(found("first", details(URL + "/a")),
                 new FetchOutcome.Failed(providerError), new FetchOutcome.Failed(selectionError));
+    }
+
+    @Test
+    void fetch_keepsTheAuthorStatusAndSynopsisWhenItReplacesAUrlTheProviderDoesNotSupport() {
+        // Propósito: cuando el provider devuelve una URL de un host que no sirve, el registro la sustituye por la
+        // pedida; los datos que solo sirven para identificar la obra no se pierden por el camino.
+        //
+        // Flujo: el provider devuelve una URL que no soporta, con autor, estado y sinopsis. El resultado conserva
+        // la URL pedida y esos tres datos.
+        ComicReadingSource source = source(1L, SOURCE_URL);
+        ComicReadingEntryTarget target = new ComicReadingEntryTarget(URL, null);
+        String otherHostUrl = "https://other.example.org/berserk";
+        ComicReadingEntryDetails full = new ComicReadingEntryDetails("42", otherHostUrl, "Berserk", 374, null,
+                "Kentaro Miura", ComicStatus.COMPLETED, "A mercenary and his sword");
+        when(sourceReferenceRepository.findBySourceIn(List.of(source)))
+                .thenReturn(List.of(sourceReference(source, "second", "s-9")));
+        when(second.fetch(new ComicReadingSourceTarget(SOURCE_URL, "s-9"), target)).thenReturn(Optional.of(full));
+        when(second.supports(otherHostUrl)).thenReturn(false);
+
+        FetchOutcome outcome = registry.fetch(source, target);
+
+        ComicReadingEntryDetails details = ((FetchOutcome.Found) outcome).entry().details();
+        assertThat(details.url()).isEqualTo(URL);
+        assertThat(details.author()).isEqualTo("Kentaro Miura");
+        assertThat(details.status()).isEqualTo(ComicStatus.COMPLETED);
+        assertThat(details.synopsis()).isEqualTo("A mercenary and his sword");
     }
 
     @Test

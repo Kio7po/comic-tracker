@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSearchListingResponseDto;
+import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSearchResultDetailsResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceSyncResponseDto;
@@ -58,6 +59,14 @@ public class ComicReadingSourceController {
     public ComicReadingSearchListingResponseDto search(@PathVariable Long id,
             @RequestParam @NotBlank @Size(max = 255) String keywords) {
         return ComicReadingSourceMapper.toSearchListingResponseDto(comicReadingSourceService.search(id, keywords));
+    }
+
+    @GetMapping("/reading-sources/{id}/search-result-details")
+    public ComicReadingSearchResultDetailsResponseDto searchResultDetails(@PathVariable Long id,
+            @RequestParam @NotBlank @Size(max = 64) String providerKey,
+            @RequestParam @NotBlank @Size(max = 255) String externalId) {
+        return ComicReadingSourceMapper.toSearchResultDetailsResponseDto(
+                comicReadingSourceService.fetchSearchResultDetails(id, providerKey, externalId));
     }
 
     @PostMapping("/moderation/reading-sources/sync")

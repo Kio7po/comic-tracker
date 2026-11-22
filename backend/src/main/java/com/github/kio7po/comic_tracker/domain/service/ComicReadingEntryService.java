@@ -132,8 +132,9 @@ public class ComicReadingEntryService {
         User contributor = userService.findById(contributorId);
 
         // Igual que en createEntry, el provider se llama con la transacción abierta (ver el TODO de allí).
-        FetchedEntry fetched = hydratedOrFailed(readingProviderRegistry.fetchFromProvider(source, providerKey,
-                new ComicReadingEntryTarget(null, externalId)), sourceId, providerKey, externalId);
+        FetchedEntry fetched = readingProviderRegistry
+                .fetchFromProvider(source, providerKey, new ComicReadingEntryTarget(null, externalId))
+                .foundOrThrow(sourceId, providerKey, externalId);
 
         return saveEntry(comic, source, fetched.details().url(), locale, contributor, Optional.of(fetched));
     }
@@ -200,20 +201,6 @@ public class ComicReadingEntryService {
             // TODO: logs
             case FetchOutcome.Failed failed -> Optional.empty();
             case FetchOutcome.NotSupported notSupported -> Optional.empty();
-        };
-    }
-
-    // A diferencia de hydratedOrRejected, aquí la hidratación es el propósito del envío: sin ella no hay entry,
-    // así que cualquier respuesta que no sea Found es un error.
-    private FetchedEntry hydratedOrFailed(FetchOutcome outcome, Long sourceId, String providerKey,
-            String externalId) {
-        return switch (outcome) {
-            case FetchOutcome.Found(FetchedEntry found) -> found;
-            case FetchOutcome.NotFound notFound ->
-                throw new ComicNotFoundInReadingSourceException(sourceId, externalId);
-            case FetchOutcome.Failed(Exception cause) ->
-                throw new ComicReadingProviderFailedException(sourceId, providerKey, cause);
-            case FetchOutcome.NotSupported notSupported -> throw new ComicReadingSourceNotSupportedException(sourceId);
         };
     }
 

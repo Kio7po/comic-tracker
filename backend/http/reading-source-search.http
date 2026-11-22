@@ -58,6 +58,21 @@ GET {{host}}/api/reading-sources/{{pendingSourceId}}/search?keywords=pick me up
 Authorization: Bearer {{login.response.body.$.access_token}}
 
 
+# ─── Details of one search result, on demand: what a search listing doesn't carry (chapters, url...) ───
+# Asks the provider that ran the search for that work, without saving anything. Each call reaches the
+# remote site, so it is meant to be made when the user opens a result, not for every result.
+
+### Details of the first result of the search above -> 200 { title, url, availableChapters, latestChapterAt }
+GET {{host}}/api/reading-sources/{{sourceId}}/search-result-details?providerKey={{search.response.body.$.providerKey}}&externalId={{search.response.body.$.results[0].externalId}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Details - no Authorization header -> 401
+GET {{host}}/api/reading-sources/{{sourceId}}/search-result-details?providerKey={{search.response.body.$.providerKey}}&externalId={{search.response.body.$.results[0].externalId}}
+
+### Details - a work that doesn't exist for that provider -> 400 (comic-not-found-in-reading-source) or 502 if it can't tell
+GET {{host}}/api/reading-sources/{{sourceId}}/search-result-details?providerKey={{search.response.body.$.providerKey}}&externalId=999999999
+Authorization: Bearer {{login.response.body.$.access_token}}
+
 # ─── Create the entry from a search result: no url needed, the provider that ran the search hydrates it ───
 
 ### Import a comic to attach the entry to (Pick Me Up)

@@ -26,10 +26,13 @@ import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingProviderFailedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntryRepository;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingSourceRepository;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryTarget;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 
 @ExtendWith(MockitoExtension.class)
@@ -86,6 +89,53 @@ class ComicReadingSourceServiceTest {
         assertThatThrownBy(() -> comicReadingSourceService.search(SOURCE_ID, "berserk"))
                 .isInstanceOf(ComicReadingSourceNotApprovedException.class);
         verify(readingProviderRegistry, never()).search(any(), any());
+    }
+
+    @Test
+    void fetchSearchResultDetailsReturnsTheDetailsTheProviderGives() {
+        ComicReadingSource source = new ComicReadingSource();
+        source.setStatus(ComicReadingSourceStatus.APPROVED);
+        ComicReadingEntryDetails details = new ComicReadingEntryDetails("42", "https://example.com/berserk",
+                "Berserk", 374, null, null, null, null);
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.fetchFromProvider(source, "suwayomi", new ComicReadingEntryTarget(null, "42")))
+                .thenReturn(new FetchOutcome.Found(new FetchedEntry("suwayomi", details)));
+
+        assertThat(comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .isSameAs(details);
+    }
+
+    @Test
+    void fetchSearchResultDetailsThrowsWhenTheSourceDoesNotExist() {
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .isInstanceOf(ComicReadingSourceNotFoundException.class);
+        verify(readingProviderRegistry, never()).fetchFromProvider(any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ComicReadingSourceStatus.class, names = "APPROVED", mode = EnumSource.Mode.EXCLUDE)
+    void fetchSearchResultDetailsThrowsWhenTheSourceIsNotApproved(ComicReadingSourceStatus status) {
+        ComicReadingSource source = new ComicReadingSource();
+        source.setStatus(status);
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+
+        assertThatThrownBy(() -> comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .isInstanceOf(ComicReadingSourceNotApprovedException.class);
+        verify(readingProviderRegistry, never()).fetchFromProvider(any(), any(), any());
+    }
+
+    @Test
+    void fetchSearchResultDetailsThrowsWhenTheProviderFails() {
+        ComicReadingSource source = new ComicReadingSource();
+        source.setStatus(ComicReadingSourceStatus.APPROVED);
+        when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
+        when(readingProviderRegistry.fetchFromProvider(source, "suwayomi", new ComicReadingEntryTarget(null, "42")))
+                .thenReturn(new FetchOutcome.Failed(new RuntimeException("site is down")));
+
+        assertThatThrownBy(() -> comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .isInstanceOf(ComicReadingProviderFailedException.class);
     }
 
     @Test

@@ -3,11 +3,13 @@ package com.github.kio7po.comic_tracker.adapter.rest.mapper;
 import java.util.List;
 
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSearchListingResponseDto;
+import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSearchResultDetailsResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSearchResultResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceSyncResponseDto;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingSearchListing;
@@ -41,6 +43,13 @@ public final class ComicReadingSourceMapper {
     public static ComicReadingSearchListingResponseDto toSearchListingResponseDto(ComicReadingSearchListing listing) {
         return new ComicReadingSearchListingResponseDto(listing.providerKey(),
                 listing.results().stream().map(ComicReadingSourceMapper::toSearchResultResponseDto).toList());
+    }
+
+    public static ComicReadingSearchResultDetailsResponseDto toSearchResultDetailsResponseDto(
+            ComicReadingEntryDetails details) {
+        return new ComicReadingSearchResultDetailsResponseDto(details.title(), details.url(),
+                details.availableChapters(), details.latestChapterAt(), details.author(), details.status(),
+                details.synopsis());
     }
 
     private static ComicReadingSearchResultResponseDto toSearchResultResponseDto(ComicReadingSearchResult result) {

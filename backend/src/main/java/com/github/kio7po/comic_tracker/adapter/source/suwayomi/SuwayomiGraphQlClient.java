@@ -37,7 +37,7 @@ class SuwayomiGraphQlClient {
     private static final String MANGA_AND_CHAPTERS_MUTATION = """
             mutation($id: Int!) {
               fetchMangaAndChapters(input: { id: $id, fetchManga: true, fetchChapters: true }) {
-                manga { id title realUrl }
+                manga { id title realUrl author description status }
                 chapters { uploadDate }
               }
             }""";

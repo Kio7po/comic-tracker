@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.OptionalLong;
 
+import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
@@ -32,7 +33,29 @@ final class SuwayomiComicReadingMapper {
         SuwayomiMangaDto suwayomiManga = suwayomiMangaWithChapters.manga();
         List<SuwayomiChapterDto> chapters = suwayomiMangaWithChapters.chapters();
         return new ComicReadingEntryDetails(toExternalComicId(suwayomiManga), suwayomiManga.realUrl(),
-                suwayomiManga.title(), chapters.size(), latestChapterAt(chapters));
+                suwayomiManga.title(), chapters.size(), latestChapterAt(chapters),
+                nullIfBlank(suwayomiManga.author()), toComicStatus(suwayomiManga.status()),
+                nullIfBlank(suwayomiManga.description()));
+    }
+
+    // "UNKNOWN" y lo que no reconocemos quedan en null: no se sabe. OTHER es solo para un estado que Suwayomi sí
+    // informa y que no tiene equivalente en el nuestro.
+    static ComicStatus toComicStatus(String suwayomiStatus) {
+        if (suwayomiStatus == null) {
+            return null;
+        }
+        return switch (suwayomiStatus) {
+            case "ONGOING" -> ComicStatus.ONGOING;
+            case "COMPLETED" -> ComicStatus.COMPLETED;
+            case "ON_HIATUS" -> ComicStatus.HIATUS;
+            case "CANCELLED" -> ComicStatus.CANCELLED;
+            case "LICENSED", "PUBLISHING_FINISHED" -> ComicStatus.OTHER;
+            default -> null;
+        };
+    }
+
+    private static String nullIfBlank(String text) {
+        return text == null || text.isBlank() ? null : text;
     }
 
     // Suwayomi sends "0" when the site gives no upload date for a chapter.

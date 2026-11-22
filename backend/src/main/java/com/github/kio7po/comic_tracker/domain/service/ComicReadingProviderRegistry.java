@@ -210,7 +210,8 @@ public class ComicReadingProviderRegistry {
             return details;
         }
         return new ComicReadingEntryDetails(details.externalId(), fallbackUrl, details.title(),
-                details.availableChapters(), details.latestChapterAt());
+                details.availableChapters(), details.latestChapterAt(), details.author(), details.status(),
+                details.synopsis());
     }
 
     private static boolean supportsSafely(ComicReadingProvider provider, String url) {

@@ -107,7 +107,7 @@ class ComicReadingEntryServiceTest {
 
     private static ComicReadingEntryDetails details(String externalId, String url, String title,
             Instant latestChapterAt) {
-        return new ComicReadingEntryDetails(externalId, url, title, 374, latestChapterAt);
+        return new ComicReadingEntryDetails(externalId, url, title, 374, latestChapterAt, null, null, null);
     }
 
     private static FetchOutcome found(ComicReadingEntryDetails details) {

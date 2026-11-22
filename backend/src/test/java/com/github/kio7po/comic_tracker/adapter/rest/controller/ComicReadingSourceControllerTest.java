@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -29,11 +30,15 @@ import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
 import com.github.kio7po.comic_tracker.domain.entities.User;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceSortField;
+import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingProviderFailedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotSupportedException;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
 import com.github.kio7po.comic_tracker.domain.service.ComicReadingSearchListing;
@@ -196,6 +201,127 @@ class ComicReadingSourceControllerTest {
                 .with(jwt().jwt(builder -> builder.subject("1"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.type").value(ProblemType.READING_SOURCE_NOT_SUPPORTED));
+    }
+
+    private static final String DETAILS_PATH = "/api/reading-sources/{id}/search-result-details";
+
+    @Test
+    void searchResultDetailsRequiresAuthentication() throws Exception {
+        mockMvc.perform(get(DETAILS_PATH, SOURCE_ID).param("providerKey", "suwayomi").param("externalId", "42"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void searchResultDetailsReturnsTheDetailsMappedToDto() throws Exception {
+        when(comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .thenReturn(new ComicReadingEntryDetails("42", "https://mangadex.org/title/7", "Berserk", 374,
+                        Instant.parse("2026-11-18T00:00:00Z"), "Kentaro Miura", ComicStatus.COMPLETED,
+                        "A mercenary and his sword"));
+
+        mockMvc.perform(get(DETAILS_PATH, SOURCE_ID)
+                .param("providerKey", "suwayomi")
+                .param("externalId", "42")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Berserk"))
+                .andExpect(jsonPath("$.url").value("https://mangadex.org/title/7"))
+                .andExpect(jsonPath("$.availableChapters").value(374))
+                .andExpect(jsonPath("$.latestChapterAt").value("2026-11-18T00:00:00Z"))
+                .andExpect(jsonPath("$.author").value("Kentaro Miura"))
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.synopsis").value("A mercenary and his sword"));
+    }
+
+    private static Stream<Arguments> invalidDetailsParams() {
+        return Stream.of(
+                Arguments.of("missing providerKey", null, "42"),
+                Arguments.of("blank providerKey", "  ", "42"),
+                Arguments.of("providerKey over 64 characters", "a".repeat(65), "42"),
+                Arguments.of("missing externalId", "suwayomi", null),
+                Arguments.of("blank externalId", "suwayomi", ""),
+                Arguments.of("externalId over 255 characters", "suwayomi", "a".repeat(256)));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidDetailsParams")
+    void searchResultDetailsReturnsBadRequestForInvalidParams(String caseName, String providerKey,
+            String externalId) throws Exception {
+        MockHttpServletRequestBuilder request = get(DETAILS_PATH, SOURCE_ID)
+                .with(jwt().jwt(builder -> builder.subject("1")));
+        if (providerKey != null) {
+            request = request.param("providerKey", providerKey);
+        }
+        if (externalId != null) {
+            request = request.param("externalId", externalId);
+        }
+
+        mockMvc.perform(request).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void searchResultDetailsReturnsNotFoundWhenTheSourceDoesNotExist() throws Exception {
+        when(comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .thenThrow(new ComicReadingSourceNotFoundException(SOURCE_ID));
+
+        mockMvc.perform(get(DETAILS_PATH, SOURCE_ID)
+                .param("providerKey", "suwayomi")
+                .param("externalId", "42")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_SOURCE_NOT_FOUND));
+    }
+
+    @Test
+    void searchResultDetailsReturnsConflictWhenTheSourceIsNotApproved() throws Exception {
+        when(comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .thenThrow(new ComicReadingSourceNotApprovedException(SOURCE_ID, ComicReadingSourceStatus.PENDING));
+
+        mockMvc.perform(get(DETAILS_PATH, SOURCE_ID)
+                .param("providerKey", "suwayomi")
+                .param("externalId", "42")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_SOURCE_NOT_APPROVED));
+    }
+
+    @Test
+    void searchResultDetailsReturnsBadRequestWhenTheProviderSaysTheComicDoesNotExist() throws Exception {
+        when(comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .thenThrow(new ComicNotFoundInReadingSourceException(SOURCE_ID, "42"));
+
+        mockMvc.perform(get(DETAILS_PATH, SOURCE_ID)
+                .param("providerKey", "suwayomi")
+                .param("externalId", "42")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(ProblemType.COMIC_NOT_FOUND_IN_READING_SOURCE));
+    }
+
+    @Test
+    void searchResultDetailsReturnsBadRequestWhenThatProviderDoesNotServeTheSource() throws Exception {
+        when(comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .thenThrow(new ComicReadingSourceNotSupportedException(SOURCE_ID));
+
+        mockMvc.perform(get(DETAILS_PATH, SOURCE_ID)
+                .param("providerKey", "suwayomi")
+                .param("externalId", "42")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_SOURCE_NOT_SUPPORTED));
+    }
+
+    @Test
+    void searchResultDetailsReturnsBadGatewayWhenTheProviderFails() throws Exception {
+        when(comicReadingSourceService.fetchSearchResultDetails(SOURCE_ID, "suwayomi", "42"))
+                .thenThrow(new ComicReadingProviderFailedException(SOURCE_ID, "suwayomi",
+                        new RuntimeException("site is down")));
+
+        mockMvc.perform(get(DETAILS_PATH, SOURCE_ID)
+                .param("providerKey", "suwayomi")
+                .param("externalId", "42")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.type").value(ProblemType.READING_PROVIDER_FAILED));
     }
 
     @Test

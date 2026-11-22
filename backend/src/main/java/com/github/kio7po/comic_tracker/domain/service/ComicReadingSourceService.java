@@ -13,12 +13,16 @@ import com.github.kio7po.comic_tracker.domain.entities.User;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingEntryStatus;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceSortField;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceStatus;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicNotFoundInReadingSourceException;
+import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingProviderFailedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceAlreadyReviewedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotSupportedException;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingEntryRepository;
 import com.github.kio7po.comic_tracker.domain.port.persistence.ComicReadingSourceRepository;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryTarget;
 
 @Service
 public class ComicReadingSourceService {
@@ -59,6 +63,30 @@ public class ComicReadingSourceService {
         }
 
         return readingProviderRegistry.search(source, keywords);
+    }
+
+    /**
+     * Asks the provider that ran a search for the data of one of its results, without saving anything.
+     *
+     * @throws ComicReadingSourceNotFoundException if there is no source with that id.
+     * @throws ComicReadingSourceNotApprovedException if the source isn't approved.
+     * @throws ComicReadingSourceNotSupportedException if that provider doesn't serve the source.
+     * @throws ComicNotFoundInReadingSourceException if the provider answered that the work doesn't exist.
+     * @throws ComicReadingProviderFailedException if the provider couldn't answer.
+     */
+    // Sin @Transactional, por lo mismo que search: la llamada al provider no debe retener una conexión de BD.
+    public ComicReadingEntryDetails fetchSearchResultDetails(Long sourceId, String providerKey, String externalId) {
+        ComicReadingSource source = comicReadingSourceRepository.findById(sourceId)
+                .orElseThrow(() -> new ComicReadingSourceNotFoundException(sourceId));
+
+        if (source.getStatus() != ComicReadingSourceStatus.APPROVED) {
+            throw new ComicReadingSourceNotApprovedException(sourceId, source.getStatus());
+        }
+
+        return readingProviderRegistry
+                .fetchFromProvider(source, providerKey, new ComicReadingEntryTarget(null, externalId))
+                .foundOrThrow(sourceId, providerKey, externalId)
+                .details();
     }
 
     @Transactional
