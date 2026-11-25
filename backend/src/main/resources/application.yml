@@ -28,6 +28,13 @@ jwt:
   refresh-token-session-expiration-hours: 24
   refresh-token-secure: true
 
+cover:
+  # Clave (Base64, de 256 bits o más) con la que se firman las direcciones de las portadas que sirve el backend
+  url-sign-key: ${COVER_URL_SIGN_KEY}
+  # Cada dirección firmada vale al menos este tiempo y como mucho el doble. La misma portada produce la misma
+  # dirección dentro de una ventana de esta duración, para que el navegador pueda reutilizar su caché.
+  url-min-validity: 6h # default value, not needed
+
 scalar:
   # default values, not needed, but nice to remember
   enabled: true

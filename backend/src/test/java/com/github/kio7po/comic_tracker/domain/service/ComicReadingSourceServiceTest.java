@@ -63,7 +63,7 @@ class ComicReadingSourceServiceTest {
         ComicReadingSource source = new ComicReadingSource();
         source.setStatus(ComicReadingSourceStatus.APPROVED);
         ComicReadingSearchListing listing = new ComicReadingSearchListing("suwayomi",
-                List.of(new ComicReadingSearchResult("7", "Berserk", null)));
+                List.of(new ComicReadingSearchResult("7", "Berserk", null, null)));
         when(comicReadingSourceRepository.findById(SOURCE_ID)).thenReturn(Optional.of(source));
         when(readingProviderRegistry.search(source, "berserk")).thenReturn(listing);
 

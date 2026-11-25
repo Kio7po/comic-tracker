@@ -24,6 +24,7 @@ import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverImage;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryTarget;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
@@ -88,6 +89,31 @@ class SuwayomiComicReadingProviderTest {
         server.expect(requestTo(GRAPHQL_URL))
                 .andExpect(jsonPath("$.variables.id").value(2))
                 .andRespond(withSuccess(MANGA_AND_CHAPTERS_JSON, MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void fetchCover_asksSuwayomiForTheThumbnailOfThatWork() {
+        server.expect(requestTo("http://localhost:4567/api/v1/manga/2/thumbnail"))
+                .andRespond(withSuccess(new byte[] { 1, 2 }, MediaType.IMAGE_PNG));
+
+        Optional<ComicReadingCoverImage> cover = provider().fetchCover("2");
+
+        assertThat(cover).hasValueSatisfying(image -> assertThat(image.getContentType()).isEqualTo("image/png"));
+        server.verify();
+    }
+
+    @Test
+    void fetchCover_rejectsACoverIdThatIsNotANumberWithoutCallingSuwayomi() {
+        // Propósito: la ruta de la miniatura se construye con el id de la portada, así que un valor que no sea un
+        // número nunca puede llegar a Suwayomi como parte de una ruta.
+        //
+        // Flujo: se pide una portada con un id que intenta salirse de la ruta. Se lanza IllegalArgumentException y
+        // el servidor simulado, que no espera ninguna petición, no recibe ninguna.
+        SuwayomiComicReadingProvider provider = provider();
+
+        assertThatThrownBy(() -> provider.fetchCover("2/../../graphql"))
+                .isInstanceOf(IllegalArgumentException.class);
+        server.verify();
     }
 
     @Test
@@ -297,8 +323,8 @@ class SuwayomiComicReadingProviderTest {
 
         List<ComicReadingSearchResult> results = provider().search(LINKED_SOURCE, "solo");
 
-        assertThat(results).containsExactly(new ComicReadingSearchResult("1", "Level Up Alone", null),
-                new ComicReadingSearchResult("2", "Solo Leveling", COMIC_URL));
+        assertThat(results).containsExactly(new ComicReadingSearchResult("1", "Level Up Alone", null, null),
+                new ComicReadingSearchResult("2", "Solo Leveling", COMIC_URL, null));
         server.verify();
     }
 

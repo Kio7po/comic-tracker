@@ -8,7 +8,9 @@ import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSearchResult
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceModerationResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceSyncResponseDto;
+import com.github.kio7po.comic_tracker.adapter.rest.security.CoverUrlSigner;
 import com.github.kio7po.comic_tracker.domain.entities.ComicReadingSource;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverLocation;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
@@ -40,9 +42,13 @@ public final class ComicReadingSourceMapper {
                 UserMapper.toContributorSummaryResponseDto(source.getContributedBy()));
     }
 
-    public static ComicReadingSearchListingResponseDto toSearchListingResponseDto(ComicReadingSearchListing listing) {
+    public static ComicReadingSearchListingResponseDto toSearchListingResponseDto(ComicReadingSearchListing listing,
+            CoverUrlSigner coverUrlSigner) {
         return new ComicReadingSearchListingResponseDto(listing.providerKey(),
-                listing.results().stream().map(ComicReadingSourceMapper::toSearchResultResponseDto).toList());
+                listing.results()
+                        .stream()
+                        .map(result -> toSearchResultResponseDto(result, listing.providerKey(), coverUrlSigner))
+                        .toList());
     }
 
     public static ComicReadingSearchResultDetailsResponseDto toSearchResultDetailsResponseDto(
@@ -52,8 +58,22 @@ public final class ComicReadingSourceMapper {
                 details.synopsis());
     }
 
-    private static ComicReadingSearchResultResponseDto toSearchResultResponseDto(ComicReadingSearchResult result) {
-        return new ComicReadingSearchResultResponseDto(result.externalId(), result.title(), result.url());
+    private static ComicReadingSearchResultResponseDto toSearchResultResponseDto(ComicReadingSearchResult result,
+            String providerKey, CoverUrlSigner coverUrlSigner) {
+        return new ComicReadingSearchResultResponseDto(result.externalId(), result.title(), result.url(),
+                toCoverUrl(result.cover(), providerKey, coverUrlSigner));
+    }
+
+    // Una portada pública se entrega tal cual; una que solo sirve el provider, con la dirección firmada del
+    // backend. Saber cómo se firma y qué ruta se usa es cosa de esta capa, no del dominio.
+    private static String toCoverUrl(ComicReadingCoverLocation cover, String providerKey,
+            CoverUrlSigner coverUrlSigner) {
+        return switch (cover) {
+            case null -> null;
+            case ComicReadingCoverLocation.PublicUrl publicUrl -> publicUrl.url();
+            case ComicReadingCoverLocation.ServedByProvider servedByProvider ->
+                coverUrlSigner.signedCoverUrl(providerKey, servedByProvider.externalCoverId());
+        };
     }
 
     public static ComicReadingSourceSyncResponseDto toSyncResponseDto(ComicReadingSourceSyncReport report) {

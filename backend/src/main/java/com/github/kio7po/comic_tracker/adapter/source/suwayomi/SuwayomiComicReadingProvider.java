@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 
 import com.github.kio7po.comic_tracker.adapter.common.RateLimiterExecutor;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverImage;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverProvider;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryTarget;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingProvider;
@@ -30,7 +32,7 @@ import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceTarg
  */
 @Component
 @Order(Ordered.LOWEST_PRECEDENCE)
-public class SuwayomiComicReadingProvider implements ComicReadingProvider {
+public class SuwayomiComicReadingProvider implements ComicReadingProvider, ComicReadingCoverProvider {
 
     static final String KEY = "suwayomi";
     static final String RATE_LIMITER_CONFIG_NAME = "suwayomi";
@@ -91,13 +93,27 @@ public class SuwayomiComicReadingProvider implements ComicReadingProvider {
         return firstPage.mangas().stream().map(SuwayomiComicReadingMapper::toReadingSearchResult).toList();
     }
 
+    /**
+     * Suwayomi doesn't give the site's address of the image, only a path of its own, so the cover is served through
+     * it. Its thumbnails are per work, so the cover id is the work's id, and since the path is built from it, it has
+     * to be a number and nothing else.
+     */
+    @Override
+    public Optional<ComicReadingCoverImage> fetchCover(String externalCoverId) {
+        return client.fetchThumbnail(parseSuwayomiMangaId(externalCoverId));
+    }
+
+    private static int parseSuwayomiMangaId(String externalId) {
+        try {
+            return Integer.parseInt(externalId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Not a Suwayomi work id: " + externalId, e);
+        }
+    }
+
     private int resolveSuwayomiMangaId(String suwayomiSourceId, ComicReadingEntryTarget entry) {
         if (entry.externalId() != null) {
-            try {
-                return Integer.parseInt(entry.externalId());
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Not a Suwayomi work id: " + entry.externalId(), e);
-            }
+            return parseSuwayomiMangaId(entry.externalId());
         }
         return findStoredMangaInBothTrailingSlashForms(suwayomiSourceId, entry.url())
                 .map(SuwayomiMangaDto::id)

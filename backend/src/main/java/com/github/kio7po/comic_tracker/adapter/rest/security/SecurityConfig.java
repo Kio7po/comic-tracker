@@ -32,6 +32,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/catalog/**").permitAll()
                     .requestMatchers("/api/comics/*/reading-state").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/comics/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/covers/*").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/reading-sources").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/reading-sources/*/search",
                             "/api/reading-sources/*/search-result-details").authenticated()

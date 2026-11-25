@@ -50,6 +50,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           JWT_SIGN_KEY: ${{ secrets.JWT_SIGN_KEY }}
+          COVER_URL_SIGN_KEY: ${{ secrets.COVER_URL_SIGN_KEY }}
         run: >
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
   frontend:

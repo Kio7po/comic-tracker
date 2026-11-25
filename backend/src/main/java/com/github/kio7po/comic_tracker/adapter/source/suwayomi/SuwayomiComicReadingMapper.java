@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.OptionalLong;
 
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverLocation;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
@@ -22,7 +23,15 @@ final class SuwayomiComicReadingMapper {
 
     static ComicReadingSearchResult toReadingSearchResult(SuwayomiMangaDto suwayomiManga) {
         return new ComicReadingSearchResult(toExternalComicId(suwayomiManga), suwayomiManga.title(),
-                suwayomiManga.realUrl());
+                suwayomiManga.realUrl(), toCoverLocation(suwayomiManga));
+    }
+
+    // Suwayomi no da la dirección original de la imagen, solo una ruta propia: la portada solo se puede servir a
+    // través de él. Sus portadas son por obra, así que el id de la portada es el id de la obra.
+    private static ComicReadingCoverLocation toCoverLocation(SuwayomiMangaDto suwayomiManga) {
+        String thumbnailUrl = suwayomiManga.thumbnailUrl();
+        return thumbnailUrl == null || thumbnailUrl.isBlank() ? null
+                : new ComicReadingCoverLocation.ServedByProvider(toExternalComicId(suwayomiManga));
     }
 
     static String toExternalComicId(SuwayomiMangaDto suwayomiManga) {

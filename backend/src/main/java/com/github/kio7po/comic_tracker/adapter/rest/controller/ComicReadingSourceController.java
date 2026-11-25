@@ -18,6 +18,7 @@ import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceModera
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.dto.ComicReadingSourceSyncResponseDto;
 import com.github.kio7po.comic_tracker.adapter.rest.mapper.ComicReadingSourceMapper;
+import com.github.kio7po.comic_tracker.adapter.rest.security.CoverUrlSigner;
 import com.github.kio7po.comic_tracker.adapter.rest.security.CurrentUser;
 import com.github.kio7po.comic_tracker.domain.common.SortDirection;
 import com.github.kio7po.comic_tracker.domain.enums.ComicReadingSourceSortField;
@@ -31,11 +32,13 @@ public class ComicReadingSourceController {
 
     private final ComicReadingSourceService comicReadingSourceService;
     private final ComicReadingSourceSyncService comicReadingSourceSyncService;
+    private final CoverUrlSigner coverUrlSigner;
 
     public ComicReadingSourceController(ComicReadingSourceService comicReadingSourceService,
-            ComicReadingSourceSyncService comicReadingSourceSyncService) {
+            ComicReadingSourceSyncService comicReadingSourceSyncService, CoverUrlSigner coverUrlSigner) {
         this.comicReadingSourceService = comicReadingSourceService;
         this.comicReadingSourceSyncService = comicReadingSourceSyncService;
+        this.coverUrlSigner = coverUrlSigner;
     }
 
     @GetMapping("/reading-sources")
@@ -58,7 +61,8 @@ public class ComicReadingSourceController {
     @GetMapping("/reading-sources/{id}/search")
     public ComicReadingSearchListingResponseDto search(@PathVariable Long id,
             @RequestParam @NotBlank @Size(max = 255) String keywords) {
-        return ComicReadingSourceMapper.toSearchListingResponseDto(comicReadingSourceService.search(id, keywords));
+        return ComicReadingSourceMapper.toSearchListingResponseDto(comicReadingSourceService.search(id, keywords),
+                coverUrlSigner);
     }
 
     @GetMapping("/reading-sources/{id}/search-result-details")

@@ -5,6 +5,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverLocation;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 
@@ -14,7 +15,13 @@ final class OlympusComicReadingMapper {
     }
 
     static ComicReadingSearchResult toSearchResult(OlympusMangaDto dto, String baseUrl) {
-        return new ComicReadingSearchResult(externalId(dto), dto.name(), mangaUrl(baseUrl, dto.slug()));
+        return new ComicReadingSearchResult(externalId(dto), dto.name(), mangaUrl(baseUrl, dto.slug()),
+                toCoverLocation(dto.cover()));
+    }
+
+    // La portada de Olympus es una URL pública de su CDN, así que se entrega tal cual.
+    private static ComicReadingCoverLocation toCoverLocation(String cover) {
+        return cover == null || cover.isBlank() ? null : new ComicReadingCoverLocation.PublicUrl(cover);
     }
 
     static String externalId(OlympusMangaDto dto) {

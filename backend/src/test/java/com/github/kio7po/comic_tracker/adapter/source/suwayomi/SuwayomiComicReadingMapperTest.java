@@ -8,8 +8,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverLocation;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
@@ -17,7 +20,7 @@ import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDesc
 class SuwayomiComicReadingMapperTest {
 
     private static final SuwayomiMangaDto MANGA = new SuwayomiMangaDto(7, "Solo Leveling",
-            "https://www.leercapitulo.co/manga/wj10bv5s3y/solo-leveling/", null, null, null);
+            "https://www.leercapitulo.co/manga/wj10bv5s3y/solo-leveling/", null, null, null, null);
 
     @Test
     void toReadingSourceDescriptor_usesTheSourceIdNameAndHomeUrl() {
@@ -43,9 +46,29 @@ class SuwayomiComicReadingMapperTest {
     @Test
     void toReadingSearchResult_leavesTheUrlNullWhenSuwayomiHasNotFetchedTheWorkPage() {
         ComicReadingSearchResult result = SuwayomiComicReadingMapper
-                .toReadingSearchResult(new SuwayomiMangaDto(7, "Solo Leveling", null, null, null, null));
+                .toReadingSearchResult(new SuwayomiMangaDto(7, "Solo Leveling", null, null, null, null, null));
 
         assertThat(result.url()).isNull();
+    }
+
+    @Test
+    void toReadingSearchResult_marksTheCoverAsServedByTheProviderUsingTheWorkId() {
+        SuwayomiMangaDto manga = new SuwayomiMangaDto(7, "Solo Leveling", MANGA.realUrl(),
+                "/api/v1/manga/7/thumbnail", null, null, null);
+
+        ComicReadingSearchResult result = SuwayomiComicReadingMapper.toReadingSearchResult(manga);
+
+        assertThat(result.cover()).isEqualTo(new ComicReadingCoverLocation.ServedByProvider("7"));
+    }
+
+    @ParameterizedTest(name = "thumbnailUrl: [{0}]")
+    @NullAndEmptySource
+    @ValueSource(strings = "   ")
+    void toReadingSearchResult_leavesTheCoverNullWhenSuwayomiGivesNoThumbnail(String thumbnailUrl) {
+        SuwayomiMangaDto manga = new SuwayomiMangaDto(7, "Solo Leveling", MANGA.realUrl(), thumbnailUrl, null,
+                null, null);
+
+        assertThat(SuwayomiComicReadingMapper.toReadingSearchResult(manga).cover()).isNull();
     }
 
     @Test
@@ -84,7 +107,7 @@ class SuwayomiComicReadingMapperTest {
 
     @Test
     void toReadingEntryDetails_mapsAuthorSynopsisAndStatus() {
-        SuwayomiMangaDto manga = new SuwayomiMangaDto(7, "Solo Leveling", MANGA.realUrl(), "Chugong",
+        SuwayomiMangaDto manga = new SuwayomiMangaDto(7, "Solo Leveling", MANGA.realUrl(), null, "Chugong",
                 "A hunter story", "ONGOING");
 
         ComicReadingEntryDetails details = SuwayomiComicReadingMapper
@@ -97,7 +120,7 @@ class SuwayomiComicReadingMapperTest {
 
     @Test
     void toReadingEntryDetails_leavesAuthorAndSynopsisNullWhenTheyAreBlank() {
-        SuwayomiMangaDto manga = new SuwayomiMangaDto(7, "Solo Leveling", MANGA.realUrl(), "  ", "", "UNKNOWN");
+        SuwayomiMangaDto manga = new SuwayomiMangaDto(7, "Solo Leveling", MANGA.realUrl(), null, "  ", "", "UNKNOWN");
 
         ComicReadingEntryDetails details = SuwayomiComicReadingMapper
                 .toReadingEntryDetails(new SuwayomiMangaWithChaptersDto(manga, List.of()));

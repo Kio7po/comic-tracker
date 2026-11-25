@@ -8,8 +8,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.github.kio7po.comic_tracker.domain.enums.ComicStatus;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverLocation;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 
@@ -19,7 +22,7 @@ class OlympusComicReadingMapperTest {
 
     @Test
     void toSearchResult_buildsTheComicPageUrlFromTheSlugAndUsesTheIdAsExternalId() {
-        OlympusMangaDto dto = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null);
+        OlympusMangaDto dto = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null, null);
 
         ComicReadingSearchResult result = OlympusComicReadingMapper.toSearchResult(dto, BASE_URL);
 
@@ -29,8 +32,28 @@ class OlympusComicReadingMapperTest {
     }
 
     @Test
+    void toSearchResult_givesTheCoverAsAPublicUrl() {
+        OlympusMangaDto dto = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null,
+                "https://media.imagesolymp.xyz/comics/covers/42/berserk.webp");
+
+        ComicReadingSearchResult result = OlympusComicReadingMapper.toSearchResult(dto, BASE_URL);
+
+        assertThat(result.cover()).isEqualTo(
+                new ComicReadingCoverLocation.PublicUrl("https://media.imagesolymp.xyz/comics/covers/42/berserk.webp"));
+    }
+
+    @ParameterizedTest(name = "cover: [{0}]")
+    @NullAndEmptySource
+    @ValueSource(strings = "   ")
+    void toSearchResult_leavesTheCoverNullWhenOlympusGivesNone(String cover) {
+        OlympusMangaDto dto = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null, cover);
+
+        assertThat(OlympusComicReadingMapper.toSearchResult(dto, BASE_URL).cover()).isNull();
+    }
+
+    @Test
     void toSearchResult_leavesTheExternalIdNullWhenTheSeriesHasNoId() {
-        OlympusMangaDto dto = new OlympusMangaDto(null, "Berserk", "berserk", "comic", null, null);
+        OlympusMangaDto dto = new OlympusMangaDto(null, "Berserk", "berserk", "comic", null, null, null);
 
         ComicReadingSearchResult result = OlympusComicReadingMapper.toSearchResult(dto, BASE_URL);
 
@@ -39,7 +62,7 @@ class OlympusComicReadingMapperTest {
 
     @Test
     void toDetails_mapsIdUrlTitleTotalChaptersAndLatestChapterAtFromTheNewestChapter() {
-        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null);
+        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null, null);
         OlympusChapterListResponseDto chapters = new OlympusChapterListResponseDto(
                 List.of(new OlympusChapterDto("2024-06-01T10:00:00.000000Z"),
                         new OlympusChapterDto("2024-05-01T10:00:00.000000Z")),
@@ -56,7 +79,7 @@ class OlympusComicReadingMapperTest {
 
     @Test
     void toDetails_buildsTheUrlFromTheCurrentSlug() {
-        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk-renamed", "comic", null, null);
+        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk-renamed", "comic", null, null, null);
 
         ComicReadingEntryDetails details = OlympusComicReadingMapper.toDetails(manga, null, BASE_URL);
 
@@ -65,7 +88,7 @@ class OlympusComicReadingMapperTest {
 
     @Test
     void toDetails_leavesLatestChapterAtNullWhenTheChapterListIsEmpty() {
-        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null);
+        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null, null);
         OlympusChapterListResponseDto chapters = new OlympusChapterListResponseDto(List.of(), new OlympusChapterMetaDto(0));
 
         ComicReadingEntryDetails details = OlympusComicReadingMapper.toDetails(manga, chapters, BASE_URL);
@@ -76,7 +99,7 @@ class OlympusComicReadingMapperTest {
 
     @Test
     void toDetails_leavesLatestChapterAtNullWhenThePublishedDateIsUnparseable() {
-        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null);
+        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null, null);
         OlympusChapterListResponseDto chapters = new OlympusChapterListResponseDto(
                 List.of(new OlympusChapterDto("not a date")), new OlympusChapterMetaDto(1));
 
@@ -88,7 +111,7 @@ class OlympusComicReadingMapperTest {
     @Test
     void toDetails_mapsTheSynopsisAndTheStatusAndLeavesTheAuthorNull() {
         OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", "A mercenary and his sword",
-                new OlympusMangaStatusDto(4, "Finalizado"));
+                new OlympusMangaStatusDto(4, "Finalizado"), null);
 
         ComicReadingEntryDetails details = OlympusComicReadingMapper.toDetails(manga, null, BASE_URL);
 
@@ -99,7 +122,7 @@ class OlympusComicReadingMapperTest {
 
     @Test
     void toDetails_leavesTheSynopsisNullWhenItIsBlank() {
-        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", "   ", null);
+        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", "   ", null, null);
 
         assertThat(OlympusComicReadingMapper.toDetails(manga, null, BASE_URL).synopsis()).isNull();
     }
@@ -127,7 +150,7 @@ class OlympusComicReadingMapperTest {
 
     @Test
     void toDetails_handlesANullChaptersResponseByLeavingChapterFieldsNull() {
-        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null);
+        OlympusMangaDto manga = new OlympusMangaDto(42L, "Berserk", "berserk", "comic", null, null, null);
 
         ComicReadingEntryDetails details = OlympusComicReadingMapper.toDetails(manga, null, BASE_URL);
 

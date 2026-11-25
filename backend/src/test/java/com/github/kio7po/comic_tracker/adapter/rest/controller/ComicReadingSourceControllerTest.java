@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import com.github.kio7po.comic_tracker.adapter.rest.exception.ProblemType;
+import com.github.kio7po.comic_tracker.adapter.rest.security.CoverUrlSigner;
 import com.github.kio7po.comic_tracker.adapter.rest.security.JwtDecoderConfig;
 import com.github.kio7po.comic_tracker.adapter.rest.security.SecurityConfig;
 import com.github.kio7po.comic_tracker.domain.common.SortDirection;
@@ -38,6 +39,7 @@ import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingProviderFai
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotApprovedException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotFoundException;
 import com.github.kio7po.comic_tracker.domain.exceptions.ComicReadingSourceNotSupportedException;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverLocation;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingEntryDetails;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSearchResult;
 import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingSourceDescriptor;
@@ -67,6 +69,8 @@ class ComicReadingSourceControllerTest {
     private ComicReadingSourceService comicReadingSourceService;
     @MockitoBean
     private ComicReadingSourceSyncService comicReadingSourceSyncService;
+    @MockitoBean
+    private CoverUrlSigner coverUrlSigner;
 
     private static ComicReadingSource source(Long id, String name, ComicReadingSourceStatus status) {
         ComicReadingSource source = new ComicReadingSource();
@@ -131,8 +135,8 @@ class ComicReadingSourceControllerTest {
     @Test
     void searchReturnsTheListingMappedToDto() throws Exception {
         when(comicReadingSourceService.search(SOURCE_ID, "berserk")).thenReturn(new ComicReadingSearchListing(
-                "suwayomi", List.of(new ComicReadingSearchResult("7", "Berserk", null),
-                        new ComicReadingSearchResult(null, "Berserk Deluxe", "https://mangadex.org/title/9"))));
+                "suwayomi", List.of(new ComicReadingSearchResult("7", "Berserk", null, null),
+                        new ComicReadingSearchResult(null, "Berserk Deluxe", "https://mangadex.org/title/9", null))));
 
         mockMvc.perform(get("/api/reading-sources/{id}/search", SOURCE_ID)
                 .param("keywords", "berserk")
@@ -145,6 +149,33 @@ class ComicReadingSourceControllerTest {
                 .andExpect(jsonPath("$.results[0].url").isEmpty())
                 .andExpect(jsonPath("$.results[1].externalId").isEmpty())
                 .andExpect(jsonPath("$.results[1].url").value("https://mangadex.org/title/9"));
+    }
+
+    @Test
+    void searchReturnsTheListingMappedToDtoWithEachKindOfCover() throws Exception {
+        // Propósito: una portada pública llega tal cual al frontend, una que solo sirve el provider llega como la
+        // dirección firmada del backend, y sin portada el campo queda vacío.
+        //
+        // Flujo: la búsqueda devuelve tres resultados del provider "suwayomi": uno con portada servida por el
+        // provider (id 7), uno con una URL pública y uno sin portada. El firmador (simulado) devuelve una
+        // dirección para ("suwayomi", "7"). Cada coverUrl de la respuesta corresponde a su caso.
+        when(coverUrlSigner.signedCoverUrl("suwayomi", "7")).thenReturn("/api/covers/signed-token");
+        when(comicReadingSourceService.search(SOURCE_ID, "berserk")).thenReturn(new ComicReadingSearchListing(
+                "suwayomi", List.of(
+                        new ComicReadingSearchResult("7", "Berserk", null,
+                                new ComicReadingCoverLocation.ServedByProvider("7")),
+                        new ComicReadingSearchResult("9", "Berserk Deluxe", null,
+                                new ComicReadingCoverLocation.PublicUrl("https://cdn.example.org/9.webp")),
+                        new ComicReadingSearchResult("8", "Berserk Gaiden", null, null))));
+
+        mockMvc.perform(get("/api/reading-sources/{id}/search", SOURCE_ID)
+                .param("keywords", "berserk")
+                .with(jwt().jwt(builder -> builder.subject("1"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.results.length()").value(3))
+                .andExpect(jsonPath("$.results[0].coverUrl").value("/api/covers/signed-token"))
+                .andExpect(jsonPath("$.results[1].coverUrl").value("https://cdn.example.org/9.webp"))
+                .andExpect(jsonPath("$.results[2].coverUrl").isEmpty());
     }
 
     private static Stream<Arguments> invalidKeywords() {

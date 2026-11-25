@@ -6,7 +6,9 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withResourceNotFound;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.util.List;
@@ -15,10 +17,13 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
+
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverImage;
 
 class SuwayomiGraphQlClientTest {
 
@@ -64,7 +69,7 @@ class SuwayomiGraphQlClientTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("page: 1")))
                 .andRespond(withSuccess("""
                         { "data": { "fetchSourceManga": { "hasNextPage": true, "mangas": [
-                          { "id": 1, "title": "Level Up Alone", "realUrl": null },
+                          { "id": 1, "title": "Level Up Alone", "realUrl": null, "thumbnailUrl": "/api/v1/manga/1/thumbnail" },
                           { "id": 2, "title": "Solo Leveling", "realUrl": "https://www.leercapitulo.co/manga/x/" }
                         ] } } }
                         """, MediaType.APPLICATION_JSON));
@@ -73,9 +78,57 @@ class SuwayomiGraphQlClientTest {
 
         assertThat(page.hasNextPage()).isTrue();
         assertThat(page.mangas()).containsExactly(
-                new SuwayomiMangaDto(1, "Level Up Alone", null, null, null, null),
-                new SuwayomiMangaDto(2, "Solo Leveling", "https://www.leercapitulo.co/manga/x/", null, null, null));
+                new SuwayomiMangaDto(1, "Level Up Alone", null, "/api/v1/manga/1/thumbnail", null, null, null),
+                new SuwayomiMangaDto(2, "Solo Leveling", "https://www.leercapitulo.co/manga/x/", null, null, null,
+                        null));
         server.verify();
+    }
+
+    @Test
+    void fetchThumbnail_returnsTheImageWithItsContentType() {
+        server.expect(requestTo(BASE_URL + "/api/v1/manga/2/thumbnail"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(new byte[] { 1, 2, 3 }, MediaType.parseMediaType("image/webp")));
+
+        Optional<ComicReadingCoverImage> cover = client.fetchThumbnail(2);
+
+        assertThat(cover).hasValueSatisfying(image -> {
+            assertThat(image.getContent()).containsExactly(1, 2, 3);
+            assertThat(image.getContentType()).isEqualTo("image/webp");
+        });
+        server.verify();
+    }
+
+    @Test
+    void fetchThumbnail_returnsEmptyWhenSuwayomiHasNoThumbnailForTheWork() {
+        server.expect(requestTo(BASE_URL + "/api/v1/manga/2/thumbnail")).andRespond(withResourceNotFound());
+
+        assertThat(client.fetchThumbnail(2)).isEmpty();
+    }
+
+    @Test
+    void fetchThumbnail_returnsEmptyWhenTheResponseHasNoBody() {
+        server.expect(requestTo(BASE_URL + "/api/v1/manga/2/thumbnail"))
+                .andRespond(withSuccess(new byte[0], MediaType.parseMediaType("image/webp")));
+
+        assertThat(client.fetchThumbnail(2)).isEmpty();
+    }
+
+    @Test
+    void fetchThumbnail_usesAGenericContentTypeWhenSuwayomiGivesNone() {
+        server.expect(requestTo(BASE_URL + "/api/v1/manga/2/thumbnail"))
+                .andRespond(withStatus(HttpStatus.OK).body(new byte[] { 1 }));
+
+        assertThat(client.fetchThumbnail(2))
+                .hasValueSatisfying(image -> assertThat(image.getContentType())
+                        .isEqualTo(MediaType.APPLICATION_OCTET_STREAM_VALUE));
+    }
+
+    @Test
+    void fetchThumbnail_failsWhenSuwayomiFails() {
+        server.expect(requestTo(BASE_URL + "/api/v1/manga/2/thumbnail")).andRespond(withServerError());
+
+        assertThatThrownBy(() -> client.fetchThumbnail(2)).isInstanceOf(HttpServerErrorException.class);
     }
 
     @Test
@@ -93,7 +146,8 @@ class SuwayomiGraphQlClientTest {
                 "https://www.leercapitulo.co/manga/x/");
 
         assertThat(manga).contains(
-                new SuwayomiMangaDto(2, "Solo Leveling", "https://www.leercapitulo.co/manga/x/", null, null, null));
+                new SuwayomiMangaDto(2, "Solo Leveling", "https://www.leercapitulo.co/manga/x/", null, null, null,
+                        null));
     }
 
     @Test
@@ -120,7 +174,7 @@ class SuwayomiGraphQlClientTest {
         SuwayomiMangaWithChaptersDto result = client.fetchMangaAndChapters(2);
 
         assertThat(result.manga()).isEqualTo(new SuwayomiMangaDto(2, "Solo Leveling",
-                "https://www.leercapitulo.co/manga/x/", "Chugong", "A hunter story", "ONGOING"));
+                "https://www.leercapitulo.co/manga/x/", null, "Chugong", "A hunter story", "ONGOING"));
         assertThat(result.chapters()).containsExactly(new SuwayomiChapterDto("1700000000000"),
                 new SuwayomiChapterDto("0"));
     }

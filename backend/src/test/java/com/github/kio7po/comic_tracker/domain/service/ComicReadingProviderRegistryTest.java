@@ -500,7 +500,7 @@ class ComicReadingProviderRegistryTest {
     @Test
     void search_usesTheProviderChosenForTheSourceAndReportsItsKey() {
         ComicReadingSource source = source(1L, SOURCE_URL);
-        ComicReadingSearchResult result = new ComicReadingSearchResult("7", "Berserk", null);
+        ComicReadingSearchResult result = new ComicReadingSearchResult("7", "Berserk", null, null);
         when(sourceReferenceRepository.findBySourceIn(List.of(source)))
                 .thenReturn(List.of(sourceReference(source, "second", "s-9")));
         when(second.search(new ComicReadingSourceTarget(SOURCE_URL, "s-9"), "berserk")).thenReturn(List.of(result));

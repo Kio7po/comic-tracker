@@ -7,11 +7,15 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.github.kio7po.comic_tracker.domain.port.source.ComicReadingCoverImage;
 
 /**
  * Plain transport to Suwayomi's GraphQL endpoint: no caching and no rate limiting, those belong to the provider.
@@ -31,7 +35,7 @@ class SuwayomiGraphQlClient {
             mutation($source: LongString!, $query: String!) {
               fetchSourceManga(input: { source: $source, type: SEARCH, query: $query, page: 1 }) {
                 hasNextPage
-                mangas { id title realUrl }
+                mangas { id title realUrl thumbnailUrl }
               }
             }""";
     private static final String MANGA_AND_CHAPTERS_MUTATION = """
@@ -43,12 +47,38 @@ class SuwayomiGraphQlClient {
             }""";
 
     private final RestClient restClient;
+    private final String baseUrl;
     private final URI graphQlUri;
 
     SuwayomiGraphQlClient(RestClient.Builder restClientBuilder,
             @Value("${suwayomi.base-url:http://localhost:4567}") String baseUrl) {
         this.restClient = restClientBuilder.build();
+        this.baseUrl = baseUrl;
         this.graphQlUri = UriComponentsBuilder.fromUriString(baseUrl).path("/api/graphql").build().toUri();
+    }
+
+    /**
+     * The only call that isn't GraphQL: Suwayomi serves a work's cover itself, from a path built from its id.
+     *
+     * @return empty when Suwayomi has no thumbnail for the work.
+     */
+    Optional<ComicReadingCoverImage> fetchThumbnail(int suwayomiMangaId) {
+        URI thumbnailUri = UriComponentsBuilder.fromUriString(baseUrl)
+                .path("/api/v1/manga/{suwayomiMangaId}/thumbnail")
+                .buildAndExpand(suwayomiMangaId)
+                .toUri();
+        try {
+            ResponseEntity<byte[]> response = restClient.get().uri(thumbnailUri).retrieve().toEntity(byte[].class);
+            byte[] content = response.getBody();
+            if (content == null || content.length == 0) {
+                return Optional.empty();
+            }
+            MediaType contentType = response.getHeaders().getContentType();
+            return Optional.of(new ComicReadingCoverImage(content,
+                    contentType == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : contentType.toString()));
+        } catch (HttpClientErrorException.NotFound e) {
+            return Optional.empty();
+        }
     }
 
     List<SuwayomiSourceDto> fetchSources() {
