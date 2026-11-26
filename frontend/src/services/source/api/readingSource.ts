@@ -1,6 +1,8 @@
 import { apiFetch } from '@/common/api/client';
 import type { SortDirection } from '@/common/api/SortDirection';
 import type {
+  ComicReadingSearchListing,
+  ComicReadingSearchResultDetails,
   ComicReadingSource,
   ComicReadingSourceModeration,
   ComicReadingSourceSortField,
@@ -37,6 +39,32 @@ export function findForModerationByStatusIn(
   return apiFetch<ComicReadingSourceModeration[]>(`/moderation/reading-sources?${query.toString()}`, {
     signal: options?.signal,
   });
+}
+
+export function search(
+  sourceId: number,
+  keywords: string,
+  options?: { signal?: AbortSignal },
+): Promise<ComicReadingSearchListing> {
+  const query = new URLSearchParams({ keywords });
+
+  return apiFetch<ComicReadingSearchListing>(`/reading-sources/${sourceId}/search?${query.toString()}`, {
+    signal: options?.signal,
+  });
+}
+
+export function findSearchResultDetails(
+  sourceId: number,
+  providerKey: string,
+  externalId: string,
+  options?: { signal?: AbortSignal },
+): Promise<ComicReadingSearchResultDetails> {
+  const query = new URLSearchParams({ providerKey, externalId });
+
+  return apiFetch<ComicReadingSearchResultDetails>(
+    `/reading-sources/${sourceId}/search-result-details?${query.toString()}`,
+    { signal: options?.signal },
+  );
 }
 
 export function approve(id: number): Promise<ComicReadingSource> {

@@ -8,3 +8,6 @@ export type * from './ComicReadingEntrySummary';
 export type * from './ComicReadingEntryRequest';
 export type * from './ComicReadingEntryModeration';
 export type * from './ComicReadingSourceModeration';
+export type * from './ComicReadingSearchResult';
+export type * from './ComicReadingSearchResultDetails';
+export type * from './ComicReadingEntryFromSearchResultRequest';

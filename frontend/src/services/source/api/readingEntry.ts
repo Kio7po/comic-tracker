@@ -3,6 +3,7 @@ import type { PageResponse } from '@/common/api/PageResponse';
 import type { SortDirection } from '@/common/api/SortDirection';
 import type {
   ComicReadingEntry,
+  ComicReadingEntryFromSearchResultRequest,
   ComicReadingEntryModeration,
   ComicReadingEntryRequest,
   ComicReadingEntrySortField,
@@ -24,6 +25,16 @@ export function findByComic(
 
 export function submit(slug: string, request: ComicReadingEntryRequest): Promise<ComicReadingEntry> {
   return apiFetch<ComicReadingEntry>(`/comics/${encodeURIComponent(slug)}/reading-entries`, {
+    method: 'POST',
+    body: request,
+  });
+}
+
+export function submitFromSearchResult(
+  slug: string,
+  request: ComicReadingEntryFromSearchResultRequest,
+): Promise<ComicReadingEntry> {
+  return apiFetch<ComicReadingEntry>(`/comics/${encodeURIComponent(slug)}/reading-entries/from-search-result`, {
     method: 'POST',
     body: request,
   });

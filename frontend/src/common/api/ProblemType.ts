@@ -17,4 +17,8 @@ export const ProblemType = {
   READING_STATE_NOT_FOUND: 'urn:problem-type:reading-state-not-found',
   READING_STATE_ALREADY_EXISTS: 'urn:problem-type:reading-state-already-exists',
   DATA_INTEGRITY_CONFLICT: 'urn:problem-type:data-integrity-conflict',
+  READING_SOURCE_NOT_SUPPORTED: 'urn:problem-type:reading-source-not-supported',
+  READING_PROVIDER_FAILED: 'urn:problem-type:reading-provider-failed',
+  COMIC_NOT_FOUND_IN_READING_SOURCE: 'urn:problem-type:comic-not-found-in-reading-source',
+  READING_COVER_UNAVAILABLE: 'urn:problem-type:reading-cover-unavailable',
 } as const;
