@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TriangleAlert } from 'lucide-react';
 import { submit } from '@/services/source/api/readingEntry';
 import { findByStatusIn } from '@/services/source/api/readingSource';
 import type { ComicReadingEntry } from '@/services/source/types';
 import { ApiError, ProblemType } from '@/common/api';
-import { LANGUAGE_CODES } from '@/common/lib/languageCodes';
-import { createLanguageNameFormatter } from '@/common/lib/languageName';
+import LanguageCombobox from '@/common/components/LanguageCombobox';
 import { Button } from '@/common/components/ui/button';
 import {
   Combobox,
@@ -78,13 +77,6 @@ interface SuggestReadingSourceDialogProps {
 
 function SuggestReadingSourceDialog({ comicSlug, onEntrySubmitted }: Readonly<SuggestReadingSourceDialogProps>) {
   const { t, i18n } = useTranslation();
-
-  const languageOptions = useMemo(() => {
-    const nameOf = createLanguageNameFormatter(i18n.language);
-    return LANGUAGE_CODES.map((code) => ({ value: code, label: nameOf(code) })).sort((a, b) =>
-      a.label.localeCompare(b.label, i18n.language),
-    );
-  }, [i18n.language]);
 
   const [sourceOptions, setSourceOptions] = useState<SourceOption[]>([]);
   const [isLoadingSources, setIsLoadingSources] = useState(true);
@@ -210,7 +202,6 @@ function SuggestReadingSourceDialog({ comicSlug, onEntrySubmitted }: Readonly<Su
   }
 
   const selectedSource = sourceOptions.find((option) => option.value === form.sourceId) ?? null;
-  const selectedLanguage = languageOptions.find((option) => option.value === form.locale) ?? null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -338,26 +329,13 @@ function SuggestReadingSourceDialog({ comicSlug, onEntrySubmitted }: Readonly<Su
                   <FieldLabel htmlFor="suggest-entry-locale">{t('detail.suggestSource.locale')}</FieldLabel>
                   <FieldError className="text-xs">{formErrors.locale && t(formErrors.locale)}</FieldError>
                 </div>
-                <Combobox
-                  items={languageOptions}
-                  value={selectedLanguage}
-                  onValueChange={(item) => updateField('locale', item ? item.value : '')}
-                >
-                  <ComboboxInput
-                    id="suggest-entry-locale"
-                    placeholder={t('detail.suggestSource.localePlaceholder')}
-                  />
-                  <ComboboxContent>
-                    <ComboboxEmpty>{t('detail.suggestSource.noLanguagesFound')}</ComboboxEmpty>
-                    <ComboboxList>
-                      {(item: Option) => (
-                        <ComboboxItem key={item.value} value={item}>
-                          {item.label}
-                        </ComboboxItem>
-                      )}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
+                <LanguageCombobox
+                  id="suggest-entry-locale"
+                  value={form.locale}
+                  onValueChange={(code) => updateField('locale', code)}
+                  placeholder={t('detail.suggestSource.localePlaceholder')}
+                  emptyMessage={t('detail.suggestSource.noLanguagesFound')}
+                />
               </Field>
               <div className="min-h-4">
                 <FieldError className="text-xs">{formError}</FieldError>
